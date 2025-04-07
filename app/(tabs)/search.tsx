@@ -1,20 +1,71 @@
-import {Image, SafeAreaView, StyleSheet} from 'react-native';
+import {
+  Animated,
+  Image,
+  Keyboard,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback
+} from 'react-native';
 import { Text, View } from '@/components/Themed';
+import HomePageSearchInput from "@/components/HomePageSearchInput";
+import ScrollView = Animated.ScrollView;
+import BookCard from "@/components/SearchPageBooksCard";
+import CameraButton from "@/components/CameraButton";
+
 
 export default function TabTwoScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.container2}>
-       <View style={styles.discoverView}>
-         <Text style={styles.discoverText}>
-           Discover
-         </Text>
-         <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
-       </View>
-        <View>
-          <Image source={require("@/assets/images/searchpagebookicon.png")} style={{height:20,width:20}}/>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container2}>
+          <View style={styles.discoverView}>
+            <Text style={styles.discoverText}>
+              Discover
+            </Text>
+            <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
+          </View>
+          <View style={styles.searchBarView}>
+            <TouchableOpacity onPress={() => {}}>
+              <Image source={require("@/assets/images/searchpagebookicon.png")} style={styles.searchInputBookIcon}/>
+            </TouchableOpacity>
+            <View style={{width:300}}>
+              <HomePageSearchInput />
+            </View>
+            <TouchableOpacity onPress={() => {}}>
+              <CameraButton/>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
+            <View style={styles.booksCardContainer}>
+              <BookCard
+                  title="Fantasy Adventure"
+                  description="Immerse yourself in the world of books and adventure through the pages of fantasy and"
+                  author="JACKY CHAN TRAMISU JHONSON"
+                  image={require('@/assets/images/bookimage.png')}
+                  isFavorite={true}
+                  onPressFavorite={() => {}}
+              />
+              <BookCard
+                  title="Sci-Fi Saga"
+                  description="Explore the futuristic world of science fiction with thrilling plot twists and technological marvels with thrilling plot twists and technological marvels."
+                  author="JACKY CHAN TRAMISU JHONSON"
+                  image={require('@/assets/images/bookimage3.png')}
+                  isFavorite={true}
+                  onPressFavorite={() => {}}
+              />
+              <BookCard
+                  title="Fantasy Adventure"
+                  description="Immerse yourself in the world of books and adventure through the pages of fantasy and"
+                  author="JACKY CHAN TRAMISU JHONSON"
+                  image={require('@/assets/images/bookimage2.png')}
+                  isFavorite={true}
+                  onPressFavorite={() => {}}
+              />
+            </View>
+          </ScrollView>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
@@ -44,5 +95,20 @@ const styles = StyleSheet.create({
     height:40,
     width:40,
     borderRadius:40,
+  },
+  searchBarView:{
+    marginTop:30,
+    paddingBottom:10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
+    gap:15
+  },
+  searchInputBookIcon: {
+    height:20,
+    width:20,
+  },
+  booksCardContainer: {
+    gap:15,
   }
 });

@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   grayBackGround:{
     backgroundColor:"#d3d3d3",
     justifyContent:"center",
-    height:230,
+    height:200,
     width:"100%",
     paddingHorizontal:25
   },

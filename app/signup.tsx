@@ -28,14 +28,14 @@ const SignUpScreen = () => {
                     <View style={styles.titleHeader}>
                         <Image source={require("@/assets/images/iconbook.png")} style={{height:20,width:20}}/>
                         <Text style={styles.logo}>
-                            AI Library
+                            Bookify
                         </Text>
                     </View>
                     <Image
                         style={styles.image}
                         source={require("@/assets/images/signupimage.png")}
                     />
-                    <Text style={styles.welcome}>Welcome to AI Library</Text>
+                    <Text style={styles.welcome}>Welcome to Bookify!</Text>
                     <Text style={styles.subtext}>
                         Discover a world of AI knowledge and resources.{"\n"}Sign up to explore more.
                     </Text>
@@ -54,6 +54,7 @@ const SignUpScreen = () => {
                    </View>
                     <View style={styles.input}>
                         <TextInput
+                            key={showPassword ? 'text' : 'password'}
                             style={styles.textInput}
                             placeholder="Password"
                             placeholderTextColor="gray"
@@ -62,14 +63,14 @@ const SignUpScreen = () => {
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <Image source={require("@/assets/images/visibility_off_password.png")} style={{height:20,width:20}}/>
+                            {showPassword ? <Image source={require("@/assets/images/visibility_off_password.png")} style={{height:20,width:20}}/> : <Image source={require("@/assets/images/visibility_on_password.png")} style={{height:20,width:20}}/>}
                         </TouchableOpacity>
                     </View>
                     <View style={styles.signInTextView}>
                         <Text style={styles.signInText}>
                             Already have an account?
                         </Text>
-                        <TouchableOpacity style={{}} onPress={() => router.navigate("/signin")}>
+                        <TouchableOpacity style={{}} onPress={() => router.replace("/signin")}>
                             <Text style={{fontWeight:"bold"}}>
                                 Sign in
                             </Text>
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#555',
         marginTop: 6,
-        marginBottom: 15,
+        marginBottom: 10,
     },
     form: {
         backgroundColor: '#fdfedb',

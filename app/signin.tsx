@@ -9,12 +9,13 @@ import {
     Image,
 } from 'react-native';
 import SignInButtonWithGoogle from "@/components/SignInButtonWithGoogle";
+import {router} from "expo-router";
 
 const SignInScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-
+    console.log(showPassword);
     const handleSignIn = () => {
         alert(`Sign in pressed with email: ${email}`);
     };
@@ -22,22 +23,24 @@ const SignInScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View>
-                <View style={styles.logoContainer}>
-                    <Image source={require("@/assets/images/iconbook.png")} style={styles.iconBook}></Image>
-                    <Text style={styles.logo}> AI Library</Text>
-                </View>
                 <View style={styles.card}>
-                    <Text style={styles.title}>Sign In</Text>
+                    <View style={styles.logoContainer}>
+                        <Image source={require("@/assets/images/iconbook.png")} style={styles.iconBook}></Image>
+                        <Text style={styles.logo}> Bookify</Text>
+                    </View>
+                    <View style={styles.input}>
                     <TextInput
-                        style={styles.input}
                         placeholder="Email"
+                        placeholderTextColor="gray"
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
                         keyboardType="email-address"
                     />
-                    <View style={styles.passwordContainer}>
+                    </View>
+                    <View style={styles.input}>
                         <TextInput
+                            key={showPassword ? 'text' : 'password'}
                             style={styles.passwordInput}
                             placeholder="Password"
                             value={password}
@@ -45,20 +48,24 @@ const SignInScreen = () => {
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <Image source={require("@/assets/images/visibility_off_password.png")} style={styles.iconBook}/> : <Image source={require("@/assets/images/visibility_on_password.png")} style={styles.iconBook}/> }
+                            {showPassword ? <Image source={require("@/assets/images/visibility_off_password.png")} style={styles.iconVisibility}/> : <Image source={require("@/assets/images/visibility_on_password.png")} style={styles.iconVisibility}/> }
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+                    <TouchableOpacity style={styles.signInButton} onPress={() => router.replace("/(tabs)/home")}>
                         <Text style={styles.signInButtonText}>Sign In</Text>
                     </TouchableOpacity>
                     <TouchableOpacity>
                         <Text style={styles.linkText}>Forgot Password?</Text>
                     </TouchableOpacity>
-                    <Text style={styles.bottomText}>
-                        Don't have an account?{' '}
-                        <Text style={styles.linkBold}>Create one</Text>
-                    </Text>
-                    <SignInButtonWithGoogle onPress={handleSignIn}/>
+                    <View style={styles.bottomTextView}>
+                        <Text style={styles.bottomText}>
+                            Don't have an account?
+                        </Text>
+                        <TouchableOpacity onPress={() => router.replace("/signup")}>
+                            <Text style={styles.linkBold}>Create one</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <SignInButtonWithGoogle onPress={() => {}}/>
                 </View>
             </View>
         </SafeAreaView>
@@ -73,23 +80,29 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     logoContainer: {
-        marginTop: 135,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
+        paddingBottom:50,
     },
     iconBook:{
+        height:40,
+        width:40,
+    },
+    iconVisibility:{
         height:20,
         width:20,
     },
     logo: {
-        fontSize: 22,
+        fontSize: 40,
         fontWeight: 'bold',
     },
     card: {
+        marginTop:150,
         backgroundColor: '#fff',
         margin: 24,
         padding: 24,
+        paddingTop:50,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#cce0ff',
@@ -105,12 +118,17 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     input: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 25,
-        padding: 12,
-        paddingLeft: 16,
-        marginBottom: 12,
-        fontSize: 16,
+        height: 40,
+        fontSize: 14,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontFamily: 'Montserrat-Regular',
+        backgroundColor: 'white',
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        marginBottom: 8,
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -129,6 +147,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
     },
     signInButton: {
+        marginTop:15,
         backgroundColor: '#fdfedb',
         padding: 14,
         borderRadius: 25,
@@ -143,6 +162,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#444',
         marginBottom: 10,
+    },
+    bottomTextView:{
+        flexDirection: 'row',
+        gap:5,
+        justifyContent: 'center',
     },
     bottomText: {
         textAlign: 'center',

@@ -71,10 +71,10 @@ export default function GenresScroller() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.contentContainer}
                 renderItem={({ item }) => (
-                    <View style={styles.genreItem}>
+                    <TouchableOpacity style={styles.genreItem}>
                         <Ionicons name={item.icon} size={24} color="#000" />
                         <Text style={styles.genreLabel}>{item.label}</Text>
-                    </View>
+                    </TouchableOpacity>
                 )}
             />
 

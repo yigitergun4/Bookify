@@ -15,7 +15,7 @@ const SignInScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    console.log(showPassword);
+
     const handleSignIn = () => {
         alert(`Sign in pressed with email: ${email}`);
     };
@@ -51,7 +51,7 @@ const SignInScreen = () => {
                             {showPassword ? <Image source={require("@/assets/images/visibility_off_password.png")} style={styles.iconVisibility}/> : <Image source={require("@/assets/images/visibility_on_password.png")} style={styles.iconVisibility}/> }
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.signInButton} onPress={() => router.replace("/(tabs)/home")}>
+                    <TouchableOpacity style={styles.signInButton} onPress={() => router.replace("/(tabs)/home/home")}>
                         <Text style={styles.signInButtonText}>Sign In</Text>
                     </TouchableOpacity>
                     <TouchableOpacity>

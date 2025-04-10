@@ -1,8 +1,9 @@
-import {SafeAreaView, StyleSheet} from 'react-native';
+import {SafeAreaView, StyleSheet, TouchableOpacity} from 'react-native';
 import { Text, View } from '@/components/Themed';
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import HomePageFlatlistRecommendedBooks from "@/components/HomePageFlatlistRecommendedBooks";
 import HomePageGenres from "@/components/HomePageFlatlistGenres";
+import {router} from "expo-router";
 
 export default function TabOneScreen() {
   return (
@@ -17,9 +18,16 @@ export default function TabOneScreen() {
           <HomePageSearchInput/>
         </View>
         <View style={styles.recommendedView}>
-          <Text style={styles.recommendedText}>
-            Recommended for you
-          </Text>
+          <View style={styles.recommendedView2}>
+            <Text style={styles.recommendedText}>
+              Recommended for you
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/home/recommendbookpage")}>
+              <Text style={styles.seeAllText}>
+                See all
+              </Text>
+            </TouchableOpacity>
+          </View>
           <HomePageFlatlistRecommendedBooks/>
         </View>
         <View style={styles.genresView}>
@@ -62,11 +70,19 @@ const styles = StyleSheet.create({
   recommendedView:{
     marginTop: 50,
   },
+  recommendedView2:{
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"space-between"
+  },
   recommendedText:{
     color: '#030303',
     fontSize: 18,
     fontFamily: 'Poppins',
     fontWeight: 600,
+  },
+  seeAllText:{
+    textDecorationLine:"underline"
   },
   genresView:{
     marginTop:50,

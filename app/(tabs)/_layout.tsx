@@ -5,6 +5,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import homeIcon from '@/assets/images/homeicon.png'
+import {DarkTheme} from "@react-navigation/native/src";
 
 const HomeIcon = () => (
     <Image src={homeIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
@@ -35,12 +36,13 @@ const TabsView = ({ color, size, label, source }: TabsViewProps) => {
 };
 export default function TabLayout() {
     const colorScheme = useColorScheme();
-    const bottomMarginIcon:number = 5;
+
     return (
         <Tabs
             screenOptions={{
                 tabBarStyle: {
                     paddingTop: 10,
+                    backgroundColor: colorScheme === 'dark' ? "white" : "dark",
                 },
                 tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
                 // Disable the static render of the header on web
@@ -48,12 +50,12 @@ export default function TabLayout() {
                 headerShown:false,
             }}>
             <Tabs.Screen
-                name="home"
+                name="homefolder"
                 options={{
                     tabBarShowLabel: false,
-                    tabBarIcon: ({ color,size }:any) => (
+                    tabBarIcon: ({ size }:any) => (
                         <TabsView
-                            color={color}
+                            color="black"
                             size={size}
                             label="Home"
                             source={require('@/assets/images/homeicon.png')}
@@ -61,12 +63,12 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="search"
+                name="search/index"
                 options={{
                     tabBarShowLabel: false,
-                    tabBarIcon: ({ color,size }:any) => (
+                    tabBarIcon: ({ size }:any) => (
                         <TabsView
-                            color={color}
+                            color="black"
                             size={size}
                             label="Search"
                             source={require('@/assets/images/searchicon.png')}
@@ -74,12 +76,12 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="reading"
+                name="reading/index"
                 options={{
                     tabBarShowLabel: false,
-                    tabBarIcon: ({ color,size }:any) => (
+                    tabBarIcon: ({ size }:any) => (
                         <TabsView
-                            color={color}
+                            color="black"
                             size={size}
                             label="Reading"
                             source={require('@/assets/images/readingicon.png')}
@@ -87,12 +89,12 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="myprofile"
+                name="profile/index"
                 options={{
                     tabBarShowLabel: false,
-                    tabBarIcon: ({ color,size }:any) => (
+                    tabBarIcon: ({ size }:any) => (
                         <TabsView
-                            color={color}
+                            color="black"
                             size={size}
                             label="My Profile"
                             source={require("@/assets/images/profileicon.png")}

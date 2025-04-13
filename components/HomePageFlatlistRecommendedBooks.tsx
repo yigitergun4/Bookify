@@ -10,28 +10,32 @@ const HomePageFlatlistRecommendedBooks = () => {
         { id: '6', title: 'Item Two',image: require('@/assets/images/bookimage2.png'),author:"Jackie Chan Jhonson",pageCount:400 },
     ];
     return (
-        <FlatList
-            data={data}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-                <View style={styles.card}>
-                    <Image style={styles.bookImage} source={item.image}/>
-                    <View style={styles.bookTexts}>
-                        <Text style={styles.titleText} numberOfLines={1}>
-                            {item.title}
-                        </Text>
-                        <Text style={styles.authorText} numberOfLines={1}>
-                            - {item.author}
-                        </Text>
+        <View style={styles.container}>
+            <FlatList
+                data={data}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                    <View style={styles.card}>
+                        <Image style={styles.bookImage} source={item.image}/>
+                        <View style={styles.bookTexts}>
+                            <Text style={styles.titleText} numberOfLines={1}>
+                                {item.title}
+                            </Text>
+                            <Text style={styles.authorText} numberOfLines={1}>
+                                - {item.author}
+                            </Text>
+                        </View>
                     </View>
-                </View>
-            )}
-        />
+                )}
+            />
+        </View>
     )
 }
 
 const styles = StyleSheet.create({
+    container:{
+    },
     card: {
         width:210,
         height:240,

@@ -25,12 +25,12 @@ export default function TabTwoScreen() {
             <Text style={styles.discoverText}>
               Discover
             </Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/myprofile")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
               <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
             </TouchableOpacity>
           </View>
           <View style={styles.searchBarView}>
-            <TouchableOpacity onPress={() => {}}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/reading")}>
               <Image source={require("@/assets/images/searchpagebookicon.png")} style={styles.searchInputBookIcon}/>
             </TouchableOpacity>
             <View style={styles.searchbarInputView}>

@@ -89,7 +89,7 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="myprofile"
+                name="profile/index"
                 options={{
                     tabBarShowLabel: false,
                     tabBarIcon: ({ size }:any) => (

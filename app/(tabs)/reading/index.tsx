@@ -5,11 +5,10 @@ import {
     Text,
     StyleSheet,
     FlatList,
-    TextInput,
     Image,
-    ScrollView,
 } from 'react-native';
 import HomePageSearchInput from "@/components/HomePageSearchInput";
+import LogoHeader from "@/components/LogoHeader";
 
 const mockBooks = [
     {
@@ -37,10 +36,7 @@ export default function LibraryScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.logoView}>
-                <Image source={require('@/assets/images/iconbook.png')} style={styles.logo} />
-                <Text style={styles.logoText}> Bookify</Text>
-            </View>
+            <LogoHeader title={"Bookify"} isProfileShown={false} />
             <Text style={styles.title}>Your Library</Text>
             <View style={styles.searchContainer}>
                 <HomePageSearchInput isHomePage={false}/>
@@ -69,26 +65,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingHorizontal: 16,
-    },
-    logoView:{
-        flexDirection:"row",
-        alignItems:"center",
-        paddingLeft:20,
-        paddingVertical:30,
-        borderBottomWidth: 1,
-        borderBottomColor: '#fff',
-        borderStyle: 'solid',
-        shadowColor: '#000',
-        shadowOpacity:0.3,
-        shadowOffset:{height:4,width:0},
-    },
-    logo: {
-        height:30,
-        width:30
-    },
-    logoText:{
-        fontSize: 16,
-        fontWeight: 'bold',
     },
     title: {
         fontSize: 22,

@@ -46,12 +46,13 @@ const SignInScreen = () => {
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
+                            placeholderTextColor="gray"
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             {showPassword ? <Image source={require("@/assets/images/visibility_off_password.png")} style={styles.iconVisibility}/> : <Image source={require("@/assets/images/visibility_on_password.png")} style={styles.iconVisibility}/> }
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.signInButton} onPress={() => router.replace("/(tabs)/home/home")}>
+                    <TouchableOpacity style={styles.signInButton} onPress={() => router.replace("/(tabs)/homefolder/home")}>
                         <Text style={styles.signInButtonText}>Sign In</Text>
                     </TouchableOpacity>
                     <TouchableOpacity>

@@ -1,11 +1,15 @@
 import React from 'react';
 import {View, TextInput, StyleSheet, Image, TouchableOpacity} from 'react-native';
 
-const SearchInput = () => {
+interface HomePageSearchInputProps {
+    isHomePage: boolean;
+}
+
+const SearchInput = ({isHomePage}:HomePageSearchInputProps) => {
     return (
         <View style={styles.inputWrapper}>
             <TextInput
-                placeholder="Search for books"
+                placeholder="Search for books..."
                 style={styles.input}
                 placeholderTextColor="#18181a"
             />
@@ -26,7 +30,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d6d6db',
         borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.83)',
+        backgroundColor: '#FFF',
         paddingHorizontal: 16,
         height: 52,
         width: "100%",

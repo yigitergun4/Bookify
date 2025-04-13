@@ -12,9 +12,11 @@ import HomePageSearchInput from "@/components/HomePageSearchInput";
 import ScrollView = Animated.ScrollView;
 import BookCard from "@/components/SearchPageBooksCard";
 import CameraButton from "@/components/CameraButton";
+import {router} from "expo-router";
 
 
 export default function TabTwoScreen() {
+
   return (
     <SafeAreaView style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -23,20 +25,22 @@ export default function TabTwoScreen() {
             <Text style={styles.discoverText}>
               Discover
             </Text>
-            <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
+            <TouchableOpacity onPress={() => router.push("/(tabs)/myprofile")}>
+              <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
+            </TouchableOpacity>
           </View>
           <View style={styles.searchBarView}>
             <TouchableOpacity onPress={() => {}}>
               <Image source={require("@/assets/images/searchpagebookicon.png")} style={styles.searchInputBookIcon}/>
             </TouchableOpacity>
-            <View style={{width:300}}>
-              <HomePageSearchInput />
+            <View style={styles.searchbarInputView}>
+              <HomePageSearchInput isHomePage={false} />
             </View>
             <TouchableOpacity onPress={() => {}}>
               <CameraButton/>
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 190 }} showsVerticalScrollIndicator={false}>
             <View style={styles.booksCardContainer}>
               <BookCard
                   title="Fantasy Adventure"
@@ -77,12 +81,14 @@ const styles = StyleSheet.create({
   },
   container2: {
     paddingHorizontal:25,
+    backgroundColor: '#FFF',
   },
   discoverView: {
     marginTop:25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#FFF',
   },
   discoverText:{
     color: '#030303',
@@ -98,11 +104,16 @@ const styles = StyleSheet.create({
   },
   searchBarView:{
     marginTop:30,
-    paddingBottom:10,
+    paddingBottom:15,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent:"space-between",
     flexDirection: 'row',
-    gap:15
+    backgroundColor: '#FFF',
+  },
+  searchbarInputView:{
+    width:"85%",
+    backgroundColor:'#fff',
+    paddingLeft:13
   },
   searchInputBookIcon: {
     height:20,
@@ -110,5 +121,6 @@ const styles = StyleSheet.create({
   },
   booksCardContainer: {
     gap:15,
+    backgroundColor: '#FFF',
   }
 });

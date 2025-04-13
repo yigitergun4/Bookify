@@ -80,9 +80,11 @@ const styles = StyleSheet.create({
     },
     container2:{
         paddingHorizontal: 10,
+        flex:1
     },
     headerView:{
         paddingTop:15,
+        paddingBottom:15,
         flexDirection:"row",
         alignItems:"center",
         paddingLeft:15,

@@ -17,13 +17,15 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "We need your permission to access the camera."
-      }
+      },
+      "bundleIdentifier": "com.yigitergun.Bookify"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.yigitergun.Bookify"
     },
     "web": {
       "bundler": "metro",

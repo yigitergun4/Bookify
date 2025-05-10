@@ -10,6 +10,7 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		1B764DA5AD5A4C82B9B7D801 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DCCD6955ACB34176B7B1BAC2 /* GoogleService-Info.plist */; };
 		317684DFC10750991200862B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C75A644D1B8096291A6E7BAA /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		451A6FB32715A52D88CC474A /* Pods_Bookify.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9210E57430B362DDF35070D4 /* Pods_Bookify.framework */; };
@@ -26,11 +27,13 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Bookify/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Bookify/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = Bookify/main.m; sourceTree = "<group>"; };
+		3CC0CF03688C4C4F9B4A3202 /* Bookify-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "Bookify-Bridging-Header.h"; path = "Bookify/Bookify-Bridging-Header.h"; sourceTree = "<group>"; };
 		56FDE0E6EB199A08246C1733 /* Pods-Bookify.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Bookify.debug.xcconfig"; path = "Target Support Files/Pods-Bookify/Pods-Bookify.debug.xcconfig"; sourceTree = "<group>"; };
 		9210E57430B362DDF35070D4 /* Pods_Bookify.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Bookify.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Bookify/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		C75A644D1B8096291A6E7BAA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Bookify/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DCCD6955ACB34176B7B1BAC2 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Bookify/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		ECD66F46827B4D3AA7DEE59C /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "Bookify/noop-file.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Bookify/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -60,6 +63,8 @@
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				ECD66F46827B4D3AA7DEE59C /* noop-file.swift */,
 				C75A644D1B8096291A6E7BAA /* PrivacyInfo.xcprivacy */,
+				3CC0CF03688C4C4F9B4A3202 /* Bookify-Bridging-Header.h */,
+				DCCD6955ACB34176B7B1BAC2 /* GoogleService-Info.plist */,
 			);
 			name = Bookify;
 			sourceTree = "<group>";
@@ -152,6 +157,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				C0547C51A30153BEB26BEC17 /* [CP] Copy Pods Resources */,
 				426762D63182A1622E3E8D95 /* [CP-User] [RNFB] Core Configuration */,
+				DD5FCF0FBF39F9BD9897F606 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -202,6 +208,7 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				317684DFC10750991200862B /* PrivacyInfo.xcprivacy in Resources */,
+				1B764DA5AD5A4C82B9B7D801 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +368,24 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Bookify/Pods-Bookify-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		DD5FCF0FBF39F9BD9897F606 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Bookify/Pods-Bookify-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Bookify/Pods-Bookify-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -403,6 +428,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yigitergun.Bookify;
 				PRODUCT_NAME = Bookify;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bookify/Bookify-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -430,6 +456,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yigitergun.Bookify;
 				PRODUCT_NAME = Bookify;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bookify/Bookify-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -506,7 +533,7 @@
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
-				USE_HERMES = false;
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -571,7 +598,7 @@
 				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
-				USE_HERMES = false;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

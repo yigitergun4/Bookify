@@ -34,3 +34,14 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+
+# Firebase config
+FirebaseConfig.ts
+
+# IDE
+.idea/
+.vscode/

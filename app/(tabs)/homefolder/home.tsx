@@ -12,7 +12,6 @@ import {
 import { Text } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import HomePageFlatlistRecommendedBooks from "@/components/HomePageFlatlistRecommendedBooks";
-import HomePageGenres from "@/components/HomePageFlatlistGenres";
 import { router } from "expo-router";
 
 export default function TabOneScreen() {

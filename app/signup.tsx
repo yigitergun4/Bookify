@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import SignInButtonWithGoogleButton from "../components/SignInButtonWithGoogle";
@@ -28,10 +29,10 @@ const SignUpScreen = () => {
         email,
         password
       );
-      console.log(response);
+      Alert.alert("You have successfully created an account");
     } catch (error: any) {
       console.error(error);
-      alert("Invalid email or password");
+      Alert.alert("You already have an account");
     } finally {
       setLoading(false);
     }

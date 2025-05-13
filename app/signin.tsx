@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
+  Alert,
 } from "react-native";
 import SignInButtonWithGoogle from "../components/SignInButtonWithGoogle";
 import { router } from "expo-router";
@@ -27,10 +28,10 @@ const SignInScreen = () => {
         email,
         password
       );
-      console.log(response);
+      router.replace("/(tabs)/homefolder/home");
     } catch (error: any) {
       console.error(error);
-      alert("Invalid email or password");
+      Alert.alert("Invalid email or password");
     } finally {
       setLoading(false);
     }

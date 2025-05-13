@@ -8,16 +8,32 @@ import {
   SafeAreaView,
   Image,
 } from "react-native";
-import SignInButtonWithGoogle from "@/components/SignInButtonWithGoogle";
+import SignInButtonWithGoogle from "../components/SignInButtonWithGoogle";
 import { router } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { FIREBASE_AUTH } from "../FirebaseConfig";
 
 const SignInScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = () => {
-    alert(`Sign in pressed with email: ${email}`);
+  const signIn = async () => {
+    setLoading(true);
+    try {
+      const response = await signInWithEmailAndPassword(
+        FIREBASE_AUTH,
+        email,
+        password
+      );
+      console.log(response);
+    } catch (error: any) {
+      console.error(error);
+      alert("Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,10 +81,7 @@ const SignInScreen = () => {
               )}
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.signInButton}
-            onPress={() => router.replace("/(tabs)/homefolder/home")}
-          >
+          <TouchableOpacity style={styles.signInButton} onPress={signIn}>
             <Text style={styles.signInButtonText}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity>

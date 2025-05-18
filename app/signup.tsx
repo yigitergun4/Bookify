@@ -39,7 +39,7 @@ const SignUpScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 31 }}>
         <View style={styles.header}>
           <View style={styles.titleHeader}>
             <Image

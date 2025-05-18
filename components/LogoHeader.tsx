@@ -1,57 +1,40 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  ViewStyle,
-  ImageStyle,
-  TextStyle,
-  TouchableOpacity,
-  Pressable,
-} from "react-native";
-import { router } from "expo-router";
+import React from "react";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useSession } from "@/contexts/AuthContext";
+import { router } from "expo-router";
 
-type LogoHeaderProps = {
+interface LogoHeaderProps {
   title: string;
-  containerStyle?: ViewStyle;
-  imageStyle?: ImageStyle;
-  textStyle?: TextStyle;
   isProfileShown?: boolean;
-};
+}
 
 export default function LogoHeader({
-  title,
-  containerStyle,
-  imageStyle,
-  textStyle,
   isProfileShown = false,
 }: LogoHeaderProps) {
   const { signOut } = useSession();
-  const [showPopup, setShowPopup] = useState(false);
+  const [showPopup, setShowPopup] = React.useState(false);
 
   const handleLogout = async () => {
     try {
       await signOut();
-      setShowPopup(false);
-      router.replace("/signin");
+      router.replace("/signup");
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("Logout error:", error);
     }
+    setShowPopup(false);
   };
 
   return (
-    <View style={[styles.logoView, containerStyle]}>
-      <View style={styles.logoAndText}>
+    <View style={styles.container}>
+      <View style={styles.logoContainer}>
         <Image
           source={require("@/assets/images/iconbook.png")}
-          style={[styles.logo, imageStyle]}
+          style={styles.iconBook}
         />
-        <Text style={[styles.logoText, textStyle]}>{title}</Text>
+        <Text style={styles.logo}>Bookify</Text>
       </View>
-      {isProfileShown ? (
-        <View style={styles.profileContainer}>
+      {isProfileShown && (
+        <View>
           <TouchableOpacity onPress={() => setShowPopup(!showPopup)}>
             <Image
               source={require("@/assets/images/bookimage.png")}
@@ -59,69 +42,53 @@ export default function LogoHeader({
             />
           </TouchableOpacity>
           {showPopup && (
-            <Pressable
-              style={styles.popupOverlay}
-              onPress={() => setShowPopup(false)}
-            >
-              <View style={styles.popupContent}>
-                <TouchableOpacity
-                  style={styles.logoutButton}
-                  onPress={handleLogout}
-                >
-                  <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
+            <View style={styles.popup}>
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <Text style={styles.logoutText}>Log out</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
-      ) : null}
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  logoView: {
+  container: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.09,
-    shadowOffset: { width: 0, height: 5 },
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  logoAndText: {
+  logoContainer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 5,
+  },
+  iconBook: {
+    width: 24,
+    height: 24,
   },
   logo: {
-    height: 30,
-    width: 30,
-  },
-  logoText: {
     fontSize: 20,
     fontWeight: "bold",
-    marginLeft: 8,
-  },
-  profileContainer: {
-    position: "relative",
   },
   profileIcon: {
-    height: 40,
     width: 40,
-    borderRadius: 40,
+    height: 40,
+    borderRadius: 20,
   },
-  popupOverlay: {
+  popup: {
     position: "absolute",
     top: 45,
     right: 0,
-    width: 120,
-    zIndex: 1000,
-  },
-  popupContent: {
     backgroundColor: "white",
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 8,
     shadowColor: "#000",
     shadowOffset: {
@@ -129,19 +96,20 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: 3.84,
     elevation: 5,
+    zIndex: 1000,
   },
   logoutButton: {
-    backgroundColor: "#ff3b30",
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    width: 75,
+    height: 35,
     alignItems: "center",
+    justifyContent: "center",
   },
   logoutText: {
-    color: "white",
-    fontSize: 14,
+    color: "red",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });

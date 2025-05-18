@@ -13,32 +13,27 @@
  * @key minimumLoadingTime: Uygulamanın minimum yükleme süresini belirler.
  */
 
-
-
-
 /**
  * AppConfig interface
  *
  * Bu interface, uygulamanın yapılandırma bilgilerini içerir.
  */
 interface AppConfig {
-    features: {
-        enableSplashScreen: boolean;
-        enableOnboarding: boolean;
-        enableAutoLogin: boolean;
-    };
-    routes: {
-        initialRoute: string;
-        authHomeRoute: string;
-        loginRoute: string;
-    };
-    timing: {
-        splashScreenDuration: number;
-        minimumLoadingTime: number;
-    };
+  features: {
+    enableSplashScreen: boolean;
+    enableOnboarding: boolean;
+    enableAutoLogin: boolean;
+  };
+  routes: {
+    initialRoute: string;
+    authHomeRoute: string;
+    loginRoute: string;
+  };
+  timing: {
+    splashScreenDuration: number;
+    minimumLoadingTime: number;
+  };
 }
-
-
 
 /**
  * appConfig
@@ -48,18 +43,18 @@ interface AppConfig {
  * Ya da uygulama genelinde kullanılacak zamanlayıcılar gibi.
  */
 export const appConfig: AppConfig = {
-    features: {
-        enableSplashScreen: false, // Splash screen özelliğini buradan kontrol edebilirsiniz
-        enableOnboarding: true,
-        enableAutoLogin: true,
-    },
-    routes: {
-        initialRoute: 'login',
-        authHomeRoute: '/(auth)/(tabs)',
-        loginRoute: '/login',
-    },
-    timing: {
-        splashScreenDuration: 2000,
-        minimumLoadingTime: 500,
-    },
+  features: {
+    enableSplashScreen: false, // Splash screen özelliğini buradan kontrol edebilirsiniz
+    enableOnboarding: true,
+    enableAutoLogin: true,
+  },
+  routes: {
+    initialRoute: "signup",
+    authHomeRoute: "/(tabs)/homefolder/home",
+    loginRoute: "signin",
+  },
+  timing: {
+    splashScreenDuration: 2000,
+    minimumLoadingTime: 500,
+  },
 };

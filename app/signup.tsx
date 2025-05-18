@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 5,
-    marginBottom: 40,
+    marginBottom: 20,
   },
   logo: {
     fontSize: 20,

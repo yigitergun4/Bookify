@@ -9,8 +9,12 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     setLibraryBooks((prev) => [book, ...prev]);
   };
 
+  const removeBook = (bookId: string) => {
+    setLibraryBooks((prev) => prev.filter((b) => b.id !== bookId));
+  };
+
   return (
-    <LibraryContext.Provider value={{ libraryBooks, addBook }}>
+    <LibraryContext.Provider value={{ libraryBooks, addBook, removeBook }}>
       {children}
     </LibraryContext.Provider>
   );

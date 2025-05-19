@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, SafeAreaView, Alert } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 
 const PAGE_SIZE = 10;
@@ -54,6 +54,26 @@ export default function SearchResultsScreen() {
     }
   };
 
+  const handleAddBook = (book: any) => {
+    Alert.alert(
+      "Add to Library",
+      "Do you want to add this book to your library?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          onPress: () => {
+            addBook(book);
+            Alert.alert("Success", "Book added to your library!");
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     if (startIndex !== 0) {
       fetchBooks(true);
@@ -78,7 +98,7 @@ export default function SearchResultsScreen() {
           <BookSearchList
             books={books}
             loadingMore={loadingMore}
-            addBook={addBook}
+            addBook={handleAddBook}
             handleLoadMore={handleLoadMore}
             isAddButtonShown={true}
           />

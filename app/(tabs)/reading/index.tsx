@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-} from "react-native";
+import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
@@ -15,10 +8,9 @@ import { useLibrary } from "@/contexts/LibraryContext";
 import BookSearchList from "@/components/BookSearchList";
 
 export default function LibraryScreen() {
-  const [search, setSearch] = useState("");
   const [userName, setUserName] = useState("");
   const user = FIREBASE_AUTH.currentUser;
-  const { libraryBooks } = useLibrary();
+  const { libraryBooks, removeBook } = useLibrary();
   useEffect(() => {
     const fetchUserName = async () => {
       if (user) {
@@ -35,6 +27,24 @@ export default function LibraryScreen() {
     fetchUserName();
   }, [user]);
 
+  const handleLongPressBook = (book: any) => {
+    Alert.alert(
+      "Remove Book",
+      "Do you want to remove this book from your library?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: () => {
+            removeBook(book.id);
+            Alert.alert("Success", "Book removed from your library!");
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
@@ -50,6 +60,7 @@ export default function LibraryScreen() {
         addBook={() => {}}
         handleLoadMore={() => {}}
         isAddButtonShown={false}
+        onLongPressBook={handleLongPressBook}
       />
     </SafeAreaView>
   );

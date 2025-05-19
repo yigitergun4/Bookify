@@ -53,7 +53,22 @@ export function SessionProvider(props: React.PropsWithChildren) {
         authFlagRef.current = true;
         console.log("Auth State Changed:", user?.uid);
         setUser(user);
-        router.replace("/(tabs)/homefolder/home");
+        // Onboarding kontrolü
+        try {
+          const userDoc = await firestore()
+            .collection("Users")
+            .doc(user.uid)
+            .get();
+          const data = userDoc.data();
+          if (data && data.firstLaunchCompleted) {
+            router.replace("/(tabs)/homefolder/home");
+          } else {
+            router.replace("/onboarding");
+          }
+        } catch (err) {
+          console.error("Onboarding kontrolü hatası:", err);
+          router.replace("/onboarding");
+        }
       } else if (!user) {
         router.replace("/signup");
       }

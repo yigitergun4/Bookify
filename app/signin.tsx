@@ -28,7 +28,7 @@ const SignInScreen = () => {
         email,
         password
       );
-      router.replace("/(tabs)/homefolder/home");
+      router.replace("/onboarding");
     } catch (error: any) {
       console.error(error);
       Alert.alert("Invalid email or password");

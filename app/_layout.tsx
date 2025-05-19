@@ -9,7 +9,6 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-
 import { useColorScheme } from "@/components/useColorScheme";
 
 export {
@@ -62,6 +61,7 @@ function RootLayoutNav() {
           name="signin"
           options={{ headerShown: false, gestureEnabled: false }}
         />
+        <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>

@@ -7,6 +7,9 @@ import {
   SafeAreaView,
 } from "react-native";
 import LogoHeader from "@/components/LogoHeader";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
 
 const favoriteGenres = ["Mystery", "Science Fiction", "Fantasy", "Non-Fiction"];
 
@@ -23,16 +26,43 @@ const recommendedBooks = [
     genre: "Non-Fiction",
     image: require("@/assets/images/bookimage2.png"),
   },
+  {
+    id: "3",
+    title: "The Quantum Leap",
+    genre: "Non-Fiction",
+    image: require("@/assets/images/bookimage2.png"),
+  },
 ];
 
 export default function MyProfileScreen() {
+  const user = FIREBASE_AUTH.currentUser;
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (user) {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const fullName = data.name || "";
+          const firstName = fullName.split(" ")[0];
+          setUserName(firstName);
+        }
+      }
+    };
+    fetchUserName();
+  }, [user]);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <LogoHeader title="Bookify" isProfileShown={true} />
         <View style={{ paddingHorizontal: 20 }}>
           <View style={styles.welcomeView}>
-            <Text style={styles.welcomeText}>Welcome Back, User's name</Text>
+            <Text style={styles.welcomeText}>
+              Welcome Back{userName ? `, ${userName}` : ""}
+            </Text>
           </View>
           <Text style={styles.sectionTitle}>Favorite Genres</Text>
           <View style={styles.genresContainer}>

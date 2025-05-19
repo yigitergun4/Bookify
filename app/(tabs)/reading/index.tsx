@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 const mockBooks = [
   {
@@ -31,6 +33,24 @@ const mockBooks = [
 
 export default function LibraryScreen() {
   const [search, setSearch] = useState("");
+  const [userName, setUserName] = useState("");
+  const user = FIREBASE_AUTH.currentUser;
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (user) {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const fullName = data.name || "";
+          const firstName = fullName.split(" ")[0];
+          setUserName(firstName);
+        }
+      }
+    };
+    fetchUserName();
+  }, [user]);
 
   const filteredBooks = mockBooks.filter((book) =>
     book.title.toLowerCase().includes(search.toLowerCase())
@@ -39,7 +59,9 @@ export default function LibraryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <Text style={styles.title}>Your Library</Text>
+      <Text style={styles.title}>
+        {userName ? `${userName}'s Library` : "Your Library"}
+      </Text>
       <View style={styles.searchContainer}>
         <HomePageSearchInput isHomePage={false} />
       </View>
@@ -82,6 +104,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     flexDirection: "row",
     borderRadius: 16,
+    marginBottom: 10,
     padding: 12,
     shadowColor: "#000",
     shadowOpacity: 0.1,

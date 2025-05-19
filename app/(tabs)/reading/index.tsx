@@ -12,25 +12,7 @@ import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { useLibrary } from "@/contexts/LibraryContext";
-
-const mockBooks = [
-  {
-    id: "1",
-    title: "Hands-On Machine Learning",
-    author: "Aurélien Géron",
-    description:
-      "Practical guide to learning machine learning using Scikit-Learn and TensorFlow.",
-    image: require("@/assets/images/bookimage.png"), // Örnek görsel
-  },
-  {
-    id: "2",
-    title: "Deep Learning with Python",
-    author: "Francois Chollet",
-    description:
-      "An introduction to deep learning using Python and the powerful Keras library.",
-    image: require("@/assets/images/bookimage2.png"),
-  },
-];
+import BookSearchList from "@/components/BookSearchList";
 
 export default function LibraryScreen() {
   const [search, setSearch] = useState("");
@@ -53,10 +35,6 @@ export default function LibraryScreen() {
     fetchUserName();
   }, [user]);
 
-  const filteredBooks = mockBooks.filter((book) =>
-    book.title.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
@@ -66,51 +44,12 @@ export default function LibraryScreen() {
       <View style={styles.searchContainer}>
         <HomePageSearchInput isHomePage={false} />
       </View>
-      <FlatList
-        data={libraryBooks}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => {
-          const volume = item?.volumeInfo;
-          let imageUrl = volume.imageLinks?.thumbnail;
-          // HTTP yerine HTTPS kullanmak zorundayım yoksa resimler yüklenmiyor (Güvenlik sorunundan dolayı)
-          if (imageUrl && imageUrl.startsWith("http:")) {
-            imageUrl = imageUrl.replace("http:", "https:");
-          }
-
-          return (
-            <View style={styles.card}>
-              <Image
-                source={
-                  imageUrl
-                    ? { uri: imageUrl }
-                    : require("@/assets/images/bookimage.png")
-                }
-                style={styles.bookImage}
-                resizeMode="cover"
-              />
-              <View style={styles.bookInfo}>
-                <Text style={styles.bookTitle} numberOfLines={1}>
-                  {volume.title}
-                </Text>
-                <Text style={styles.author} numberOfLines={1}>
-                  Author: {volume.authors?.join(", ") || "Unknown"}
-                </Text>
-                <Text style={styles.description} numberOfLines={1}>
-                  Publisher: {volume?.publisher || "No publisher available."}
-                </Text>
-                <Text style={styles.language} numberOfLines={1}>
-                  Language: {volume?.language.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No results found.</Text>
-          </View>
-        }
+      <BookSearchList
+        books={libraryBooks}
+        loadingMore={false}
+        addBook={() => {}}
+        handleLoadMore={() => {}}
+        isAddButtonShown={false}
       />
     </SafeAreaView>
   );

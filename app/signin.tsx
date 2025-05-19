@@ -12,7 +12,8 @@ import {
 import SignInButtonWithGoogle from "../components/SignInButtonWithGoogle";
 import { router } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { FIREBASE_AUTH } from "../FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 const SignInScreen = () => {
   const [email, setEmail] = useState("");
@@ -28,7 +29,15 @@ const SignInScreen = () => {
         email,
         password
       );
-      router.replace("/onboarding");
+      // Firestore'dan firstLaunchCompleted kontrolü
+      const user = response.user;
+      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
+        router.replace("/(tabs)/homefolder/home");
+      } else {
+        router.replace("/onboarding");
+      }
     } catch (error: any) {
       console.error(error);
       Alert.alert("Invalid email or password");

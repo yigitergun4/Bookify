@@ -11,8 +11,6 @@ import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 
-const favoriteGenres = ["Mystery", "Science Fiction", "Fantasy", "Non-Fiction"];
-
 const recommendedBooks = [
   {
     id: "1",
@@ -37,6 +35,7 @@ const recommendedBooks = [
 export default function MyProfileScreen() {
   const user = FIREBASE_AUTH.currentUser;
   const [userName, setUserName] = useState("");
+  const [userGenres, setUserGenres] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -48,6 +47,7 @@ export default function MyProfileScreen() {
           const fullName = data.name || "";
           const firstName = fullName.split(" ")[0];
           setUserName(firstName);
+          setUserGenres(data.favoriteGenres || []);
         }
       }
     };
@@ -66,21 +66,13 @@ export default function MyProfileScreen() {
           </View>
           <Text style={styles.sectionTitle}>Favorite Genres</Text>
           <View style={styles.genresContainer}>
-            {favoriteGenres.map((genre) => (
+            {userGenres.map((genre) => (
               <View key={genre} style={styles.genreBadge}>
                 <Text style={styles.genreText}>{genre}</Text>
               </View>
             ))}
           </View>
-          <Text style={styles.sectionTitle}>Reading Activity</Text>
-          <View style={styles.activityBox}>
-            <Text style={styles.activityText}>
-              Current Book: "The AI Revolution"
-            </Text>
-            <Text style={styles.progressText}>
-              You have read 60% of this book
-            </Text>
-          </View>
+          {/* Buraya yeni feature eklenecek */}
           <Text style={styles.sectionTitle}>AI Recommended Books</Text>
           <View>
             {recommendedBooks.map((book) => (
@@ -110,7 +102,6 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 26,
     fontWeight: "500",
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -121,6 +112,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+    marginBottom: 16,
   },
   genreBadge: {
     backgroundColor: "#f4f8b2",

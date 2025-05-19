@@ -136,5 +136,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#333",
   },
-  listView: {},
 });

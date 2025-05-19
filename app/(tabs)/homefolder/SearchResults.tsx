@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,31 +9,32 @@ import {
   Image,
 } from "react-native";
 
-const mockBooks = [
-  {
-    id: "1",
-    title: "Hands-On Machine Learning",
-    author: "Aurélien Géron",
-    description:
-      "Practical guide to learning machine learning using Scikit-Learn and TensorFlow.",
-    image: require("@/assets/images/bookimage.png"),
-  },
-  {
-    id: "2",
-    title: "Deep Learning with Python",
-    author: "Francois Chollet",
-    description:
-      "An introduction to deep learning using Python and the powerful Keras library.",
-    image: require("@/assets/images/bookimage2.png"),
-  },
-];
-
 export default function SearchResultsScreen() {
   const { query } = useLocalSearchParams<{ query: string }>();
-  const filteredBooks = mockBooks.filter((book) =>
-    book.title.toLowerCase().includes((query || "").toLowerCase())
-  );
+  const [books, setBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchBooks = async () => {
+      if (!query) return;
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+            query
+          )}`
+        );
+        const data = await response.json();
+        const items = data.items || [];
+        setBooks(items);
+      } catch (err) {
+        console.error("Google Books API error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBooks();
+  }, [query]);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -40,21 +42,40 @@ export default function SearchResultsScreen() {
         <Text style={styles.subtitle}>Results for “{query}”</Text>
       </View>
       <FlatList
-        data={filteredBooks}
+        data={books}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={item.image} style={styles.bookImage} />
-            <View style={styles.bookInfo}>
-              <Text style={styles.bookTitle}>{item.title}</Text>
-              <Text style={styles.author}>by {item.author}</Text>
-              <Text style={styles.description} numberOfLines={3}>
-                {item.description}
-              </Text>
+        renderItem={({ item }) => {
+          const volume = item.volumeInfo;
+          let imageUrl = volume.imageLinks?.thumbnail;
+          // HTTP yerine HTTPS kullanmak zorundayım yoksa resimler yüklenmiyor (Güvenlik sorunundan dolayı)
+          if (imageUrl && imageUrl.startsWith("http:")) {
+            imageUrl = imageUrl.replace("http:", "https:");
+          }
+
+          return (
+            <View style={styles.card}>
+              <Image
+                source={
+                  imageUrl
+                    ? { uri: imageUrl }
+                    : require("@/assets/images/bookimage.png")
+                }
+                style={styles.bookImage}
+                resizeMode="cover"
+              />
+              <View style={styles.bookInfo}>
+                <Text style={styles.bookTitle}>{volume.title}</Text>
+                <Text style={styles.author}>
+                  by {volume.authors?.join(", ") || "Unknown"}
+                </Text>
+                <Text style={styles.description} numberOfLines={3}>
+                  {volume.description || "No description available."}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No results found.</Text>
@@ -110,6 +131,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 8,
     marginRight: 14,
+    backgroundColor: "#eee",
   },
   bookInfo: {
     flex: 1,

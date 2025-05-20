@@ -74,7 +74,7 @@ export default function LibraryScreen() {
             {userName ? `${userName}'s Library` : "Your Library"}
           </Text>
         </View>
-        <Text style={styles.bookCount}>{filteredBooks.length} books</Text>
+        <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
       </View>
       <View style={styles.searchContainer}>
         <HomePageSearchInput

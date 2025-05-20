@@ -6,15 +6,21 @@ import {
   StyleSheet,
   ViewStyle,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 
 interface GoogleButtonProps {
-  onPress: () => void;
   style?: ViewStyle;
 }
 
-const GoogleButton: React.FC<GoogleButtonProps> = ({ onPress, style }) => {
+WebBrowser.maybeCompleteAuthSession();
+
+const GoogleButton: React.FC<GoogleButtonProps> = ({ style }) => {
+
   return (
-    <TouchableOpacity style={[styles.button, style]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.button, style]}
+      onPress={() => {}}
+    >
       <Image
         source={require("@/assets/images/google.png")}
         style={styles.icon}

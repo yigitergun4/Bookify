@@ -5,67 +5,166 @@ import {
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
-  TouchableWithoutFeedback
-} from 'react-native';
-import { Text, View } from '@/components/Themed';
+  TouchableWithoutFeedback,
+  ActivityIndicator,
+} from "react-native";
+import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import ScrollView = Animated.ScrollView;
 import BookCard from "@/components/SearchPageBooksCard";
 import CameraButton from "@/components/CameraButton";
-import {router} from "expo-router";
+import { router } from "expo-router";
+import { useState } from "react";
 
+const PAGE_SIZE = 10;
 
 export default function TabTwoScreen() {
+  const [books, setBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [startIndex, setStartIndex] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchBooks = async (query: string, append = false) => {
+    if (!query) return;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}&startIndex=${append ? startIndex : 0}&maxResults=${PAGE_SIZE}`
+      );
+      const data = await response.json();
+      const items = data.items || [];
+      setTotalItems(data.totalItems || 0);
+      if (append) {
+        setBooks((prev) => [...prev, ...items]);
+      } else {
+        setBooks(items);
+      }
+    } catch (err) {
+      console.error("Google Books API error:", err);
+    } finally {
+      if (append) setLoadingMore(false);
+      else setLoading(false);
+    }
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  const handleSubmit = () => {
+    if (searchQuery.trim()) {
+      setStartIndex(0);
+      fetchBooks(searchQuery, false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (books.length < totalItems) {
+      setStartIndex((prev) => prev + PAGE_SIZE);
+      fetchBooks(searchQuery, true);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container2}>
           <View style={styles.discoverView}>
-            <Text style={styles.discoverText}>
-              Discover
-            </Text>
+            <Text style={styles.discoverText}>Discover</Text>
             <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
-              <Image source={require("@/assets/images/bookimage.png")} style={styles.myProfileImage} />
+              <Image
+                source={require("@/assets/images/bookimage.png")}
+                style={styles.myProfileImage}
+              />
             </TouchableOpacity>
           </View>
           <View style={styles.searchBarView}>
             <TouchableOpacity onPress={() => router.push("/(tabs)/reading")}>
-              <Image source={require("@/assets/images/searchpagebookicon.png")} style={styles.searchInputBookIcon}/>
+              <Image
+                source={require("@/assets/images/searchpagebookicon.png")}
+                style={styles.searchInputBookIcon}
+              />
             </TouchableOpacity>
             <View style={styles.searchbarInputView}>
-              <HomePageSearchInput isHomePage={false} />
+              <HomePageSearchInput
+                isHomePage={false}
+                onSearchChange={handleSearch}
+                onSubmit={handleSubmit}
+                isSubmitButtonShown={true}
+              />
             </View>
             <TouchableOpacity onPress={() => {}}>
-              <CameraButton/>
+              <CameraButton />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: 190 }} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 190 }}
+            showsVerticalScrollIndicator={false}
+            onScroll={({ nativeEvent }) => {
+              const { layoutMeasurement, contentOffset, contentSize } =
+                nativeEvent;
+              const paddingToBottom = 20;
+              if (
+                layoutMeasurement.height + contentOffset.y >=
+                contentSize.height - paddingToBottom
+              ) {
+                handleLoadMore();
+              }
+            }}
+            scrollEventThrottle={400}
+          >
             <View style={styles.booksCardContainer}>
-              <BookCard
-                  title="Fantasy Adventure"
-                  description="Immerse yourself in the world of books and adventure through the pages of fantasy and"
-                  author="JACKY CHAN TRAMISU JHONSON"
-                  image={require('@/assets/images/bookimage.png')}
-                  isFavorite={true}
-                  onPressFavorite={() => {}}
-              />
-              <BookCard
-                  title="Sci-Fi Saga"
-                  description="Explore the futuristic world of science fiction with thrilling plot twists and technological marvels with thrilling plot twists and technological marvels."
-                  author="JACKY CHAN TRAMISU JHONSON"
-                  image={require('@/assets/images/bookimage3.png')}
-                  isFavorite={true}
-                  onPressFavorite={() => {}}
-              />
-              <BookCard
-                  title="Fantasy Adventure"
-                  description="Immerse yourself in the world of books and adventure through the pages of fantasy and"
-                  author="JACKY CHAN TRAMISU JHONSON"
-                  image={require('@/assets/images/bookimage2.png')}
-                  isFavorite={true}
-                  onPressFavorite={() => {}}
-              />
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#000" />
+                </View>
+              ) : books.length > 0 ? (
+                books.map((book, index) => {
+                  const volume = book.volumeInfo;
+                  let imageUrl = volume.imageLinks?.thumbnail;
+                  if (imageUrl && imageUrl.startsWith("http:")) {
+                    imageUrl = imageUrl.replace("http:", "https:");
+                  }
+                  return (
+                    <BookCard
+                      key={`${book.id}-${index}`}
+                      title={book.volumeInfo.title}
+                      description={
+                        book.volumeInfo.description ||
+                        "No description available"
+                      }
+                      author={book.volumeInfo.authors?.[0] || "Unknown Author"}
+                      image={
+                        book.volumeInfo.imageLinks?.thumbnail
+                          ? {
+                              uri: book.volumeInfo.imageLinks.thumbnail.replace(
+                                "http://",
+                                "https://"
+                              ),
+                            }
+                          : require("@/assets/images/not-avaliable-book-photo.png")
+                      }
+                      bookData={book}
+                    />
+                  );
+                })
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>
+                    Search for books to discover
+                  </Text>
+                </View>
+              )}
+              {loadingMore && (
+                <View style={styles.loadingMoreContainer}>
+                  <ActivityIndicator size="small" color="#000" />
+                </View>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -77,50 +176,71 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
   },
   container2: {
-    paddingHorizontal:25,
-    backgroundColor: '#FFF',
+    paddingHorizontal: 25,
+    backgroundColor: "#FFF",
   },
   discoverView: {
-    marginTop:25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFF',
+    marginTop: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFF",
   },
-  discoverText:{
-    color: '#030303',
+  discoverText: {
+    color: "#030303",
     fontSize: 46,
-    fontFamily: 'Poppins',
+    fontFamily: "Poppins",
     fontWeight: 700,
     lineHeight: 54,
   },
   myProfileImage: {
-    height:40,
-    width:40,
-    borderRadius:40,
+    height: 40,
+    width: 40,
+    borderRadius: 40,
   },
-  searchBarView:{
-    marginTop:30,
-    paddingBottom:15,
-    alignItems: 'center',
-    justifyContent:"space-between",
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
+  searchBarView: {
+    marginTop: 30,
+    paddingBottom: 15,
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexDirection: "row",
+    backgroundColor: "#FFF",
   },
-  searchbarInputView:{
-    width:"85%",
-    backgroundColor:'#fff',
-    paddingLeft:13
+  searchbarInputView: {
+    width: "85%",
+    backgroundColor: "#fff",
+    paddingLeft: 13,
   },
   searchInputBookIcon: {
-    height:20,
-    width:20,
+    height: 20,
+    width: 20,
   },
   booksCardContainer: {
-    gap:15,
-    backgroundColor: '#FFF',
-  }
+    gap: 15,
+    backgroundColor: "#FFF",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadingMoreContainer: {
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+  },
 });

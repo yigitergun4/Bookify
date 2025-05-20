@@ -112,7 +112,7 @@ const SignUpScreen = () => {
             <Text style={styles.orText}>or</Text>
             <View style={styles.line} />
           </View>
-          <SignInButtonWithGoogleButton onPress={() => {}} />
+          <SignInButtonWithGoogleButton />
         </View>
       </ScrollView>
     </SafeAreaView>

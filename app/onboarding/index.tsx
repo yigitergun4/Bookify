@@ -49,6 +49,14 @@ export default function OnboardingFlow() {
   const [book3, setBook3] = useState("");
   const user = FIREBASE_AUTH.currentUser;
 
+  function toTitleCase(str: string) {
+    return str
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
   // Step 1: Name
   const renderNameScreen = () => (
     <View style={styles.centered}>
@@ -198,14 +206,15 @@ export default function OnboardingFlow() {
     await setDoc(
       userRef,
       {
-        name,
+        name: toTitleCase(name),
         favoriteGenres: selectedGenres,
         goal,
-        favoriteBooks: [book1, book2, book3],
+        favoriteBooks: [book1, book2, book3].map(toTitleCase),
         firstLaunchCompleted: true,
       },
       { merge: true }
     );
+
     router.replace("/(tabs)/homefolder/home");
   }
 

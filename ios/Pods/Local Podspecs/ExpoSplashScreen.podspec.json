@@ -1,6 +1,6 @@
 {
   "name": "ExpoSplashScreen",
-  "version": "0.29.22",
+  "version": "0.29.24",
   "summary": "Provides a module to allow keeping the native Splash Screen visible until you choose to hide it.",
   "description": "Provides a module to allow keeping the native Splash Screen visible until you choose to hide it.",
   "license": "MIT",

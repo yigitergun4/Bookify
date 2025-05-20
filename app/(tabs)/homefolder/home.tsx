@@ -1,12 +1,8 @@
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Text } from "@/components/Themed";

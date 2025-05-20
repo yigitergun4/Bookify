@@ -1,40 +1,21 @@
 import { useState, useEffect } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-} from "react-native";
+import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-
-const mockBooks = [
-  {
-    id: "1",
-    title: "Hands-On Machine Learning",
-    author: "Aurélien Géron",
-    description:
-      "Practical guide to learning machine learning using Scikit-Learn and TensorFlow.",
-    image: require("@/assets/images/bookimage.png"), // Örnek görsel
-  },
-  {
-    id: "2",
-    title: "Deep Learning with Python",
-    author: "Francois Chollet",
-    description:
-      "An introduction to deep learning using Python and the powerful Keras library.",
-    image: require("@/assets/images/bookimage2.png"),
-  },
-];
+import { useLibrary } from "@/contexts/LibraryContext";
+import BookSearchList from "@/components/BookSearchList";
 
 export default function LibraryScreen() {
-  const [search, setSearch] = useState("");
   const [userName, setUserName] = useState("");
+  const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const user = FIREBASE_AUTH.currentUser;
+  const { libraryBooks, removeBook } = useLibrary();
+
+  useEffect(() => {
+    setFilteredBooks(libraryBooks);
+  }, [libraryBooks]);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -52,33 +33,63 @@ export default function LibraryScreen() {
     fetchUserName();
   }, [user]);
 
-  const filteredBooks = mockBooks.filter((book) =>
-    book.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSearchChange = (text: string) => {
+    if (text.trim() === "") {
+      setFilteredBooks(libraryBooks);
+    } else {
+      const filtered = libraryBooks.filter((book: any) => {
+        const title = book.volumeInfo.title.toLowerCase();
+        const authors = book.volumeInfo.authors?.join(" ").toLowerCase() || "";
+        const searchText = text.toLowerCase();
+        return title.includes(searchText) || authors.includes(searchText);
+      });
+      setFilteredBooks(filtered);
+    }
+  };
+
+  const handleLongPressBook = (book: any) => {
+    Alert.alert(
+      "Remove Book",
+      "Do you want to remove this book from your library?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: () => {
+            removeBook(book.id);
+            Alert.alert("Success", "Book removed from your library!");
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <Text style={styles.title}>
-        {userName ? `${userName}'s Library` : "Your Library"}
-      </Text>
-      <View style={styles.searchContainer}>
-        <HomePageSearchInput isHomePage={false} />
+      <View style={styles.headerContainer}>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>
+            {userName ? `${userName}'s Library` : "Your Library"}
+          </Text>
+        </View>
+        <Text style={styles.bookCount}>{filteredBooks.length} books</Text>
       </View>
-      <FlatList
-        data={filteredBooks}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={item.image} style={styles.image} />
-            <View style={styles.cardContent}>
-              <Text style={styles.bookTitle}>{item.title}</Text>
-              <Text style={styles.author}>by {item.author}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-            </View>
-          </View>
-        )}
+      <View style={styles.searchContainer}>
+        <HomePageSearchInput
+          isHomePage={false}
+          onSearchChange={handleSearchChange}
+          isSubmitButtonShown={false}
+        />
+      </View>
+      <BookSearchList
+        books={filteredBooks}
+        loadingMore={false}
+        addBook={() => {}}
+        handleLoadMore={() => {}}
+        isAddButtonShown={false}
+        onLongPressBook={handleLongPressBook}
       />
     </SafeAreaView>
   );
@@ -112,6 +123,17 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  bookImage: {
+    width: 70,
+    height: 100,
+    borderRadius: 8,
+    marginRight: 14,
+    backgroundColor: "#eee",
+  },
+  bookInfo: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
   image: {
     width: 70,
     height: 90,
@@ -136,5 +158,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#333",
   },
-  listView: {},
+  language: {
+    fontSize: 13,
+    color: "#444",
+    lineHeight: 18,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    marginTop: 80,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginVertical: 20,
+    backgroundColor: "#fff",
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  bookCount: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    position: "absolute",
+    right: 16,
+  },
 });

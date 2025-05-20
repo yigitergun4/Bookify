@@ -7,13 +7,16 @@
 
 import ExpoModulesCore
 import Expo
+import EXApplication
 import ExpoAsset
 import EXConstants
+import ExpoCrypto
 import ExpoFileSystem
 import ExpoFont
 import ExpoImagePicker
 import ExpoKeepAwake
 import ExpoLinking
+import ExpoRandom
 import ExpoHead
 import ExpoSplashScreen
 import ExpoSystemUI
@@ -24,14 +27,17 @@ public class ExpoModulesProvider: ModulesProvider {
   public override func getModuleClasses() -> [AnyModule.Type] {
     return [
       ExpoFetchModule.self,
+      ApplicationModule.self,
       AssetModule.self,
       ConstantsModule.self,
+      CryptoModule.self,
       FileSystemModule.self,
       FileSystemNextModule.self,
       FontLoaderModule.self,
       ImagePickerModule.self,
       KeepAwakeModule.self,
       ExpoLinkingModule.self,
+      RandomModule.self,
       ExpoHeadModule.self,
       SplashScreenModule.self,
       ExpoSystemUIModule.self,

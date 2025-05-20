@@ -57,6 +57,7 @@
 #import "RCTSurfacePresenterBridgeAdapter.h"
 #import "RCTSurfaceRegistry.h"
 #import "RCTSurfaceTouchHandler.h"
+#import "RCTThirdPartyFabricComponentsProvider.h"
 #import "RCTTouchableComponentViewProtocol.h"
 #import "RCTFabricSurface.h"
 #import "PlatformRunLoopObserver.h"

@@ -12,12 +12,14 @@ interface HomePageSearchInputProps {
   isHomePage: boolean;
   onSearchChange?: (text: string) => void;
   isSubmitButtonShown?: boolean;
+  onSubmit?: () => void;
 }
 
 const SearchInput = ({
   isHomePage,
   onSearchChange,
   isSubmitButtonShown = true,
+  onSubmit,
 }: HomePageSearchInputProps) => {
   const [search, setSearch] = useState("");
 
@@ -28,6 +30,8 @@ const SearchInput = ({
           pathname: "/(tabs)/homefolder/SearchResults",
           params: { query: search },
         });
+      } else if (onSubmit) {
+        onSubmit();
       }
     }
   };

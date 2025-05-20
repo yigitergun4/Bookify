@@ -31,8 +31,15 @@ const SignUpScreen = () => {
       );
       Alert.alert("You have successfully created an account");
     } catch (error: any) {
-      console.error(error);
-      Alert.alert("You already have an account");
+      if (error.code === "auth/email-already-in-use") {
+        Alert.alert("You already have an account");
+      } else if (error.code === "auth/invalid-email") {
+        Alert.alert("Invalid email");
+      } else if (error.code === "auth/weak-password") {
+        Alert.alert("Password is too weak");
+      } else {
+        Alert.alert("An error occurred");
+      }
     } finally {
       setLoading(false);
     }

@@ -17,7 +17,7 @@ export default function LogoHeader({
   const handleLogout = async () => {
     try {
       await signOut();
-      router.replace("/signup");
+      router.replace("/signin");
     } catch (error) {
       console.error("Logout error:", error);
     }

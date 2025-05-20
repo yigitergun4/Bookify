@@ -9,7 +9,6 @@ import {
   Animated,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useLibrary } from "@/contexts/LibraryContext";
 import ScrollView = Animated.ScrollView;
 

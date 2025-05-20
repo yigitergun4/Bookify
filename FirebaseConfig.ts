@@ -24,3 +24,4 @@ export const FIREBASE_APP = app;
 export const FIREBASE_AUTH = getAuth(app);
 export const FIREBASE_ANALYTICS = getAnalytics(app);
 export const FIREBASE_DB = getFirestore(app);
+

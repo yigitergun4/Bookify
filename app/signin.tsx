@@ -39,8 +39,26 @@ const SignInScreen = () => {
         router.replace("/onboarding");
       }
     } catch (error: any) {
-      console.error(error);
-      Alert.alert("Invalid email or password");
+      switch (error.code) {
+        case "auth/user-not-found":
+          Alert.alert("No account found with this email");
+          break;
+        case "auth/wrong-password":
+          Alert.alert("Incorrect password");
+          break;
+        case "auth/invalid-email":
+          Alert.alert("Invalid email format");
+          break;
+        case "auth/too-many-requests":
+          Alert.alert("Too many failed attempts. Please try again later");
+          break;
+        case "auth/invalid-credential":
+          Alert.alert("Invalid email or password");
+          break;
+        default:
+          Alert.alert("An error occurred. Please try again");
+          break;
+      }
     } finally {
       setLoading(false);
     }
@@ -103,7 +121,7 @@ const SignInScreen = () => {
               <Text style={styles.linkBold}>Create one</Text>
             </TouchableOpacity>
           </View>
-          <SignInButtonWithGoogle onPress={() => {}} />
+          <SignInButtonWithGoogle />
         </View>
       </View>
     </SafeAreaView>

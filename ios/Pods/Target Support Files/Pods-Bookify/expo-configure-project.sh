@@ -45,7 +45,7 @@ with_node \
   --no-warnings \
   --eval "require(require.resolve('expo-modules-autolinking', { paths: [require.resolve('expo/package.json')] }))(process.argv.slice(1))" \
   generate-modules-provider  \
-  --target "/Users/yigitergun/Desktop/Bookify/ios/Pods/Target Support Files/Pods-Bookify/ExpoModulesProvider.swift" \
-  --entitlement "/Users/yigitergun/Desktop/Bookify/ios/Bookify/Bookify.entitlements" \
+  --target "/Users/yigitergun/Bookify/ios/Pods/Target Support Files/Pods-Bookify/ExpoModulesProvider.swift" \
+  --entitlement "/Users/yigitergun/Bookify/ios/Bookify/Bookify.entitlements" \
   --platform "apple" \
-  --packages "expo" "expo-asset" "expo-constants" "expo-file-system" "expo-font" "expo-image-picker" "expo-keep-awake" "expo-linking" "expo-router" "expo-splash-screen" "expo-system-ui" "expo-web-browser"
+  --packages "expo" "expo-application" "expo-asset" "expo-constants" "expo-crypto" "expo-file-system" "expo-font" "expo-image-picker" "expo-keep-awake" "expo-linking" "expo-random" "expo-router" "expo-splash-screen" "expo-system-ui" "expo-web-browser"

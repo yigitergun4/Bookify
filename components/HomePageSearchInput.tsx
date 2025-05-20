@@ -10,18 +10,35 @@ import { router } from "expo-router";
 
 interface HomePageSearchInputProps {
   isHomePage: boolean;
+  onSearchChange?: (text: string) => void;
+  isSubmitButtonShown?: boolean;
 }
 
-const SearchInput = ({ isHomePage }: HomePageSearchInputProps) => {
+const SearchInput = ({
+  isHomePage,
+  onSearchChange,
+  isSubmitButtonShown = true,
+}: HomePageSearchInputProps) => {
   const [search, setSearch] = useState("");
+
   const handleSearch = () => {
     if (search.trim()) {
-      router.push({
-        pathname: "/(tabs)/homefolder/SearchResults",
-        params: { query: search },
-      });
+      if (isHomePage) {
+        router.push({
+          pathname: "/(tabs)/homefolder/SearchResults",
+          params: { query: search },
+        });
+      }
     }
   };
+
+  const handleTextChange = (text: string) => {
+    setSearch(text);
+    if (onSearchChange) {
+      onSearchChange(text);
+    }
+  };
+
   return (
     <View style={styles.inputWrapper}>
       <TextInput
@@ -29,16 +46,18 @@ const SearchInput = ({ isHomePage }: HomePageSearchInputProps) => {
         style={styles.input}
         placeholderTextColor="#18181a"
         value={search}
-        onChangeText={setSearch}
+        onChangeText={handleTextChange}
         onSubmitEditing={handleSearch}
         returnKeyType="search"
       />
-      <TouchableOpacity onPress={handleSearch}>
-        <Image
-          source={require("@/assets/images/homepagesearchicon.png")}
-          style={styles.icon}
-        />
-      </TouchableOpacity>
+      {isSubmitButtonShown && (
+        <TouchableOpacity onPress={handleSearch}>
+          <Image
+            source={require("@/assets/images/homepagesearchicon.png")}
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

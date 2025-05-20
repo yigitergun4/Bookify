@@ -9,8 +9,14 @@ import BookSearchList from "@/components/BookSearchList";
 
 export default function LibraryScreen() {
   const [userName, setUserName] = useState("");
+  const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const user = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook } = useLibrary();
+
+  useEffect(() => {
+    setFilteredBooks(libraryBooks);
+  }, [libraryBooks]);
+
   useEffect(() => {
     const fetchUserName = async () => {
       if (user) {
@@ -26,6 +32,20 @@ export default function LibraryScreen() {
     };
     fetchUserName();
   }, [user]);
+
+  const handleSearchChange = (text: string) => {
+    if (text.trim() === "") {
+      setFilteredBooks(libraryBooks);
+    } else {
+      const filtered = libraryBooks.filter((book: any) => {
+        const title = book.volumeInfo.title.toLowerCase();
+        const authors = book.volumeInfo.authors?.join(" ").toLowerCase() || "";
+        const searchText = text.toLowerCase();
+        return title.includes(searchText) || authors.includes(searchText);
+      });
+      setFilteredBooks(filtered);
+    }
+  };
 
   const handleLongPressBook = (book: any) => {
     Alert.alert(
@@ -48,14 +68,23 @@ export default function LibraryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <Text style={styles.title}>
-        {userName ? `${userName}'s Library` : "Your Library"}
-      </Text>
+      <View style={styles.headerContainer}>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>
+            {userName ? `${userName}'s Library` : "Your Library"}
+          </Text>
+        </View>
+        <Text style={styles.bookCount}>{filteredBooks.length} books</Text>
+      </View>
       <View style={styles.searchContainer}>
-        <HomePageSearchInput isHomePage={false} />
+        <HomePageSearchInput
+          isHomePage={false}
+          onSearchChange={handleSearchChange}
+          isSubmitButtonShown={false}
+        />
       </View>
       <BookSearchList
-        books={libraryBooks}
+        books={filteredBooks}
         loadingMore={false}
         addBook={() => {}}
         handleLoadMore={() => {}}
@@ -142,5 +171,29 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#999",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginVertical: 20,
+    backgroundColor: "#fff",
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  bookCount: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    position: "absolute",
+    right: 16,
   },
 });

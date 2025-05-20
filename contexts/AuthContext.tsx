@@ -2,8 +2,7 @@ import React from "react";
 import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { FirebaseError } from "firebase/app";
 import firestore from "@react-native-firebase/firestore";
-import { RelativePathString, useRouter } from "expo-router";
-import { appConfig } from "@/config/app.config";
+import { useRouter } from "expo-router";
 
 type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>;
@@ -41,7 +40,6 @@ export function SessionProvider(props: React.PropsWithChildren) {
   const [user, setUser] = React.useState<FirebaseAuthTypes.User | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const router = useRouter();
-  const [authFlag, setAuthFlag] = React.useState(false);
 
   const authFlagRef = React.useRef(false);
 
@@ -83,7 +81,11 @@ export function SessionProvider(props: React.PropsWithChildren) {
       const response = await auth().signInWithEmailAndPassword(email, password);
       router.replace("//signup"); // Login sonrası loading screen'e yönlendir
     } catch (error: any) {
-      setError(error.message);
+      if (error.code === "auth/invalid-credential") {
+        setError("Invalid email or password");
+      } else {
+        setError(error.message);
+      }
     } finally {
       setIsLoading(false);
     }

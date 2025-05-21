@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/appicon.png",
+      "image": "./assets/images/book.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

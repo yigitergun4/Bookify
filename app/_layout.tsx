@@ -53,19 +53,19 @@ function RootLayoutNav() {
   return (
     <LibraryProvider>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen
-          name="signup"
-          options={{ headerShown: false, gestureEnabled: false }}
-        />
-        <Stack.Screen
-          name="signin"
-          options={{ headerShown: false, gestureEnabled: false }}
-        />
-        <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    </ThemeProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+          initialRouteName="signup"
+        >
+          <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="signin" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="onboarding/index" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="[...missing]" redirect={true} />
+        </Stack>
+      </ThemeProvider>
     </LibraryProvider>
   );
 }

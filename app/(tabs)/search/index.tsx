@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
@@ -16,8 +17,6 @@ import CameraButton from "@/components/CameraButton";
 import { router } from "expo-router";
 import { useState } from "react";
 
-const PAGE_SIZE = 10;
-
 export default function TabTwoScreen() {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +24,7 @@ export default function TabTwoScreen() {
   const [startIndex, setStartIndex] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const PAGE_SIZE = 10;
 
   const fetchBooks = async (query: string, append = false) => {
     if (!query) return;
@@ -45,7 +45,7 @@ export default function TabTwoScreen() {
         setBooks(items);
       }
     } catch (err) {
-      console.error("Google Books API error:", err);
+      Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);
       else setLoading(false);

@@ -1,97 +1,79 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import {
-  collection,
   doc,
-  setDoc,
   getDoc,
+  setDoc,
   arrayUnion,
   arrayRemove,
-  updateDoc,
 } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 const LibraryContext = createContext<any>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [libraryBooks, setLibraryBooks] = useState<any[]>([]);
-  const user = FIREBASE_AUTH.currentUser;
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Listen for auth state changes
   useEffect(() => {
-    const loadLibraryBooks = async () => {
-      if (user) {
-        try {
-          const userRef = doc(FIREBASE_DB, "Users", user.uid);
-          const userDoc = await getDoc(userRef);
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setLibraryBooks(data.libraryBooks || []);
-          }
-        } catch (error) {
-          console.error("Error loading library books:", error);
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
+      setCurrentUser(user);
+      // Clear books when user changes
+      setLibraryBooks([]);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load books when currentUser changes
+  useEffect(() => {
+    const loadBooks = async () => {
+      if (currentUser) {
+        const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setLibraryBooks(data.libraryBooks || []);
         }
       }
     };
-
-    loadLibraryBooks();
-  }, [user]);
+    loadBooks();
+  }, [currentUser]);
 
   const addBook = async (book: any) => {
-    if (!user) {
-      console.log("No user logged in");
-      return;
-    }
+    if (!currentUser) return;
 
-    try {
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+    setLibraryBooks((prev) => [book, ...prev]);
 
-      // Önce mevcut kitapları al
-      const userDoc = await getDoc(userRef);
-      const currentBooks = userDoc.exists()
-        ? userDoc.data().libraryBooks || []
-        : [];
-
-      // Kitap zaten var mı kontrol et
-      const bookExists = currentBooks.some((b: any) => b.id === book.id);
-      if (bookExists) {
-        console.log("Book already exists in library");
-        return;
-      }
-
-      // Yeni kitabı ekle
-      const updatedBooks = [...currentBooks, book];
-
-      // Firebase'i güncelle
-      await updateDoc(userRef, {
-        libraryBooks: updatedBooks,
-      });
-
-      // Local state'i güncelle
-      setLibraryBooks(updatedBooks);
-    } catch (error) {
-      throw error; // Hata durumunu üst katmana ilet
-    }
+    // Save to Firebase
+    const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+    await setDoc(
+      userRef,
+      {
+        libraryBooks: arrayUnion(book),
+      },
+      { merge: true }
+    );
   };
 
   const removeBook = async (bookId: string) => {
-    if (!user) return;
+    if (!currentUser) return;
 
-    try {
-      const bookToRemove = libraryBooks.find((book) => book.id === bookId);
-      if (!bookToRemove) return;
+    const bookToRemove = libraryBooks.find((book) => book.id === bookId);
+    if (!bookToRemove) return;
 
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      await setDoc(
-        userRef,
-        {
-          libraryBooks: arrayRemove(bookToRemove),
-        },
-        { merge: true }
-      );
+    setLibraryBooks((prev) => prev.filter((b) => b.id !== bookId));
 
-      setLibraryBooks((prev) => prev.filter((b) => b.id !== bookId));
-    } catch (error) {
-      console.error("Error removing book from library:", error);
-    }
+    // Remove from Firebase
+    const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+    await setDoc(
+      userRef,
+      {
+        libraryBooks: arrayRemove(bookToRemove),
+      },
+      { merge: true }
+    );
   };
 
   return (

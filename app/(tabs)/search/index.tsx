@@ -156,7 +156,7 @@ export default function TabTwoScreen() {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>
-                    Search for books to discover
+                    Search to discover books.
                   </Text>
                 </View>
               )}

@@ -7,6 +7,7 @@ import {
   getDoc,
   arrayUnion,
   arrayRemove,
+  updateDoc,
 } from "firebase/firestore";
 
 const LibraryContext = createContext<any>(null);
@@ -35,21 +36,39 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const addBook = async (book: any) => {
-    if (!user) return;
+    if (!user) {
+      console.log("No user logged in");
+      return;
+    }
 
     try {
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      await setDoc(
-        userRef,
-        {
-          libraryBooks: arrayUnion(book),
-        },
-        { merge: true }
-      );
 
-      setLibraryBooks((prev) => [book, ...prev]);
+      // Önce mevcut kitapları al
+      const userDoc = await getDoc(userRef);
+      const currentBooks = userDoc.exists()
+        ? userDoc.data().libraryBooks || []
+        : [];
+
+      // Kitap zaten var mı kontrol et
+      const bookExists = currentBooks.some((b: any) => b.id === book.id);
+      if (bookExists) {
+        console.log("Book already exists in library");
+        return;
+      }
+
+      // Yeni kitabı ekle
+      const updatedBooks = [...currentBooks, book];
+
+      // Firebase'i güncelle
+      await updateDoc(userRef, {
+        libraryBooks: updatedBooks,
+      });
+
+      // Local state'i güncelle
+      setLibraryBooks(updatedBooks);
     } catch (error) {
-      console.error("Error adding book to library:", error);
+      throw error; // Hata durumunu üst katmana ilet
     }
   };
 

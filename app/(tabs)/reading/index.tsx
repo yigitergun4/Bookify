@@ -3,51 +3,75 @@ import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
-import { useLibrary } from "@/contexts/LibraryContext";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import BookSearchList from "@/components/BookSearchList";
+import { useLibrary } from "@/contexts/LibraryContext";
 
 export default function LibraryScreen() {
   const [userName, setUserName] = useState("");
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const user = FIREBASE_AUTH.currentUser;
-  const { libraryBooks, removeBook } = useLibrary();
+  const { libraryBooks } = useLibrary();
 
   useEffect(() => {
-    setFilteredBooks(libraryBooks);
-  }, [libraryBooks]);
-
-  useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserData = async () => {
       if (user) {
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          const fullName = data.name || "";
-          const firstName = fullName.split(" ")[0];
-          setUserName(firstName);
+        try {
+          // Fetch user data including books
+          const userRef = doc(FIREBASE_DB, "Users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const fullName = data.name || "";
+            const firstName = fullName.split(" ")[0];
+            setUserName(firstName);
+          }
+        } catch (error) {
+          Alert.alert("Error", "Failed to load your library");
+        } finally {
+          setLoading(false);
         }
+      } else {
+        Alert.alert("Error", "Failed to load your library");
       }
     };
-    fetchUserName();
+
+    fetchUserData();
   }, [user]);
 
+  // libraryBooks değiştiğinde filteredBooks'u güncelle
+  useEffect(() => {
+    // Kitapları ters sırada listele
+    setFilteredBooks([...libraryBooks].reverse());
+  }, [libraryBooks]);
+
   const handleSearchChange = (text: string) => {
-    if (text.trim() === "") {
-      setFilteredBooks(libraryBooks);
-    } else {
-      const filtered = libraryBooks.filter((book: any) => {
-        const title = book.volumeInfo.title.toLowerCase();
-        const authors = book.volumeInfo.authors?.join(" ").toLowerCase() || "";
-        const searchText = text.toLowerCase();
-        return title.includes(searchText) || authors.includes(searchText);
-      });
-      setFilteredBooks(filtered);
+    const searchText = text.toLowerCase().trim();
+
+    if (!searchText) {
+      setFilteredBooks([...libraryBooks].reverse());
+      return;
     }
+
+    const filtered = [...libraryBooks].reverse().filter((book: any) => {
+      if (!book || !book.volumeInfo) return false;
+
+      const title = String(book.volumeInfo.title || "").toLowerCase();
+      const authors = Array.isArray(book.volumeInfo.authors)
+        ? book.volumeInfo.authors
+            .map((a: any) => String(a).toLowerCase())
+            .join(" ")
+        : String(book.volumeInfo.authors || "").toLowerCase();
+
+      return title.includes(searchText) || authors.includes(searchText);
+    });
+
+    setFilteredBooks(filtered);
   };
 
-  const handleLongPressBook = (book: any) => {
+  const handleLongPressBook = async (book: any) => {
     Alert.alert(
       "Remove Book",
       "Do you want to remove this book from your library?",
@@ -56,9 +80,28 @@ export default function LibraryScreen() {
         {
           text: "Yes",
           style: "destructive",
-          onPress: () => {
-            removeBook(book.id);
-            Alert.alert("Success", "Book removed from your library!");
+          onPress: async () => {
+            try {
+              // Get current user data
+              const userRef = doc(FIREBASE_DB, "Users", user!.uid);
+              const userSnap = await getDoc(userRef);
+
+              if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const updatedBooks = userData.libraryBooks.filter(
+                  (b: any) => b.id !== book.id
+                );
+
+                // Update user document with new books array
+                await updateDoc(userRef, {
+                  libraryBooks: updatedBooks,
+                });
+
+                Alert.alert("Success", "Book removed from your library!");
+              }
+            } catch (error) {
+              Alert.alert("Error", "Failed to remove book from library");
+            }
           },
         },
       ]
@@ -74,7 +117,7 @@ export default function LibraryScreen() {
             {userName ? `${userName}'s Library` : "Your Library"}
           </Text>
         </View>
-        <Text style={styles.bookCount}>{filteredBooks.length} books</Text>
+        <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
       </View>
       <View style={styles.searchContainer}>
         <HomePageSearchInput
@@ -85,7 +128,7 @@ export default function LibraryScreen() {
       </View>
       <BookSearchList
         books={filteredBooks}
-        loadingMore={false}
+        loadingMore={loading}
         addBook={() => {}}
         handleLoadMore={() => {}}
         isAddButtonShown={false}

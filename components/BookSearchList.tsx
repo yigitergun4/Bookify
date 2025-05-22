@@ -49,7 +49,7 @@ const BookSearchList = ({
   return (
     <>
       <FlatList
-        data={books}
+        data={books.reverse()}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) =>
           item.id ? item.id + "-" + index : index.toString()

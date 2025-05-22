@@ -16,6 +16,10 @@ import { useRouter } from "expo-router";
 import { detectText } from "../services/visionService";
 import { searchBook } from "../services/booksService";
 import { getBase64FromUri } from "../utils/imageUtils";
+import { VisionError } from "../services/visionService";
+import { BooksError } from "../services/booksService";
+import { extractBookInfoWithGPT } from "../services/gptExtractor";
+import { GPTError } from "../services/gptExtractor";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const overlayWidth = screenWidth * 0.65;
@@ -54,21 +58,64 @@ export default function CameraButton() {
       });
 
       const base64Image = await getBase64FromUri(cropResult.uri);
-      const detectedText = await detectText(base64Image);
-      const bookData = await searchBook(detectedText);
+      const visionResult = await detectText(base64Image);
+      const detectedText = visionResult.textAnnotations?.[0]?.description || "";
+      if (!detectedText) {
+        throw new VisionError("No text detected in image.");
+      }
+
+      // Extract structured book info using GPT
+      const bookInfo = await extractBookInfoWithGPT(detectedText);
+      console.log("Extracted book info:", bookInfo);
+
+      // Search for the book using the extracted info
+      const bookData = await searchBook(bookInfo.title);
+      console.log("Found book data:", bookData);
+
+      // Kitap başlığı ve yazarlar için öncelik sırası: Books API > GPT > fallback
+      const title =
+        bookData.title && bookData.title !== "Unknown"
+          ? bookData.title
+          : bookInfo.title && bookInfo.title !== "Unknown"
+          ? bookInfo.title
+          : "Unknown Title";
+
+      const authors =
+        bookData.authors &&
+        bookData.authors.length > 0 &&
+        bookData.authors[0] !== "Unknown"
+          ? bookData.authors.join(", ")
+          : bookInfo.authors && bookInfo.authors[0] !== "Unknown"
+          ? bookInfo.authors.join(", ")
+          : "Unknown Author";
+
+      const description = bookData.description || "";
+      const imageUrl = bookData.imageLinks?.thumbnail || cropResult.uri;
 
       router.push({
         pathname: "/(tabs)/homefolder/photoeditpage" as any,
         params: {
-          title: bookData.title,
-          authors: bookData.authors?.join(", ") || "",
-          description: bookData.description || "",
-          imageUrl: bookData.imageLinks?.thumbnail || cropResult.uri,
+          title,
+          authors,
+          description,
+          imageUrl,
         },
       });
     } catch (error) {
-      console.error("Error processing image:", error);
-      Alert.alert("Error", "Failed to process image. Please try again.");
+      let errorMessage = "Failed to process image. Please try again.";
+
+      if (error instanceof VisionError) {
+        errorMessage =
+          "Failed to detect text in image. Please try again with a clearer image.";
+        console.log(error, "error");
+      } else if (error instanceof GPTError) {
+        errorMessage = "Failed to extract book information. Please try again.";
+        console.log(error, "error");
+      } else if (error instanceof BooksError) {
+        errorMessage = "Failed to find book information. Please try again.";
+      }
+
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
       setModalVisible(false);

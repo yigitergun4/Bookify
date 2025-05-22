@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Text,
   StyleSheet,
@@ -9,17 +8,37 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useState, useEffect } from "react";
 
 export default function EditBookScreen() {
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [description, setDescription] = useState("");
-  const { photo } = useLocalSearchParams();
-  const photoUri = typeof photo === "string" ? photo : null;
+  const {
+    title = "",
+    imageUrl = "",
+    authors = "",
+    description = "",
+  } = useLocalSearchParams();
+  const [bookTitle, setBookTitle] = useState(
+    Array.isArray(title) ? title[0] : title
+  );
+  const [author, setAuthor] = useState(
+    Array.isArray(authors) ? authors[0] : authors
+  );
+  const [desc, setDesc] = useState(
+    Array.isArray(description) ? description[0] : description
+  );
+  const photoUri = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
+
+  // Parametreler değişirse state'i güncelle
+  useEffect(() => {
+    setBookTitle(Array.isArray(title) ? title[0] : title);
+    setAuthor(Array.isArray(authors) ? authors[0] : authors);
+    setDesc(Array.isArray(description) ? description[0] : description);
+  }, [title, authors, description]);
+
+  console.log({ bookTitle, author, desc, photoUri }, "photoedit");
 
   const handleUpdate = () => {
     // Handle form submission logic here
-    console.log({ title, author, description });
   };
 
   return (
@@ -39,8 +58,8 @@ export default function EditBookScreen() {
         <TextInput
           placeholder="Book Title"
           style={styles.input}
-          value={title}
-          onChangeText={setTitle}
+          value={bookTitle}
+          onChangeText={setBookTitle}
           placeholderTextColor="gray"
         />
         <TextInput
@@ -53,8 +72,8 @@ export default function EditBookScreen() {
         <TextInput
           placeholder="Book Description"
           style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
+          value={desc}
+          onChangeText={setDesc}
           multiline
           numberOfLines={4}
           placeholderTextColor="gray"

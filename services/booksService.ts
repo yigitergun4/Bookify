@@ -1,6 +1,9 @@
 import axios from "axios";
+import { CacheService } from "./cacheService";
+import { withRetry, ApiError } from "../utils/apiUtils";
+import ENV from "../config/env";
 
-const BOOKS_API_KEY = "AIzaSyALRYFWbp8BkrD7ONPPH5TmJ4_oZEUR1yM";
+const cacheService = CacheService.getInstance();
 
 export interface BookData {
   title: string;
@@ -11,24 +14,55 @@ export interface BookData {
   };
 }
 
-export const searchBook = async (query: string): Promise<BookData> => {
-  try {
-    const response = await axios.get(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-        query
-      )}&key=${BOOKS_API_KEY}`
-    );
+export class BooksError extends ApiError {
+  constructor(message: string, statusCode?: number, originalError?: any) {
+    super(message, statusCode, originalError);
+    this.name = "BooksError";
+  }
+}
 
-    return (
-      response.data.items?.[0]?.volumeInfo || {
-        title: "",
-        authors: [],
-        description: "",
-        imageLinks: { thumbnail: "" },
+export const searchBook = async (query: string): Promise<BookData> => {
+  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+
+  try {
+    // Generate cache key from query
+    const cacheKey = `books_${query}`;
+
+    // Check cache first
+    const cachedResult = await cacheService.get<BookData>(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    // If not in cache, make API call with retry
+    const result = await withRetry(async () => {
+      const response = await axios.get(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}&key=${BOOKS_API_KEY}`
+      );
+
+      const bookData = response.data.items?.[0]?.volumeInfo;
+      if (!bookData) {
+        throw new BooksError("No book found for the given query");
       }
-    );
+
+      return {
+        title: bookData.title || "",
+        authors: bookData.authors || [],
+        description: bookData.description || "",
+        imageLinks: bookData.imageLinks || { thumbnail: "" },
+      };
+    });
+
+    // Cache the result
+    await cacheService.set(cacheKey, result);
+
+    return result;
   } catch (error) {
-    console.error("Books API Error:", error);
-    throw error;
+    if (error instanceof BooksError) {
+      throw error;
+    }
+    throw new BooksError("Failed to search for book", undefined, error);
   }
 };

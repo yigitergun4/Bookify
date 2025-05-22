@@ -9,8 +9,19 @@ import { Text } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import HomePageFlatlistRecommendedBooks from "@/components/HomePageFlatlistRecommendedBooks";
 import { router } from "expo-router";
+import { CacheService } from "@/services/cacheService";
+import { useEffect, useState } from "react";
 
 export default function TabOneScreen() {
+  const cacheService = CacheService.getInstance();
+  const [cacheItems, setCacheItems] = useState<string>("");
+
+  useEffect(() => {
+    cacheService.get("cacheItems").then((value) => {
+      setCacheItems(JSON.stringify(value));
+    });
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -39,6 +50,9 @@ export default function TabOneScreen() {
             <View>
               <HomePageFlatlistRecommendedBooks />
             </View>
+          </View>
+          <View>
+            <Text>{cacheItems}</Text>
           </View>
         </View>
       </ScrollView>

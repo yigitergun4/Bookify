@@ -21,42 +21,47 @@ export class BooksError extends ApiError {
   }
 }
 
-export const searchBook = async (query: string): Promise<BookData> => {
+export const searchBook = async (
+  title: string,
+  author: string,
+  language: string
+): Promise<any> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
 
   try {
-    // Generate cache key from query
-    const cacheKey = `books_${query}`;
+    //const cacheKey = `books_${title}_${author}_${language}`;
+    //const cachedResult = await cacheService.get<BookData>(cacheKey);
+    //if (cachedResult) {
+    //  console.log(cachedResult, "cachedResult booksService:35");
+    //  return cachedResult;
+    //}
 
-    // Check cache first
-    const cachedResult = await cacheService.get<BookData>(cacheKey);
-    if (cachedResult) {
-      return cachedResult;
-    }
-
-    // If not in cache, make API call with retry
     const result = await withRetry(async () => {
-      const response = await axios.get(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-          query
-        )}&key=${BOOKS_API_KEY}`
-      );
+      let query = encodeURIComponent(title);
+      if (author && author !== "Unknown Author") {
+        query += "+inauthor:" + encodeURIComponent(author);
+      }
+      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
+      if (language && language !== "und") {
+        url += `&langRestrict=${encodeURIComponent(language)}`;
+      }
+      url += `&key=${BOOKS_API_KEY}`;
 
-      const bookData = response.data.items?.[0]?.volumeInfo;
+      const response = await axios.get(url);
+      const items = response.data.items || [];
+
+      // find exact match kısmı kaldırıldı, ilk kitap döndürülüyor
+      const bookData = items[0]?.volumeInfo;
+
       if (!bookData) {
         throw new BooksError("No book found for the given query");
       }
 
-      return {
-        title: bookData.title || "",
-        authors: bookData.authors || [],
-        description: bookData.description || "",
-        imageLinks: bookData.imageLinks || { thumbnail: "" },
-      };
+      return bookData;
     });
 
     // Cache the result
-    await cacheService.set(cacheKey, result);
+    // await cacheService.set(cacheKey, result);
 
     return result;
   } catch (error) {

@@ -45,11 +45,9 @@ export function SessionProvider(props: React.PropsWithChildren) {
 
   React.useEffect(() => {
     // auth().signOut();
-    console.log("AuthContext mounted");
     const unsubscribe = auth().onAuthStateChanged(async (user) => {
       if (user && !authFlagRef.current) {
         authFlagRef.current = true;
-        console.log("Auth State Changed:", user?.uid);
         setUser(user);
         // Onboarding kontrolü
         try {

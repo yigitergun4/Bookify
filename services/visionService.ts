@@ -35,12 +35,11 @@ export const detectText = async (base64Image: string) => {
             requests: [
               {
                 image: { content: base64Image },
-                features: [{ type: "TEXT_DETECTION" }],
+                features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
               },
             ],
           }
         );
-        console.log("Vision API response:", response.data);
         if (!response.data.responses?.[0]) {
           throw new VisionError("No text detected in image");
         }

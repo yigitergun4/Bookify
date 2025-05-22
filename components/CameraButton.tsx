@@ -57,64 +57,116 @@ export default function CameraButton() {
         format: SaveFormat.JPEG,
       });
 
+      // Fotoğraf çekildikten hemen sonra yönlendir
+      router.push({
+        pathname: "/(tabs)/homefolder/photoeditpage" as any,
+        params: {
+          imageUri: cropResult.uri,
+          photoWidth,
+          photoHeight,
+        },
+      });
       const base64Image = await getBase64FromUri(cropResult.uri);
       const visionResult = await detectText(base64Image);
       const detectedText = visionResult.textAnnotations?.[0]?.description || "";
       if (!detectedText) {
         throw new VisionError("No text detected in image.");
       }
-
-      // Extract structured book info using GPT
       const bookInfo = await extractBookInfoWithGPT(detectedText);
       console.log("Extracted book info:", bookInfo);
 
-      // Search for the book using the extracted info
-      const bookData = await searchBook(bookInfo.title);
-      console.log("Found book data:", bookData);
+      let bookData: any = null;
+      let shouldRoute = false;
+      try {
+        // 1. search original title, author and language that gpt found
+        console.log(
+          "[CameraButton] Orijinal başlık/yazar/dil ile arama:",
+          bookInfo.title,
+          bookInfo.authors[0],
+          bookInfo.language
+        );
+        bookData = await searchBook(
+          bookInfo.title,
+          bookInfo.authors[0] || "",
+          bookInfo.language || ""
+        );
+        // if no exact match, search with english title
+        if (
+          bookInfo.english_title &&
+          bookInfo.english_title !== "Unknown" &&
+          bookInfo.english_title.toLowerCase().trim() !==
+            bookInfo.title.toLowerCase().trim() &&
+          bookData.title.toLowerCase().trim() !==
+            bookInfo.title.toLowerCase().trim()
+        ) {
+          try {
+            console.log(
+              "[CameraButton] Tam eşleşme yok, english_title ile arama:",
+              bookInfo.english_title
+            );
+            bookData = await searchBook(
+              bookInfo.english_title,
+              bookInfo.authors[0] || "",
+              "en"
+            );
+          } catch (err) {
+            console.log(
+              "[CameraButton] English_title ile de kitap bulunamadı. Hata:",
+              err
+            );
+            Alert.alert(
+              "No book found",
+              "No book found, please select manual search."
+            );
+            shouldRoute = false;
+          }
+        } else {
+          console.log(
+            "[CameraButton] Orijinal başlık ile tam eşleşme bulundu.",
+            bookData
+          );
+          shouldRoute = true;
+        }
+      } catch (err) {
+        console.log(
+          "[CameraButton] Orijinal başlık/yazar/dil ile kitap bulunamadı. Hata:",
+          err
+        );
+        Alert.alert(
+          "No book found",
+          "No book found, please select manual search."
+        );
+        shouldRoute = false;
+      }
+      console.log("[CameraButton] Bulunan kitap verisi:", bookData);
 
-      // Kitap başlığı ve yazarlar için öncelik sırası: Books API > GPT > fallback
-      const title =
-        bookData.title && bookData.title !== "Unknown"
-          ? bookData.title
-          : bookInfo.title && bookInfo.title !== "Unknown"
-          ? bookInfo.title
-          : "Unknown Title";
-
-      const authors =
-        bookData.authors &&
-        bookData.authors.length > 0 &&
-        bookData.authors[0] !== "Unknown"
-          ? bookData.authors.join(", ")
-          : bookInfo.authors && bookInfo.authors[0] !== "Unknown"
-          ? bookInfo.authors.join(", ")
-          : "Unknown Author";
-
-      const description = bookData.description || "";
-      const imageUrl = bookData.imageLinks?.thumbnail || cropResult.uri;
-
-      router.push({
-        pathname: "/(tabs)/homefolder/photoeditpage" as any,
-        params: {
-          title,
-          authors,
-          description,
-          imageUrl,
-        },
-      });
+      // Tüm işlemler ve kontroller tamamlandıktan sonra yönlendir
+      if (bookData) {
+        router.push({
+          pathname: "/(tabs)/homefolder/photoeditpage" as any,
+          params: {
+            book: JSON.stringify(bookData),
+          },
+        });
+      } else {
+        Alert.alert(
+          "No book found",
+          "No book found, please select manual search."
+        );
+      }
     } catch (error) {
       let errorMessage = "Failed to process image. Please try again.";
-
       if (error instanceof VisionError) {
         errorMessage =
           "Failed to detect text in image. Please try again with a clearer image.";
-        console.log(error, "error");
+        Alert.alert(errorMessage);
       } else if (error instanceof GPTError) {
         errorMessage = "Failed to extract book information. Please try again.";
-        console.log(error, "error");
+        Alert.alert(errorMessage);
       } else if (error instanceof BooksError) {
         errorMessage = "Failed to find book information. Please try again.";
+        Alert.alert(errorMessage);
       }
-
       Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);

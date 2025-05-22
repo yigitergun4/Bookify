@@ -14,6 +14,8 @@ export class GPTError extends ApiError {
 export interface BookInfo {
   title: string;
   authors: string[];
+  language: string;
+  english_title?: string;
 }
 
 export async function extractBookInfoWithGPT(
@@ -28,16 +30,41 @@ export async function extractBookInfoWithGPT(
     if (!ocrText || ocrText.trim().length === 0) {
       throw new GPTError("OCR text is empty");
     }
+
     // Generate cache key from OCR text
     const cacheKey = `gpt_${ocrText.substring(0, 50)}`;
+
     // Check cache first
     const cachedResult = await cacheService.get<BookInfo>(cacheKey);
     if (cachedResult) {
       return cachedResult;
     }
 
+    // If not in cache, make API call with retry
     const result = await withRetry(async () => {
-      const systemPrompt = `Extract book title and author(s) from the following OCR text. Return only JSON: {"title": "...", "authors": ["...", "..."]}. If you can't determine the information, use "Unknown" as the value.`;
+      const systemPrompt = `You are an expert bibliographic metadata extractor. 
+Given the OCR-extracted text from a book cover, identify and return only the following four fields in strict JSON:
+
+{
+  "title": "...",
+  "authors": ["...","..."],
+  "language": "xxx",
+  "english_title": "..."
+}
+
+Instructions:
+1. **title**: The original book title. Exclude any translator names, edition statements, publisher imprint, printing details, subtitles, series names or other cover text.
+2. **authors**: A list of the primary author(s) only. Do not include translator(s), editor(s), illustrator(s), or any secondary credits.
+3. **language**: The ISO 639-2 code of the original language (e.g. "tur" for Turkish, "fra" for French). If unknown, use "und".
+4. **english_title**: If the book was originally written in English, repeat the title here. If it was in another language and you know the official English translation, provide it; otherwise set this equal to "Unknown".
+
+If any field cannot be determined, use \`"Unknown"\` for title/authors and \`"und"\` for language. 
+Do not output any explanatory text—only the JSON object.`;
+
+      console.log(
+        "Sending request to GPT with text:",
+        ocrText.substring(0, 100) + "..."
+      );
 
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -48,7 +75,7 @@ export async function extractBookInfoWithGPT(
             Authorization: `Bearer ${OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4-turbo",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },
@@ -70,11 +97,9 @@ export async function extractBookInfoWithGPT(
           response.status,
           errorData
         );
-        console.log(errorData, "errorData");
       }
 
       const data = await response.json();
-      console.log("GPT Response:", data);
 
       const content = data.choices[0]?.message?.content;
       if (!content) {
@@ -83,7 +108,7 @@ export async function extractBookInfoWithGPT(
 
       try {
         const parsed = JSON.parse(content);
-        if (!parsed.title || !parsed.authors) {
+        if (!parsed.title || !parsed.authors || !parsed.language) {
           throw new GPTError("Invalid response format from GPT");
         }
         return {
@@ -91,6 +116,8 @@ export async function extractBookInfoWithGPT(
           authors: Array.isArray(parsed.authors)
             ? parsed.authors
             : ["Unknown Author"],
+          language: parsed.language || "und",
+          english_title: parsed.english_title || undefined,
         };
       } catch (e) {
         console.error("Failed to parse GPT response:", content);

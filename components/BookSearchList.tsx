@@ -41,11 +41,14 @@ const BookSearchList = ({
     setSelectedBook(null);
   };
 
-  let modalImageUrl = selectedBook?.volumeInfo.imageLinks?.thumbnail;
-  if (modalImageUrl && modalImageUrl.startsWith("http:")) {
-    modalImageUrl = modalImageUrl.replace("http:", "https:");
+  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
+    modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
-
+  console.log(
+    books.map((book) => book?.volumeInfo?.title),
+    "bookss BookSearchList:48"
+  );
   return (
     <>
       <FlatList
@@ -55,10 +58,10 @@ const BookSearchList = ({
           item.id ? item.id + "-" + index : index.toString()
         }
         renderItem={({ item }) => {
-          const volume = item.volumeInfo;
-          let imageUrl = volume.imageLinks?.thumbnail;
-          if (imageUrl && imageUrl.startsWith("http:")) {
-            imageUrl = imageUrl.replace("http:", "https:");
+          const volume = item?.volumeInfo;
+          let imageUrl = volume?.imageLinks?.thumbnail;
+          if (imageUrl && imageUrl?.startsWith("http:")) {
+            imageUrl = imageUrl?.replace("http:", "https:");
           }
           return (
             <TouchableOpacity
@@ -77,10 +80,10 @@ const BookSearchList = ({
                 />
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle} numberOfLines={1}>
-                    {volume.title}
+                    {volume?.title}
                   </Text>
                   <Text style={styles.author} numberOfLines={1}>
-                    Author: {volume.authors?.join(", ") || "Unknown"}
+                    Author: {volume?.authors?.join(", ") || "Unknown"}
                   </Text>
                   <Text style={styles.description} numberOfLines={1}>
                     Publisher: {volume?.publisher || "No publisher available."}
@@ -164,25 +167,25 @@ const BookSearchList = ({
                     textAlign: "center",
                   }}
                 >
-                  {selectedBook.volumeInfo.title}
+                  {selectedBook?.volumeInfo?.title}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Author: </Text>
-                  {selectedBook.volumeInfo.authors?.join(", ") || "Unknown"}
+                  {selectedBook?.volumeInfo?.authors?.join(", ") || "Unknown"}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Publisher: </Text>
-                  {selectedBook.volumeInfo.publisher ||
+                  {selectedBook?.volumeInfo?.publisher ||
                     "No publisher available."}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Language: </Text>
-                  {selectedBook.volumeInfo.language?.toUpperCase()}
+                  {selectedBook?.volumeInfo?.language?.toUpperCase()}
                 </Text>
                 <View style={{ maxHeight: 180, marginTop: 8 }}>
                   <ScrollView>
                     <Text style={{ fontSize: 14, color: "#444" }}>
-                      {selectedBook.volumeInfo.description ||
+                      {selectedBook?.volumeInfo?.description ||
                         "No description available."}
                     </Text>
                   </ScrollView>

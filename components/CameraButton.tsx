@@ -57,15 +57,6 @@ export default function CameraButton() {
         format: SaveFormat.JPEG,
       });
 
-      // Fotoğraf çekildikten hemen sonra yönlendir
-      router.push({
-        pathname: "/(tabs)/homefolder/photoeditpage" as any,
-        params: {
-          imageUri: cropResult.uri,
-          photoWidth,
-          photoHeight,
-        },
-      });
       const base64Image = await getBase64FromUri(cropResult.uri);
       const visionResult = await detectText(base64Image);
       const detectedText = visionResult.textAnnotations?.[0]?.description || "";
@@ -76,7 +67,6 @@ export default function CameraButton() {
       console.log("Extracted book info:", bookInfo);
 
       let bookData: any = null;
-      let shouldRoute = false;
       try {
         // 1. search original title, author and language that gpt found
         console.log(
@@ -96,7 +86,7 @@ export default function CameraButton() {
           bookInfo.english_title !== "Unknown" &&
           bookInfo.english_title.toLowerCase().trim() !==
             bookInfo.title.toLowerCase().trim() &&
-          bookData.title.toLowerCase().trim() !==
+          bookData?.volumeInfo?.title?.toLowerCase().trim() !==
             bookInfo.title.toLowerCase().trim()
         ) {
           try {
@@ -114,60 +104,36 @@ export default function CameraButton() {
               "[CameraButton] English_title ile de kitap bulunamadı. Hata:",
               err
             );
-            Alert.alert(
-              "No book found",
-              "No book found, please select manual search."
-            );
-            shouldRoute = false;
+            throw new BooksError("No book found with English title");
           }
-        } else {
-          console.log(
-            "[CameraButton] Orijinal başlık ile tam eşleşme bulundu.",
-            bookData
-          );
-          shouldRoute = true;
         }
       } catch (err) {
-        console.log(
-          "[CameraButton] Orijinal başlık/yazar/dil ile kitap bulunamadı. Hata:",
-          err
-        );
-        Alert.alert(
-          "No book found",
-          "No book found, please select manual search."
-        );
-        shouldRoute = false;
+        console.log("[CameraButton] Kitap bulunamadı. Hata:", err);
+        throw new BooksError("No book found for the given query");
       }
-      console.log("[CameraButton] Bulunan kitap verisi:", bookData);
 
-      // Tüm işlemler ve kontroller tamamlandıktan sonra yönlendir
-      if (bookData) {
-        router.push({
-          pathname: "/(tabs)/homefolder/photoeditpage" as any,
-          params: {
-            book: JSON.stringify(bookData),
-          },
-        });
-      } else {
-        Alert.alert(
-          "No book found",
-          "No book found, please select manual search."
-        );
+      if (!bookData || !bookData?.volumeInfo?.imageLinks) {
+        throw new BooksError("Invalid book data received");
       }
+
+      // Tüm işlemler başarılı olduğunda yönlendir
+      router.push({
+        pathname: "/(tabs)/homefolder/photoeditpage" as any,
+        params: {
+          book: JSON.stringify(bookData),
+        },
+      });
     } catch (error) {
-      let errorMessage = "Failed to process image. Please try again.";
+      console.error("[CameraButton] Error:", error);
       if (error instanceof VisionError) {
-        errorMessage =
-          "Failed to detect text in image. Please try again with a clearer image.";
-        Alert.alert(errorMessage);
+        Alert.alert("Error", error.message);
       } else if (error instanceof GPTError) {
-        errorMessage = "Failed to extract book information. Please try again.";
-        Alert.alert(errorMessage);
+        Alert.alert("Error", error.message);
       } else if (error instanceof BooksError) {
-        errorMessage = "Failed to find book information. Please try again.";
-        Alert.alert(errorMessage);
+        Alert.alert("Error", error.message);
+      } else {
+        Alert.alert("Error", "An unexpected error occurred");
       }
-      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
       setModalVisible(false);
@@ -243,6 +209,15 @@ export default function CameraButton() {
               },
             ]}
           />
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Image
+              source={require("@/assets/images/close.png")}
+              style={{ width: 30, height: 30, tintColor: "#fff" }}
+            />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
             <Image
               source={require("@/assets/images/camera-icon.png")}
@@ -298,5 +273,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
   },
 });

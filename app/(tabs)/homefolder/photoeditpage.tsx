@@ -6,6 +6,7 @@ import {
   Image,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
@@ -13,11 +14,10 @@ import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
 
 export default function EditBookScreen() {
-  const { book = "", imageUrl = "" } = useLocalSearchParams();
+  const { book = "" } = useLocalSearchParams();
   const { addBook } = useLibrary();
   const router = useRouter();
 
-  console.log(book, "book photoeditpage:15");
   let parsedBook: any = null;
   try {
     parsedBook = book ? JSON.parse(Array.isArray(book) ? book[0] : book) : null;
@@ -25,27 +25,52 @@ export default function EditBookScreen() {
     parsedBook = null;
   }
 
-  const [bookTitle, setBookTitle] = useState(parsedBook?.title || "");
-  const [author, setAuthor] = useState(parsedBook?.authors?.join(", ") || "");
-  const [desc, setDesc] = useState(parsedBook?.description || "");
-  const photoUri = parsedBook?.imageLinks?.thumbnail || "";
+  const [bookTitle, setBookTitle] = useState(
+    parsedBook?.volumeInfo?.title || ""
+  );
+  const [author, setAuthor] = useState(
+    parsedBook?.volumeInfo?.authors?.join(", ") || ""
+  );
+  const [desc, setDesc] = useState(parsedBook?.volumeInfo?.description || "");
+  const photoUri = parsedBook?.volumeInfo?.imageLinks?.thumbnail || "";
 
   useEffect(() => {
-    setBookTitle(parsedBook?.title || "");
-    setAuthor(parsedBook?.authors?.join(", ") || "");
-    setDesc(parsedBook?.description || "");
+    setBookTitle(parsedBook?.volumeInfo?.title || "");
+    setAuthor(parsedBook?.volumeInfo?.authors?.join(", ") || "");
+    setDesc(parsedBook?.volumeInfo?.description || "");
   }, [parsedBook]);
 
-  const handleUpdate = () => {
-    if (book) {
-      addBook(book);
-      router.push("/(tabs)/reading");
+  const handleUpdate = async () => {
+    let bookObj: any = book;
+    if (typeof book === "string") {
+      try {
+        bookObj = JSON.parse(book);
+      } catch (e) {
+        Alert.alert("Error", "Invalid book data");
+        return;
+      }
+    }
+    if (bookObj && typeof bookObj === "object" && !Array.isArray(bookObj)) {
+      try {
+        console.log("Kitap ekleniyor:", bookObj);
+        addBook(bookObj);
+        router.push("/(tabs)/reading/index");
+      } catch (error) {
+        console.error("Error adding book:", error);
+        Alert.alert(
+          "Error",
+          "Failed to add book to library. Please try again."
+        );
+      }
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.replace("/(tabs)/search")}
+      >
         <Image
           source={require("@/assets/images/arrow-left.png")}
           resizeMode="contain"

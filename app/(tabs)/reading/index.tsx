@@ -11,7 +11,7 @@ import {
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import BookSearchList from "@/components/BookSearchList";
 import { useLibrary } from "@/contexts/LibraryContext";
 

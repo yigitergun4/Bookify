@@ -84,7 +84,7 @@ export default function TabTwoScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.searchBarView}>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/reading")}>
+            <TouchableOpacity onPress={() => {}}>
               <Image
                 source={require("@/assets/images/searchpagebookicon.png")}
                 style={styles.searchInputBookIcon}

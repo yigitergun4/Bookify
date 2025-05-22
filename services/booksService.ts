@@ -45,16 +45,25 @@ export const searchBook = async (
       if (language && language !== "und") {
         url += `&langRestrict=${encodeURIComponent(language)}`;
       }
-      url += `&key=${BOOKS_API_KEY}`;
+      url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)&key=${BOOKS_API_KEY}`;
 
+      console.log("[BooksService] Searching with URL:", url);
       const response = await axios.get(url);
       const items = response.data.items || [];
+      console.log(
+        "[BooksService] Found items:",
+        items.map((item: any) => item)
+      );
 
-      // find exact match kısmı kaldırıldı, ilk kitap döndürülüyor
-      const bookData = items[0]?.volumeInfo;
-
-      if (!bookData) {
+      if (items.length === 0) {
         throw new BooksError("No book found for the given query");
+      }
+
+      const bookData = items[0];
+      console.log("[BooksService] Selected book data:", bookData);
+
+      if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
+        throw new BooksError("Invalid book data received from API");
       }
 
       return bookData;

@@ -70,7 +70,7 @@ export default function TabLayout() {
             <TabsView
               color="black"
               size={size}
-              label="Library"
+              label="Reading"
               source={require("@/assets/images/book.png")}
             />
           ),

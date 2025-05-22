@@ -45,10 +45,6 @@ const BookSearchList = ({
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
-  console.log(
-    books.map((book) => book?.volumeInfo?.title),
-    "bookss BookSearchList:48"
-  );
   return (
     <>
       <FlatList

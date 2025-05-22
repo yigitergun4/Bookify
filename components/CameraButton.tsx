@@ -13,7 +13,9 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useRouter } from "expo-router";
-import axios from "axios";
+import { detectText } from "../services/visionService";
+import { searchBook } from "../services/booksService";
+import { getBase64FromUri } from "../utils/imageUtils";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const overlayWidth = screenWidth * 0.65;
@@ -24,7 +26,6 @@ const overlayTop = (screenHeight - overlayHeight) / 2;
 export default function CameraButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [croppedUri, setCroppedUri] = useState<string | null>(null); // for debug
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
@@ -40,54 +41,22 @@ export default function CameraButton() {
   ) => {
     try {
       setIsLoading(true);
-      // Overlay'nin ekrandaki oranını fotoğraf çözünürlüğüne ölçekle
       const crop = {
         originX: (overlayLeft / screenWidth) * photoWidth,
         originY: (overlayTop / screenHeight) * photoHeight,
         width: (overlayWidth / screenWidth) * photoWidth,
         height: (overlayHeight / screenHeight) * photoHeight,
       };
-      // Fotoğrafı kırp
-      const cropResult = await manipulateAsync(
-        imageUri,
-        [
-          {
-            crop,
-          },
-        ],
-        { compress: 1, format: SaveFormat.JPEG }
-      );
-      setCroppedUri(cropResult.uri); // debug için göster
-      // OCR
-      const visionApiKey = "AIzaSyD3wpw7y6jJqL905btvKlscgYku5fZxj_I";
+
+      const cropResult = await manipulateAsync(imageUri, [{ crop }], {
+        compress: 1,
+        format: SaveFormat.JPEG,
+      });
+
       const base64Image = await getBase64FromUri(cropResult.uri);
-      console.log("base64 length", base64Image.length);
-      const visionResponse = await axios.post(
-        `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`,
-        {
-          requests: [
-            {
-              image: { content: base64Image },
-              features: [{ type: "TEXT_DETECTION" }],
-            },
-          ],
-        }
-      );
-      console.log(visionResponse.data, "vision response");
-      const detectedText = visionResponse.data.responses[0] || "";
-      console.log(detectedText, "detectedText");
-      const booksApiKey = "AIzaSyALRYFWbp8BkrD7ONPPH5TmJ4_oZEUR1yM";
-      const booksResponse = await axios.get(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-          detectedText
-        )}&key=${booksApiKey}`
-      );
-      const bookData = booksResponse.data.items?.[0]?.volumeInfo || {
-        title: "",
-        authors: [],
-        description: "",
-        imageLinks: { thumbnail: cropResult.uri },
-      };
+      const detectedText = await detectText(base64Image);
+      const bookData = await searchBook(detectedText);
+
       router.push({
         pathname: "/(tabs)/homefolder/photoeditpage" as any,
         params: {
@@ -98,41 +67,18 @@ export default function CameraButton() {
         },
       });
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.log(error.response?.data, "error");
-      }
-      console.log(error, "error");
+      console.error("Error processing image:", error);
+      Alert.alert("Error", "Failed to process image. Please try again.");
     } finally {
       setIsLoading(false);
       setModalVisible(false);
     }
   };
 
-  // Helper to convert local image URI to base64
-  async function getBase64FromUri(uri: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = function () {
-        const reader = new FileReader();
-        reader.onloadend = function () {
-          const base64data = (reader.result as string).split(",")[1];
-          resolve(base64data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(xhr.response);
-      };
-      xhr.onerror = reject;
-      xhr.open("GET", uri);
-      xhr.responseType = "blob";
-      xhr.send();
-    });
-  }
-
   const takePhoto = async () => {
     if (cameraRef.current) {
       try {
         setIsLoading(true);
-        // @ts-ignore
         const photo = await cameraRef.current.takePictureAsync({
           quality: 1,
         });
@@ -154,9 +100,9 @@ export default function CameraButton() {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Text>Kamera izni gerekli</Text>
+        <Text>Camera permission is required</Text>
         <TouchableOpacity onPress={requestPermission}>
-          <Text>İzni ver</Text>
+          <Text>Give permission</Text>
         </TouchableOpacity>
       </View>
     );

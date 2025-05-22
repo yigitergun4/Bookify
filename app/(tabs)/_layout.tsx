@@ -1,19 +1,5 @@
-import React from "react";
 import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
-import Colors from "@/constants/Colors";
-import { useColorScheme } from "@/components/useColorScheme";
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import homeIcon from "@/assets/images/homeicon.png";
-import { DarkTheme } from "@react-navigation/native/src";
-
-const HomeIcon = () => (
-  <Image
-    src={homeIcon}
-    style={{ width: 40, height: 40 }}
-    resizeMode="contain"
-  />
-);
 
 type TabsViewProps = {
   color: string;

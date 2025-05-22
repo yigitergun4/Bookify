@@ -70,10 +70,10 @@ const BookSearchList = ({
                   source={
                     imageUrl
                       ? { uri: imageUrl }
-                      : require("@/assets/images/bookimage.png")
+                      : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={styles.bookImage}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle} numberOfLines={1}>
@@ -145,7 +145,7 @@ const BookSearchList = ({
                   source={
                     modalImageUrl
                       ? { uri: modalImageUrl }
-                      : require("@/assets/images/bookimage.png")
+                      : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={{
                     width: 120,
@@ -154,7 +154,7 @@ const BookSearchList = ({
                     alignSelf: "center",
                     marginBottom: 16,
                   }}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <Text
                   style={{

@@ -71,7 +71,6 @@ export const searchBook = async (
 
       return bookData;
     });
-
     return result;
   } catch (error) {
     if (error instanceof BooksError) {
@@ -81,7 +80,6 @@ export const searchBook = async (
   }
 };
 
-// Google Books API'den sayfalı kitap arama (maxResults olmadan)
 export const searchBooksPaginated = async (
   query: string,
   startIndex: number = 0
@@ -92,4 +90,25 @@ export const searchBooksPaginated = async (
   const response = await fetch(url);
   const data = await response.json();
   return data;
+};
+
+export const searchBookList = async (
+  title: string,
+  author: string,
+  language: string
+): Promise<any[]> => {
+  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+  let query = encodeURIComponent(title);
+  if (author && author !== "Unknown Author") {
+    query += "+inauthor:" + encodeURIComponent(author);
+  }
+  let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
+  if (language && language !== "und") {
+    url += `&langRestrict=${encodeURIComponent(language)}`;
+  }
+  url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)&key=${BOOKS_API_KEY}`;
+
+  const response = await axios.get(url);
+  const items = response.data.items || [];
+  return items;
 };

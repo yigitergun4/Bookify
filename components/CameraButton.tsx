@@ -14,7 +14,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useRouter } from "expo-router";
 import { detectText } from "../services/visionService";
-import { searchBook } from "../services/booksService";
+import { searchBook, searchBookList } from "../services/booksService";
 import { getBase64FromUri } from "../utils/imageUtils";
 import { VisionError } from "../services/visionService";
 import { BooksError } from "../services/booksService";
@@ -67,31 +67,31 @@ export default function CameraButton() {
       console.log("Extracted book info:", bookInfo);
 
       let bookData: any = null;
+
       try {
-        // 1. search original title, author and language that gpt found
         console.log(
           "[CameraButton] Orijinal başlık/yazar/dil ile arama:",
           bookInfo.title,
           bookInfo.authors[0],
           bookInfo.language
         );
-        bookData = await searchBook(
-          bookInfo.title,
-          bookInfo.authors[0] || "",
-          bookInfo.language || ""
-        );
-        // if no exact match, search with english title
-        if (
-          bookInfo.english_title &&
-          bookInfo.english_title !== "Unknown" &&
-          bookInfo.english_title.toLowerCase().trim() !==
-            bookInfo.title.toLowerCase().trim() &&
-          bookData?.volumeInfo?.title?.toLowerCase().trim() !==
-            bookInfo.title.toLowerCase().trim()
-        ) {
+
+        // 1. Orijinal başlık ile arama
+        try {
+          bookData = await searchBook(
+            bookInfo.title,
+            bookInfo.authors[0] || "",
+            bookInfo.language || ""
+          );
+        } catch (err) {
+          console.log("[CameraButton] Orijinal başlıkla kitap bulunamadı.");
+        }
+
+        // 2. Eğer kitap bulunamadıysa, İngilizce başlıkla dene
+        if (bookInfo.english_title && bookInfo.english_title !== "Unknown") {
           try {
             console.log(
-              "[CameraButton] Tam eşleşme yok, english_title ile arama:",
+              "[CameraButton] English title ile arama:",
               bookInfo.english_title
             );
             bookData = await searchBook(
@@ -101,15 +101,54 @@ export default function CameraButton() {
             );
           } catch (err) {
             console.log(
-              "[CameraButton] English_title ile de kitap bulunamadı. Hata:",
-              err
+              "[CameraButton] English title ile de kitap bulunamadı."
             );
-            throw new BooksError("No book found with English title");
           }
         }
-      } catch (err) {
-        console.log("[CameraButton] Kitap bulunamadı. Hata:", err);
-        throw new BooksError("No book found please try with manual search");
+
+        // 3. Hâlâ kitap bulunamadıysa, alternatif kitap listesini getir
+        if (!bookData) {
+          try {
+            const listOfBooks = await searchBookList(
+              bookInfo.title,
+              bookInfo.authors[0] || "",
+              bookInfo.language || ""
+            );
+            console.log(
+              "[CameraButton] Alternatif kitap listesi bulundu:",
+              listOfBooks
+            );
+
+            router.replace({
+              pathname: "/(tabs)/homefolder/notexactbookfound",
+              params: {
+                results: JSON.stringify(listOfBooks),
+              },
+            });
+
+            return; // işlem bitti, yönlendirme yapıldı
+          } catch (err) {
+            console.log(
+              "[CameraButton] Alternatif kitap listesi de bulunamadı."
+            );
+            throw new BooksError("No book found after extended search");
+          }
+        }
+
+        // 4. Kitap bulunduysa yönlendir
+        if (!bookData || !bookData?.volumeInfo?.imageLinks) {
+          throw new BooksError("Invalid book data received");
+        }
+
+        router.push({
+          pathname: "/(tabs)/homefolder/photoeditpage" as any,
+          params: {
+            book: JSON.stringify(bookData),
+          },
+        });
+      } catch (error: any) {
+        console.error("[CameraButton] Error:", error);
+        Alert.alert("Error", error.message || "An unexpected error occurred");
       }
 
       // if all processes are successful, redirect to photoeditpage

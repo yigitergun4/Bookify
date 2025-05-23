@@ -43,7 +43,7 @@ export async function extractBookInfoWithGPT(
     // If not in cache, make API call with retry
     const result = await withRetry(async () => {
       const systemPrompt = `You are an expert bibliographic metadata extractor.
-Given OCR-extracted text from a book cover, extract and return only the following fields in **strict** JSON format:
+Given OCR-extracted text from a book cover, extract and return only the following fields in strict JSON format:
 
 {
   "title": "...",
@@ -53,25 +53,27 @@ Given OCR-extracted text from a book cover, extract and return only the followin
 }
 
 Instructions:
-1. "title": Only the original title of the book. Exclude any translator names, edition statements, publisher imprint, printing details, subtitles, series names, or other cover text.
-   - If the title appears across multiple lines or words (e.g. one word per line), **combine them in the correct order** to reconstruct the full title.
-2. "authors": List only the primary author(s). Do not include translators, editors, illustrators, or secondary credits.
-3. "language": The ISO 639-1 code of the original language (e.g. "tr" for Turkish, "fr" for French). If unknown, return "und".
-4. "english_title": If the book was originally written in English, repeat the title here. If it was originally in another language and an official English title exists, provide it. Otherwise, return "Unknown".
+
+1. **"title"**: Extract the original book title only.
+   - Combine multiple lines if the title is broken across lines (e.g., "BEYAZ", "ZAMBAKLAR", "ÜLKESİNDE" → "Beyaz Zambaklar Ülkesinde")
+   - The title is usually the largest or most central text, often in all-caps, and may span multiple lines.
+   - **Do not include** translator names, subtitles, series names, edition info, publisher imprint, or print details.
+
+2. **"authors"**: Identify the primary author(s) only.
+   - Do **not** include translators, editors, illustrators, or contributors.
+   - Author names may appear above or below the title. Common known authors should be preferred.
+
+3. **"language"**: Return the original language in ISO 639-1 format (e.g., "tr", "en", "fr"). If unknown, return "und".
+
+4. **"english_title"**: 
+   - If the original title is in English, repeat it here.
+   - If not, and an official English translation exists, provide it.
+   - Otherwise, return "Unknown".
 
 If you are not 100% certain of a value, use:
 - "Unknown" for title, authors, or english_title
 - "und" for language
 
-✅ Example Output:
-{
-  "title": "Beyaz Zambaklar Ülkesinde",
-  "authors": ["Grigori Petrov"],
-  "language": "tr",
-  "english_title": "In the Country of White Lilies"
-}
-
-Return **only** the JSON object. Do not include any commentary, explanation, or extra formatting.
 `;
 
       console.log(

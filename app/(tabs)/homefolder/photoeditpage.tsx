@@ -56,7 +56,7 @@ export default function EditBookScreen() {
     if (bookObj && typeof bookObj === "object" && !Array.isArray(bookObj)) {
       try {
         await addBook(bookObj);
-        router.replace("/(tabs)/reading/index");
+        router.replace("/(tabs)/reading");
       } catch (error: any) {
         if (error?.message === "This book is already in your library.") {
           Alert.alert("Error", error.message);

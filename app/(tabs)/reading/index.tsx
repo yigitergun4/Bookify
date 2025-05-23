@@ -43,18 +43,18 @@ export default function LibraryScreen() {
   }, [user]);
 
   useEffect(() => {
-    setFilteredBooks([...libraryBooks].reverse());
+    setFilteredBooks([...libraryBooks]);
   }, [libraryBooks]);
 
   const handleSearchChange = (text: string) => {
     const searchText = text.toLowerCase().trim();
 
     if (!searchText) {
-      setFilteredBooks([...libraryBooks].reverse());
+      setFilteredBooks([...libraryBooks]);
       return;
     }
 
-    const filtered = [...libraryBooks].reverse().filter((book: any) => {
+    const filtered = [...libraryBooks].filter((book: any) => {
       if (!book || !book.volumeInfo) return false;
 
       const title = String(book.volumeInfo.title || "").toLowerCase();
@@ -90,9 +90,20 @@ export default function LibraryScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUserData();
-    setFilteredBooks([...libraryBooks].reverse());
+    setFilteredBooks([...libraryBooks]);
     setRefreshing(false);
   };
+
+  // Kitapları id'ye göre tekilleştir
+  function uniqueById(arr: any[]) {
+    const seen = new Set();
+    return arr.filter((item) => {
+      if (!item?.id) return false;
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -115,7 +126,7 @@ export default function LibraryScreen() {
         </View>
       </View>
       <BookSearchList
-        books={filteredBooks}
+        books={uniqueById(filteredBooks)}
         loadingMore={loading}
         addBook={() => {}}
         handleLoadMore={() => {}}

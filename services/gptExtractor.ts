@@ -42,8 +42,8 @@ export async function extractBookInfoWithGPT(
 
     // If not in cache, make API call with retry
     const result = await withRetry(async () => {
-      const systemPrompt = `You are an expert bibliographic metadata extractor. 
-Given the OCR-extracted text from a book cover, identify and return only the following four fields in strict JSON:
+      const systemPrompt = `You are an expert bibliographic metadata extractor.
+Given OCR-extracted text from a book cover, extract and return only the following fields in **strict** JSON format:
 
 {
   "title": "...",
@@ -53,13 +53,26 @@ Given the OCR-extracted text from a book cover, identify and return only the fol
 }
 
 Instructions:
-1. **title**: The original book title. Exclude any translator names, edition statements, publisher imprint, printing details, subtitles, series names or other cover text.
-2. **authors**: A list of the primary author(s) only. Do not include translator(s), editor(s), illustrator(s), or any secondary credits.
-3. **language**: The ISO 639-2 code of the original language (e.g. "tur" for Turkish, "fra" for French). If unknown, use "und".
-4. **english_title**: If the book was originally written in English, repeat the title here. If it was in another language and you know the official English translation, provide it; otherwise set this equal to "Unknown".
+1. "title": Only the original title of the book. Exclude any translator names, edition statements, publisher imprint, printing details, subtitles, series names, or other cover text.
+   - If the title appears across multiple lines or words (e.g. one word per line), **combine them in the correct order** to reconstruct the full title.
+2. "authors": List only the primary author(s). Do not include translators, editors, illustrators, or secondary credits.
+3. "language": The ISO 639-1 code of the original language (e.g. "tr" for Turkish, "fr" for French). If unknown, return "und".
+4. "english_title": If the book was originally written in English, repeat the title here. If it was originally in another language and an official English title exists, provide it. Otherwise, return "Unknown".
 
-If any field cannot be determined, use \`"Unknown"\` for title/authors and \`"und"\` for language. 
-Do not output any explanatory text—only the JSON object.`;
+If you are not 100% certain of a value, use:
+- "Unknown" for title, authors, or english_title
+- "und" for language
+
+✅ Example Output:
+{
+  "title": "Beyaz Zambaklar Ülkesinde",
+  "authors": ["Grigori Petrov"],
+  "language": "tr",
+  "english_title": "In the Country of White Lilies"
+}
+
+Return **only** the JSON object. Do not include any commentary, explanation, or extra formatting.
+`;
 
       console.log(
         "Sending request to GPT with text:",

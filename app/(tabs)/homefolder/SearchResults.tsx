@@ -34,7 +34,7 @@ export default function SearchResultsScreen() {
         setBooks(items);
       }
     } catch (err) {
-      console.error("Google Books API error:", err);
+      Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);
       else setLoading(false);
@@ -44,7 +44,6 @@ export default function SearchResultsScreen() {
   useEffect(() => {
     setStartIndex(0);
     fetchBooks(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   const handleLoadMore = () => {
@@ -54,7 +53,7 @@ export default function SearchResultsScreen() {
     }
   };
 
-  const handleAddBook = (book: any) => {
+  const handleAddBook = async (book: any) => {
     Alert.alert(
       "Add to Library",
       "Do you want to add this book to your library?",
@@ -65,9 +64,17 @@ export default function SearchResultsScreen() {
         },
         {
           text: "Yes",
-          onPress: () => {
-            addBook(book);
-            Alert.alert("Success", "Book added to your library!");
+          onPress: async () => {
+            try {
+              await addBook(book);
+              Alert.alert("Success", "Book added to your library!");
+            } catch (err: any) {
+              if (err?.message === "This book is already in your library.") {
+                Alert.alert("Error", err.message);
+              } else {
+                Alert.alert("Error", "Failed to add book.");
+              }
+            }
           },
         },
       ]
@@ -78,8 +85,18 @@ export default function SearchResultsScreen() {
     if (startIndex !== 0) {
       fetchBooks(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startIndex]);
+
+  // make unique by id
+  function uniqueById(arr: any[]) {
+    const seen = new Set();
+    return arr.filter((item) => {
+      if (!item?.id) return false;
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -96,7 +113,7 @@ export default function SearchResultsScreen() {
       ) : (
         <>
           <BookSearchList
-            books={books}
+            books={uniqueById(books)}
             loadingMore={loadingMore}
             addBook={handleAddBook}
             handleLoadMore={handleLoadMore}

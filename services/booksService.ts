@@ -29,38 +29,41 @@ export const searchBook = async (
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
 
   try {
-    //const cacheKey = `books_${title}_${author}_${language}`;
-    //const cachedResult = await cacheService.get<BookData>(cacheKey);
-    //if (cachedResult) {
-    //  console.log(cachedResult, "cachedResult booksService:35");
-    //  return cachedResult;
-    //}
-
     const result = await withRetry(async () => {
-      let query = encodeURIComponent(title);
-      if (author && author !== "Unknown Author") {
-        query += "+inauthor:" + encodeURIComponent(author);
+      let query = "";
+      const MAX_RESULTS: number = 10;
+
+      if (title) {
+        query += `intitle:${encodeURIComponent(title)}`;
       }
+
+      if (author && author !== "Unknown Author") {
+        query += `+inauthor:${encodeURIComponent(author)}`;
+      }
+
       let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
+      url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)`;
+      url += `&maxResults=${MAX_RESULTS}`;
+      url += `&printType=books`;
+      url += `&orderBy=relevance`;
+
       if (language && language !== "und") {
         url += `&langRestrict=${encodeURIComponent(language)}`;
       }
-      url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)&key=${BOOKS_API_KEY}`;
+
+      url += `&key=${BOOKS_API_KEY}`;
 
       console.log("[BooksService] Searching with URL:", url);
       const response = await axios.get(url);
       const items = response.data.items || [];
-      console.log(
-        "[BooksService] Found items:",
-        items.map((item: any) => item)
-      );
+
+      console.log("[BooksService] Found items:", items);
 
       if (items.length === 0) {
         throw new BooksError("No book found for the given query");
       }
 
       const bookData = items[0];
-      console.log("[BooksService] Selected book data:", bookData);
 
       if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
         throw new BooksError("Invalid book data received from API");
@@ -69,9 +72,6 @@ export const searchBook = async (
       return bookData;
     });
 
-    // Cache the result
-    // await cacheService.set(cacheKey, result);
-
     return result;
   } catch (error) {
     if (error instanceof BooksError) {
@@ -79,4 +79,17 @@ export const searchBook = async (
     }
     throw new BooksError("Failed to search for book", undefined, error);
   }
+};
+
+// Google Books API'den sayfalı kitap arama (maxResults olmadan)
+export const searchBooksPaginated = async (
+  query: string,
+  startIndex: number = 0
+) => {
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+    query
+  )}&startIndex=${startIndex}`;
+  const response = await fetch(url);
+  const data = await response.json();
+  return data;
 };

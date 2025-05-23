@@ -34,7 +34,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setLibraryBooks(data.libraryBooks || []);
+        setLibraryBooks(
+          data.libraryBooks ? [...data.libraryBooks].reverse() : []
+        );
       } else {
         setLibraryBooks([]);
       }
@@ -44,11 +46,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 
   const addBook = async (book: any) => {
     if (!currentUser) return;
-
-    // Kitap zaten var mı kontrolü
-    if (libraryBooks.some((b) => b.id === book.id)) {
-      throw new Error("This book is already in your library.");
-    }
 
     try {
       setLibraryBooks((prev) => [book, ...prev]);
@@ -63,7 +60,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         { merge: true }
       );
     } catch (error) {
-      console.error("Error adding book:", error);
       // Revert local state if Firebase update fails
       setLibraryBooks((prev) => prev.filter((b) => b.id !== book.id));
       throw error;

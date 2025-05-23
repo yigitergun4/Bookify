@@ -24,6 +24,7 @@ const TabsView = ({ color, size, label, source }: TabsViewProps) => {
     </View>
   );
 };
+
 export default function TabLayout() {
   return (
     <Tabs

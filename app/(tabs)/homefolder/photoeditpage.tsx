@@ -32,7 +32,10 @@ export default function EditBookScreen() {
     parsedBook?.volumeInfo?.authors?.join(", ") || ""
   );
   const [desc, setDesc] = useState(parsedBook?.volumeInfo?.description || "");
-  const photoUri = parsedBook?.volumeInfo?.imageLinks?.thumbnail || "";
+  const photoUri =
+    parsedBook?.imageUrl ||
+    parsedBook?.volumeInfo?.imageLinks?.thumbnail ||
+    null;
 
   useEffect(() => {
     setBookTitle(parsedBook?.volumeInfo?.title || "");
@@ -52,41 +55,48 @@ export default function EditBookScreen() {
     }
     if (bookObj && typeof bookObj === "object" && !Array.isArray(bookObj)) {
       try {
-        console.log("Kitap ekleniyor:", bookObj);
-        addBook(bookObj);
-        router.push("/(tabs)/reading/index");
-      } catch (error) {
-        console.error("Error adding book:", error);
-        Alert.alert(
-          "Error",
-          "Failed to add book to library. Please try again."
-        );
+        await addBook(bookObj);
+        router.replace("/(tabs)/reading/index");
+      } catch (error: any) {
+        if (error?.message === "This book is already in your library.") {
+          Alert.alert("Error", error.message);
+        } else {
+          Alert.alert(
+            "Error",
+            "Failed to add book to library. Please try again."
+          );
+        }
       }
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.replace("/(tabs)/search")}
-      >
-        <Image
-          source={require("@/assets/images/arrow-left.png")}
-          resizeMode="contain"
-          style={{ width: 26, height: 26 }}
-        />
-      </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.content}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace("/(tabs)/search/index")}
+        >
+          <Image
+            source={require("@/assets/images/arrow-left.png")}
+            resizeMode="contain"
+            style={{ width: 26, height: 26 }}
+          />
+        </TouchableOpacity>
         <Text style={styles.header}>Edit Book Details</Text>
-        {photoUri && (
+        {photoUri ? (
           <Image
             source={{ uri: photoUri }}
             style={styles.bookImage}
             resizeMode="contain"
           />
+        ) : (
+          <Image
+            source={require("@/assets/images/not-avaliable-book-photo.png")}
+            style={styles.bookImage}
+            resizeMode="contain"
+          />
         )}
-
         <TextInput
           placeholder="Book Title"
           style={styles.input}

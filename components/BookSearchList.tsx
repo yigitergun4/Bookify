@@ -53,11 +53,9 @@ const BookSearchList = ({
   return (
     <>
       <FlatList
-        data={books.reverse()}
+        data={books}
         contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) =>
-          item.id ? item.id + "-" + index : index.toString()
-        }
+        keyExtractor={(item, index) => (item.id ? item.id : String(index))}
         renderItem={({ item }) => {
           const volume = item?.volumeInfo;
           let imageUrl = volume?.imageLinks?.thumbnail;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -13,6 +13,7 @@ interface HomePageSearchInputProps {
   onSearchChange?: (text: string) => void;
   isSubmitButtonShown?: boolean;
   onSubmit?: () => void;
+  value?: string;
 }
 
 const SearchInput = ({
@@ -20,14 +21,19 @@ const SearchInput = ({
   onSearchChange,
   isSubmitButtonShown = true,
   onSubmit,
+  value = "",
 }: HomePageSearchInputProps) => {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(value);
+
+  useEffect(() => {
+    setSearch(value);
+  }, [value]);
 
   const handleSearch = () => {
     if (search.trim()) {
       if (isHomePage) {
         router.push({
-          pathname: "/(tabs)/homefolder/SearchResults",
+          pathname: "/(tabs)/homefolder/searchresults",
           params: { query: search },
         });
       } else if (onSubmit) {

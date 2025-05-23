@@ -109,14 +109,10 @@ export default function CameraButton() {
         }
       } catch (err) {
         console.log("[CameraButton] Kitap bulunamadı. Hata:", err);
-        throw new BooksError("No book found for the given query");
+        throw new BooksError("No book found please try with manual search");
       }
 
-      if (!bookData || !bookData?.volumeInfo?.imageLinks) {
-        throw new BooksError("Invalid book data received");
-      }
-
-      // Tüm işlemler başarılı olduğunda yönlendir
+      // if all processes are successful, redirect to photoeditpage
       router.push({
         pathname: "/(tabs)/homefolder/photoeditpage" as any,
         params: {
@@ -197,7 +193,6 @@ export default function CameraButton() {
             facing="back"
             ratio="16:9"
           />
-          {/* Dikey dikdörtgen overlay */}
           <View
             style={[
               styles.overlay,

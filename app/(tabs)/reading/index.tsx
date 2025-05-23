@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  RefreshControl,
-} from "react-native";
+import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
@@ -50,7 +42,6 @@ export default function LibraryScreen() {
     fetchUserData();
   }, [user]);
 
-  // libraryBooks değiştiğinde filteredBooks'u güncelle
   useEffect(() => {
     setFilteredBooks([...libraryBooks].reverse());
   }, [libraryBooks]);
@@ -106,11 +97,7 @@ export default function LibraryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+      <View>
         <View style={styles.headerContainer}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>
@@ -126,15 +113,17 @@ export default function LibraryScreen() {
             isSubmitButtonShown={false}
           />
         </View>
-        <BookSearchList
-          books={filteredBooks}
-          loadingMore={loading}
-          addBook={() => {}}
-          handleLoadMore={() => {}}
-          isAddButtonShown={false}
-          onLongPressBook={handleLongPressBook}
-        />
-      </ScrollView>
+      </View>
+      <BookSearchList
+        books={filteredBooks}
+        loadingMore={loading}
+        addBook={() => {}}
+        handleLoadMore={() => {}}
+        isAddButtonShown={false}
+        onLongPressBook={handleLongPressBook}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
     </SafeAreaView>
   );
 }

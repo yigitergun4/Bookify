@@ -207,6 +207,7 @@ export default function OnboardingFlow() {
       userRef,
       {
         name: toTitleCase(name),
+        email: user.email,
         favoriteGenres: selectedGenres,
         goal,
         favoriteBooks: [book1, book2, book3].map(toTitleCase),

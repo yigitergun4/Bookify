@@ -6,6 +6,7 @@ import {
   setDoc,
   arrayUnion,
   arrayRemove,
+  onSnapshot,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -26,23 +27,28 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Load books when currentUser changes
+  // Real-time sync with Firestore
   useEffect(() => {
-    const loadBooks = async () => {
-      if (currentUser) {
-        const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setLibraryBooks(data.libraryBooks || []);
-        }
+    if (!currentUser) return;
+    const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setLibraryBooks(data.libraryBooks || []);
+      } else {
+        setLibraryBooks([]);
       }
-    };
-    loadBooks();
+    });
+    return () => unsubscribe();
   }, [currentUser]);
 
   const addBook = async (book: any) => {
     if (!currentUser) return;
+
+    // Kitap zaten var mı kontrolü
+    if (libraryBooks.some((b) => b.id === book.id)) {
+      throw new Error("This book is already in your library.");
+    }
 
     try {
       setLibraryBooks((prev) => [book, ...prev]);

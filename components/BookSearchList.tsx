@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  Alert,
 } from "react-native";
 
 interface BookSearchListProps {
@@ -18,6 +19,8 @@ interface BookSearchListProps {
   handleLoadMore: () => void;
   isAddButtonShown: boolean;
   onLongPressBook?: (book: any) => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 const BookSearchList = ({
@@ -27,6 +30,8 @@ const BookSearchList = ({
   handleLoadMore,
   isAddButtonShown,
   onLongPressBook,
+  refreshing = false,
+  onRefresh,
 }: BookSearchListProps) => {
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -94,7 +99,22 @@ const BookSearchList = ({
                       Language: {volume?.language?.toUpperCase()}
                     </Text>
                     {isAddButtonShown && (
-                      <TouchableOpacity onPress={() => addBook(item)}>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            await addBook(item);
+                          } catch (err: any) {
+                            if (
+                              err?.message ===
+                              "This book is already in your library."
+                            ) {
+                              Alert.alert("Error", err.message);
+                            } else {
+                              Alert.alert("Error", "Failed to add book.");
+                            }
+                          }
+                        }}
+                      >
                         <Image
                           source={require("@/assets/images/addtolibrary.png")}
                           style={{ width: 20, height: 20 }}
@@ -114,6 +134,8 @@ const BookSearchList = ({
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
       {loadingMore && (
         <View style={{ padding: 16, alignItems: "center" }}>

@@ -3,7 +3,7 @@ import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import BookSearchList from "@/components/BookSearchList";
 import { useLibrary } from "@/contexts/LibraryContext";
 
@@ -11,51 +11,50 @@ export default function LibraryScreen() {
   const [userName, setUserName] = useState("");
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const user = FIREBASE_AUTH.currentUser;
-  const { libraryBooks } = useLibrary();
+  const { libraryBooks, removeBook } = useLibrary();
+
+  const fetchUserData = async () => {
+    if (user) {
+      try {
+        // Fetch user data including books
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const fullName = data.name || "";
+          const firstName = fullName.split(" ")[0];
+          setUserName(firstName);
+        }
+      } catch (error) {
+        Alert.alert("Error", "Failed to load your library");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      Alert.alert("Error", "Failed to load your library");
+    }
+  };
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          // Fetch user data including books
-          const userRef = doc(FIREBASE_DB, "Users", user.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            const fullName = data.name || "";
-            const firstName = fullName.split(" ")[0];
-            setUserName(firstName);
-          }
-        } catch (error) {
-          Alert.alert("Error", "Failed to load your library");
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        Alert.alert("Error", "Failed to load your library");
-      }
-    };
-
     fetchUserData();
   }, [user]);
 
-  // libraryBooks değiştiğinde filteredBooks'u güncelle
   useEffect(() => {
-    // Kitapları ters sırada listele
-    setFilteredBooks([...libraryBooks].reverse());
+    setFilteredBooks([...libraryBooks]);
   }, [libraryBooks]);
 
   const handleSearchChange = (text: string) => {
     const searchText = text.toLowerCase().trim();
 
     if (!searchText) {
-      setFilteredBooks([...libraryBooks].reverse());
+      setFilteredBooks([...libraryBooks]);
       return;
     }
 
-    const filtered = [...libraryBooks].reverse().filter((book: any) => {
+    const filtered = [...libraryBooks].filter((book: any) => {
       if (!book || !book.volumeInfo) return false;
 
       const title = String(book.volumeInfo.title || "").toLowerCase();
@@ -81,58 +80,60 @@ export default function LibraryScreen() {
           text: "Yes",
           style: "destructive",
           onPress: async () => {
-            try {
-              // Get current user data
-              const userRef = doc(FIREBASE_DB, "Users", user!.uid);
-              const userSnap = await getDoc(userRef);
-
-              if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const updatedBooks = userData.libraryBooks.filter(
-                  (b: any) => b.id !== book.id
-                );
-
-                // Update user document with new books array
-                await updateDoc(userRef, {
-                  libraryBooks: updatedBooks,
-                });
-
-                Alert.alert("Success", "Book removed from your library!");
-              }
-            } catch (error) {
-              Alert.alert("Error", "Failed to remove book from library");
-            }
+            await removeBook(book.id);
           },
         },
       ]
     );
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserData();
+    setFilteredBooks([...libraryBooks]);
+    setRefreshing(false);
+  };
+
+  // Kitapları id'ye göre tekilleştir
+  function uniqueById(arr: any[]) {
+    const seen = new Set();
+    return arr.filter((item) => {
+      if (!item?.id) return false;
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <View style={styles.headerContainer}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>
-            {userName ? `${userName}'s Library` : "Your Library"}
-          </Text>
+      <View>
+        <View style={styles.headerContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>
+              {userName ? `${userName}'s Library` : "Your Library"}
+            </Text>
+          </View>
+          <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
         </View>
-        <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
-      </View>
-      <View style={styles.searchContainer}>
-        <HomePageSearchInput
-          isHomePage={false}
-          onSearchChange={handleSearchChange}
-          isSubmitButtonShown={false}
-        />
+        <View style={styles.searchContainer}>
+          <HomePageSearchInput
+            isHomePage={false}
+            onSearchChange={handleSearchChange}
+            isSubmitButtonShown={false}
+          />
+        </View>
       </View>
       <BookSearchList
-        books={filteredBooks}
+        books={uniqueById(filteredBooks)}
         loadingMore={loading}
         addBook={() => {}}
         handleLoadMore={() => {}}
         isAddButtonShown={false}
         onLongPressBook={handleLongPressBook}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </SafeAreaView>
   );

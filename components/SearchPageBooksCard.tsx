@@ -17,7 +17,7 @@ type BookCardProps = {
   description: string;
   author: string;
   image: any;
-  bookData?: any; // Google Books API'den gelen tüm kitap verisi
+  bookData?: any; // all book data from google books api
   onPressFavorite?: () => void;
   isFavorite?: boolean;
 };
@@ -32,7 +32,7 @@ const BookCard: React.FC<BookCardProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const { addBook } = useLibrary();
 
-  const handleAddToLibrary = () => {
+  const handleAddToLibrary = async () => {
     if (bookData) {
       Alert.alert(
         "Add to Library",
@@ -44,9 +44,17 @@ const BookCard: React.FC<BookCardProps> = ({
           },
           {
             text: "Yes",
-            onPress: () => {
-              addBook(bookData);
-              Alert.alert("Success", "Book added to your library!");
+            onPress: async () => {
+              try {
+                await addBook(bookData);
+                Alert.alert("Success", "Book added to your library!");
+              } catch (err: any) {
+                if (err?.message === "This book is already in your library.") {
+                  Alert.alert("Error", err.message);
+                } else {
+                  Alert.alert("Error", "Failed to add book.");
+                }
+              }
             },
           },
         ]
@@ -61,10 +69,11 @@ const BookCard: React.FC<BookCardProps> = ({
         onPress={() => setModalVisible(true)}
       >
         <View style={styles.imageWrapper}>
+          {/* kendime not: Eğer image local bir foto ise bu number tipindedir, eğer internetten gelen bir foto ise bu object tipindedir. */}
           <Image
             source={image}
             style={
-              typeof image === "number" // Eğer image local bir foto ise bu number tipindedir, eğer internetten gelen bir foto ise bu object tipindedir.
+              typeof image === "number"
                 ? [styles.image, styles.fallbackImage]
                 : styles.image
             }

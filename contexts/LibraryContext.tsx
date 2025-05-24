@@ -6,6 +6,7 @@ import {
   setDoc,
   arrayUnion,
   arrayRemove,
+  onSnapshot,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -26,35 +27,43 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Load books when currentUser changes
+  // Real-time sync with Firestore
   useEffect(() => {
-    const loadBooks = async () => {
-      if (currentUser) {
-        const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setLibraryBooks(data.libraryBooks || []);
-        }
+    if (!currentUser) return;
+    const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setLibraryBooks(
+          data.libraryBooks ? [...data.libraryBooks].reverse() : []
+        );
+      } else {
+        setLibraryBooks([]);
       }
-    };
-    loadBooks();
+    });
+    return () => unsubscribe();
   }, [currentUser]);
 
   const addBook = async (book: any) => {
     if (!currentUser) return;
 
-    setLibraryBooks((prev) => [book, ...prev]);
+    try {
+      setLibraryBooks((prev) => [book, ...prev]);
 
-    // Save to Firebase
-    const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
-    await setDoc(
-      userRef,
-      {
-        libraryBooks: arrayUnion(book),
-      },
-      { merge: true }
-    );
+      // Save to Firebase
+      const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+      await setDoc(
+        userRef,
+        {
+          libraryBooks: arrayUnion(book),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      // Revert local state if Firebase update fails
+      setLibraryBooks((prev) => prev.filter((b) => b.id !== book.id));
+      throw error;
+    }
   };
 
   const removeBook = async (bookId: string) => {
@@ -76,8 +85,31 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const refreshBooks = async () => {
+    if (!currentUser) return;
+
+    try {
+      const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setLibraryBooks(data.libraryBooks || []);
+      }
+    } catch (error) {
+      console.error("Error refreshing books:", error);
+    }
+  };
+
   return (
-    <LibraryContext.Provider value={{ libraryBooks, addBook, removeBook }}>
+    <LibraryContext.Provider
+      value={{
+        books: libraryBooks,
+        libraryBooks,
+        addBook,
+        removeBook,
+        refreshBooks,
+      }}
+    >
       {children}
     </LibraryContext.Provider>
   );

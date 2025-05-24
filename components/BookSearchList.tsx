@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  Alert,
 } from "react-native";
 
 interface BookSearchListProps {
@@ -18,6 +19,8 @@ interface BookSearchListProps {
   handleLoadMore: () => void;
   isAddButtonShown: boolean;
   onLongPressBook?: (book: any) => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 const BookSearchList = ({
@@ -27,6 +30,8 @@ const BookSearchList = ({
   handleLoadMore,
   isAddButtonShown,
   onLongPressBook,
+  refreshing = false,
+  onRefresh,
 }: BookSearchListProps) => {
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -41,24 +46,21 @@ const BookSearchList = ({
     setSelectedBook(null);
   };
 
-  let modalImageUrl = selectedBook?.volumeInfo.imageLinks?.thumbnail;
-  if (modalImageUrl && modalImageUrl.startsWith("http:")) {
-    modalImageUrl = modalImageUrl.replace("http:", "https:");
+  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
+    modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
-
   return (
     <>
       <FlatList
         data={books}
         contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) =>
-          item.id ? item.id + "-" + index : index.toString()
-        }
+        keyExtractor={(item, index) => (item.id ? item.id : String(index))}
         renderItem={({ item }) => {
-          const volume = item.volumeInfo;
-          let imageUrl = volume.imageLinks?.thumbnail;
-          if (imageUrl && imageUrl.startsWith("http:")) {
-            imageUrl = imageUrl.replace("http:", "https:");
+          const volume = item?.volumeInfo;
+          let imageUrl = volume?.imageLinks?.thumbnail;
+          if (imageUrl && imageUrl?.startsWith("http:")) {
+            imageUrl = imageUrl?.replace("http:", "https:");
           }
           return (
             <TouchableOpacity
@@ -70,17 +72,17 @@ const BookSearchList = ({
                   source={
                     imageUrl
                       ? { uri: imageUrl }
-                      : require("@/assets/images/bookimage.png")
+                      : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={styles.bookImage}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle} numberOfLines={1}>
-                    {volume.title}
+                    {volume?.title}
                   </Text>
                   <Text style={styles.author} numberOfLines={1}>
-                    Author: {volume.authors?.join(", ") || "Unknown"}
+                    Author: {volume?.authors?.join(", ") || "Unknown"}
                   </Text>
                   <Text style={styles.description} numberOfLines={1}>
                     Publisher: {volume?.publisher || "No publisher available."}
@@ -95,7 +97,22 @@ const BookSearchList = ({
                       Language: {volume?.language?.toUpperCase()}
                     </Text>
                     {isAddButtonShown && (
-                      <TouchableOpacity onPress={() => addBook(item)}>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            await addBook(item);
+                          } catch (err: any) {
+                            if (
+                              err?.message ===
+                              "This book is already in your library."
+                            ) {
+                              Alert.alert("Error", err.message);
+                            } else {
+                              Alert.alert("Error", "Failed to add book.");
+                            }
+                          }
+                        }}
+                      >
                         <Image
                           source={require("@/assets/images/addtolibrary.png")}
                           style={{ width: 20, height: 20 }}
@@ -115,6 +132,8 @@ const BookSearchList = ({
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
       {loadingMore && (
         <View style={{ padding: 16, alignItems: "center" }}>
@@ -145,7 +164,7 @@ const BookSearchList = ({
                   source={
                     modalImageUrl
                       ? { uri: modalImageUrl }
-                      : require("@/assets/images/bookimage.png")
+                      : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={{
                     width: 120,
@@ -154,7 +173,7 @@ const BookSearchList = ({
                     alignSelf: "center",
                     marginBottom: 16,
                   }}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <Text
                   style={{
@@ -164,25 +183,25 @@ const BookSearchList = ({
                     textAlign: "center",
                   }}
                 >
-                  {selectedBook.volumeInfo.title}
+                  {selectedBook?.volumeInfo?.title}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Author: </Text>
-                  {selectedBook.volumeInfo.authors?.join(", ") || "Unknown"}
+                  {selectedBook?.volumeInfo?.authors?.join(", ") || "Unknown"}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Publisher: </Text>
-                  {selectedBook.volumeInfo.publisher ||
+                  {selectedBook?.volumeInfo?.publisher ||
                     "No publisher available."}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
                   <Text style={{ fontWeight: "bold" }}>Language: </Text>
-                  {selectedBook.volumeInfo.language?.toUpperCase()}
+                  {selectedBook?.volumeInfo?.language?.toUpperCase()}
                 </Text>
                 <View style={{ maxHeight: 180, marginTop: 8 }}>
                   <ScrollView>
                     <Text style={{ fontSize: 14, color: "#444" }}>
-                      {selectedBook.volumeInfo.description ||
+                      {selectedBook?.volumeInfo?.description ||
                         "No description available."}
                     </Text>
                   </ScrollView>

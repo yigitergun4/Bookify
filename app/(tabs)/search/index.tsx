@@ -1,5 +1,4 @@
 import {
-  Animated,
   Image,
   Keyboard,
   SafeAreaView,
@@ -7,16 +6,29 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  Alert,
+  FlatList,
 } from "react-native";
 import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
-import ScrollView = Animated.ScrollView;
 import BookCard from "@/components/SearchPageBooksCard";
 import CameraButton from "@/components/CameraButton";
 import { router } from "expo-router";
 import { useState } from "react";
+import { searchBooksPaginated } from "@/services/booksService";
+import { useFocusEffect } from "expo-router";
+import React from "react";
 
-const PAGE_SIZE = 10;
+// make unique by id
+function uniqueById(arr: any[]) {
+  const seen = new Set();
+  return arr.filter((item) => {
+    if (!item?.id) return false;
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
 
 export default function TabTwoScreen() {
   const [books, setBooks] = useState<any[]>([]);
@@ -31,21 +43,16 @@ export default function TabTwoScreen() {
     if (append) setLoadingMore(true);
     else setLoading(true);
     try {
-      const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-          query
-        )}&startIndex=${append ? startIndex : 0}&maxResults=${PAGE_SIZE}`
-      );
-      const data = await response.json();
+      const data = await searchBooksPaginated(query, append ? startIndex : 0);
       const items = data.items || [];
       setTotalItems(data.totalItems || 0);
       if (append) {
-        setBooks((prev) => [...prev, ...items]);
+        setBooks((prev) => uniqueById([...prev, ...items]));
       } else {
-        setBooks(items);
+        setBooks(uniqueById(items));
       }
     } catch (err) {
-      console.error("Google Books API error:", err);
+      Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);
       else setLoading(false);
@@ -54,6 +61,11 @@ export default function TabTwoScreen() {
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
+    if (text.trim() === "") {
+      setBooks([]);
+      setStartIndex(0);
+      setTotalItems(0);
+    }
   };
 
   const handleSubmit = () => {
@@ -65,18 +77,31 @@ export default function TabTwoScreen() {
 
   const handleLoadMore = () => {
     if (books.length < totalItems) {
-      setStartIndex((prev) => prev + PAGE_SIZE);
+      setStartIndex((prev) => prev + 10);
       fetchBooks(searchQuery, true);
     }
   };
 
+  const filteredBooks = uniqueById(books.filter((item) => !!item.id));
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setBooks([]);
+      setSearchQuery("");
+      setStartIndex(0);
+      setTotalItems(0);
+    }, [])
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { flex: 1 }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.container2}>
+        <View style={[styles.container2, { flex: 1 }]}>
           <View style={styles.discoverView}>
             <Text style={styles.discoverText}>Discover</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/profile/index")}
+            >
               <Image
                 source={require("@/assets/images/bookimage.png")}
                 style={styles.myProfileImage}
@@ -84,7 +109,7 @@ export default function TabTwoScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.searchBarView}>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/reading")}>
+            <TouchableOpacity onPress={() => {}}>
               <Image
                 source={require("@/assets/images/searchpagebookicon.png")}
                 style={styles.searchInputBookIcon}
@@ -96,77 +121,75 @@ export default function TabTwoScreen() {
                 onSearchChange={handleSearch}
                 onSubmit={handleSubmit}
                 isSubmitButtonShown={true}
+                value={searchQuery}
               />
             </View>
-            <TouchableOpacity onPress={() => {}}>
-              <CameraButton />
-            </TouchableOpacity>
+            <CameraButton />
           </View>
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 190 }}
-            showsVerticalScrollIndicator={false}
-            onScroll={({ nativeEvent }) => {
-              const { layoutMeasurement, contentOffset, contentSize } =
-                nativeEvent;
-              const paddingToBottom = 20;
-              if (
-                layoutMeasurement.height + contentOffset.y >=
-                contentSize.height - paddingToBottom
-              ) {
-                handleLoadMore();
-              }
-            }}
-            scrollEventThrottle={400}
-          >
-            <View style={styles.booksCardContainer}>
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#000" />
-                </View>
-              ) : books.length > 0 ? (
-                books.map((book, index) => {
-                  const volume = book.volumeInfo;
-                  let imageUrl = volume.imageLinks?.thumbnail;
-                  if (imageUrl && imageUrl.startsWith("http:")) {
-                    imageUrl = imageUrl.replace("http:", "https:");
-                  }
-                  return (
+          {/* loading spinner while books are loading */}
+          {loading ? (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <ActivityIndicator size="large" color="#000" />
+            </View>
+          ) : (
+            <FlatList
+              data={filteredBooks}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+              renderItem={({ item }) => {
+                const volume = item.volumeInfo;
+                let imageUrl = volume.imageLinks?.thumbnail;
+                if (imageUrl && imageUrl.startsWith("http:")) {
+                  imageUrl = imageUrl.replace("http:", "https:");
+                }
+                return (
+                  <View style={{ marginBottom: 15 }}>
                     <BookCard
-                      key={`${book.id}-${index}`}
-                      title={book.volumeInfo.title}
+                      title={volume.title}
                       description={
-                        book.volumeInfo.description ||
-                        "No description available"
+                        volume.description || "No description available"
                       }
-                      author={book.volumeInfo.authors?.[0] || "Unknown Author"}
+                      author={volume.authors?.[0] || "Unknown Author"}
                       image={
-                        book.volumeInfo.imageLinks?.thumbnail
-                          ? {
-                              uri: book.volumeInfo.imageLinks.thumbnail.replace(
-                                "http://",
-                                "https://"
-                              ),
-                            }
+                        volume.imageLinks?.thumbnail
+                          ? { uri: imageUrl }
                           : require("@/assets/images/not-avaliable-book-photo.png")
                       }
-                      bookData={book}
+                      bookData={item}
                     />
-                  );
-                })
-              ) : (
+                  </View>
+                );
+              }}
+              contentContainerStyle={styles.booksCardContainer}
+              ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>
                     Search to discover books.
                   </Text>
                 </View>
-              )}
-              {loadingMore && (
-                <View style={styles.loadingMoreContainer}>
-                  <ActivityIndicator size="small" color="#000" />
-                </View>
-              )}
-            </View>
-          </ScrollView>
+              }
+              ListFooterComponent={
+                loadingMore ? (
+                  <View
+                    style={[styles.loadingMoreContainer, { minHeight: 60 }]}
+                  >
+                    <ActivityIndicator size="small" color="#000" />
+                  </View>
+                ) : (
+                  <View style={{ height: 30 }} />
+                )
+              }
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.5}
+            />
+          )}
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -219,7 +242,6 @@ const styles = StyleSheet.create({
     width: 20,
   },
   booksCardContainer: {
-    gap: 15,
     backgroundColor: "#FFF",
   },
   loadingContainer: {

@@ -18,6 +18,8 @@ import { useState } from "react";
 import { searchBooksPaginated } from "@/services/booksService";
 import { useFocusEffect } from "expo-router";
 import React from "react";
+import { CacheService } from "@/services/cacheService";
+import { Timestamp } from "@react-native-firebase/firestore";
 
 // make unique by id
 function uniqueById(arr: any[]) {
@@ -93,6 +95,7 @@ export default function TabTwoScreen() {
     }, [])
   );
 
+  console.log(CacheService.getInstance());
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>

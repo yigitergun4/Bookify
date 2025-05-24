@@ -48,20 +48,28 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) return;
 
     try {
-      setLibraryBooks((prev) => [book, ...prev]);
-
-      // Save to Firebase
       const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+      const userDoc = await getDoc(userRef);
+      const currentBooks = userDoc.data()?.libraryBooks || [];
+
+      // Kitap zaten varsa hata fırlat
+      if (currentBooks.some((b: any) => b.id === book.id)) {
+        throw new Error("This book is already in your library.");
+      }
+
+      // Yeni kitabı başa ekle
+      const updatedBooks = [book, ...currentBooks];
+
       await setDoc(
         userRef,
         {
-          libraryBooks: arrayUnion(book),
+          libraryBooks: updatedBooks,
         },
         { merge: true }
       );
+
+      setLibraryBooks(updatedBooks);
     } catch (error) {
-      // Revert local state if Firebase update fails
-      setLibraryBooks((prev) => prev.filter((b) => b.id !== book.id));
       throw error;
     }
   };

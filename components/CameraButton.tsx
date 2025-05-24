@@ -126,7 +126,7 @@ export default function CameraButton() {
               },
             });
 
-            return; // işlem bitti, yönlendirme yapıldı
+            return;
           } catch (err) {
             console.log(
               "[CameraButton] Alternatif kitap listesi de bulunamadı."
@@ -135,8 +135,7 @@ export default function CameraButton() {
           }
         }
 
-        // 4. Kitap bulunduysa yönlendir
-        if (!bookData || !bookData?.volumeInfo?.imageLinks) {
+        if (!bookData) {
           throw new BooksError("Invalid book data received");
         }
 

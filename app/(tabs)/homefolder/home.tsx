@@ -4,13 +4,70 @@ import {
   ScrollView,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { Text } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import HomePageFlatlistRecommendedBooks from "@/components/HomePageFlatlistRecommendedBooks";
-import { router } from "expo-router";
+import HomepageCardList from "@/components/HomepageCardList";
+import { router, useNavigation } from "expo-router";
+import { useEffect, useState } from "react";
+import { CacheService } from "@/services/cacheService";
+import { useLibrary } from "@/contexts/LibraryContext";
+
+const cacheService = CacheService.getInstance();
 
 export default function TabOneScreen() {
+  const [recentClicks, setRecentClicks] = useState<any[]>([]);
+  const [selectedBook, setSelectedBook] = useState<any | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputKey, setInputKey] = useState(Date.now());
+  const { addBook } = useLibrary();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const loadAndSubscribe = async () => {
+      // İlk yükleme
+      const clicks = await cacheService.getRecentClicks();
+      setRecentClicks(clicks.map((click) => click.bookInfo));
+
+      // Cache değişikliklerini dinle
+      const unsubscribe = cacheService.subscribeToRecentClicks((clicks) => {
+        setRecentClicks(clicks.map((click) => click.bookInfo));
+      });
+
+      // Cleanup
+      return () => {
+        unsubscribe();
+      };
+    };
+
+    loadAndSubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setInputKey(Date.now());
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const openModal = (book: any) => {
+    setSelectedBook(book);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedBook(null);
+  };
+
+  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
+    modalImageUrl = modalImageUrl?.replace("http:", "https:");
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -23,8 +80,28 @@ export default function TabOneScreen() {
         </View>
         <View style={styles.container2}>
           <View style={styles.searchInput}>
-            <HomePageSearchInput isHomePage={true} />
+            <HomePageSearchInput key={inputKey} isHomePage={true} />
           </View>
+
+          {recentClicks.length > 0 && (
+            <View style={styles.recentClicksView}>
+              <View style={styles.recommendedView2}>
+                <Text style={styles.recommendedText}>Recently Viewed</Text>
+                <TouchableOpacity>
+                  <Text style={styles.seeAllText}>See all</Text>
+                </TouchableOpacity>
+              </View>
+              <HomepageCardList
+                books={recentClicks.slice(0, 10)}
+                onBookPress={openModal}
+                closeModal={closeModal}
+                modalVisible={modalVisible}
+                selectedBook={selectedBook}
+                addBook={addBook}
+              />
+            </View>
+          )}
+
           <View style={styles.recommendedView}>
             <View style={styles.recommendedView2}>
               <Text style={styles.recommendedText}>Recommended for you</Text>
@@ -77,6 +154,10 @@ const styles = StyleSheet.create({
   },
   recommendedView: {
     marginTop: 50,
+    backgroundColor: "#FFF",
+  },
+  recentClicksView: {
+    marginTop: 30,
     backgroundColor: "#FFF",
   },
   recommendedView2: {

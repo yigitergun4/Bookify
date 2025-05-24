@@ -75,7 +75,7 @@ export default function EditBookScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.replace("/(tabs)/search/index")}
+          onPress={() => router.back()}
         >
           <Image
             source={require("@/assets/images/arrow-left.png")}
@@ -114,6 +114,7 @@ export default function EditBookScreen() {
           editable={false}
         />
         <TextInput
+          placeholder="Description"
           style={[styles.input, styles.textArea]}
           value={desc}
           onChangeText={setDesc}

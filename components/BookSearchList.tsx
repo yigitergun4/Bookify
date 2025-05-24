@@ -11,6 +11,9 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+import { CacheService } from "@/services/cacheService";
+
+const cacheService = CacheService.getInstance();
 
 interface BookSearchListProps {
   books: any[];
@@ -36,9 +39,10 @@ const BookSearchList = ({
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const openModal = (book: any) => {
+  const openModal = async (book: any) => {
     setSelectedBook(book);
     setModalVisible(true);
+    await cacheService.addBookClick(book);
   };
 
   const closeModal = () => {
@@ -50,6 +54,7 @@ const BookSearchList = ({
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
+
   return (
     <>
       <FlatList

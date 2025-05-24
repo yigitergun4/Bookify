@@ -1,9 +1,6 @@
 import axios from "axios";
-import { CacheService } from "./cacheService";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import ENV from "../config/env";
-
-const cacheService = CacheService.getInstance();
 
 export interface BookData {
   title: string;
@@ -37,7 +34,7 @@ export const searchBook = async (
         query += `intitle:${encodeURIComponent(title)}`;
       }
 
-      if (author && author !== "Unknown Author") {
+      if (author && author !== "Unknown") {
         query += `+inauthor:${encodeURIComponent(author)}`;
       }
 
@@ -57,12 +54,11 @@ export const searchBook = async (
       const response = await axios.get(url);
       const items = response.data.items || [];
 
-      console.log("[BooksService] Found items:", items);
-
       if (items.length === 0) {
         throw new BooksError("No book found for the given query");
       }
 
+      // the most relevant book
       const bookData = items[0];
 
       if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
@@ -99,7 +95,7 @@ export const searchBookList = async (
 ): Promise<any[]> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
   let query = encodeURIComponent(title);
-  if (author && author !== "Unknown Author") {
+  if (author && author !== "Unknown") {
     query += "+inauthor:" + encodeURIComponent(author);
   }
   let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;

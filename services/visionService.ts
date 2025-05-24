@@ -6,6 +6,8 @@ import SHA256 from "crypto-js/sha256";
 
 const cacheService = CacheService.getInstance();
 
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 export class VisionError extends ApiError {
   constructor(message: string, statusCode?: number, originalError?: any) {
     super(message, statusCode, originalError);
@@ -13,20 +15,45 @@ export class VisionError extends ApiError {
   }
 }
 
-export const detectText = async (base64Image: string) => {
+interface VisionCacheKey {
+  userId: string;
+  imageHash: string;
+  operationType: string;
+  timestamp: number;
+}
+
+interface VisionCacheData {
+  data: any;
+  timestamp: number;
+}
+
+export const detectText = async (base64Image: string, userId: string) => {
   const VISION_API_KEY = ENV.VISION_API_KEY;
   try {
-    // Generate cache key from image content (SHA-256 hash)
-    const hash = SHA256(base64Image).toString();
-    const cacheKey = `vision_${hash}`;
+    // Cache key oluşturma
+    const cacheKey: VisionCacheKey = {
+      userId,
+      imageHash: SHA256(base64Image).toString(),
+      operationType: "text_detection",
+      timestamp: Date.now(),
+    };
 
-    // Check cache first
-    const cachedResult = await cacheService.get(cacheKey);
+    const cacheKeyString = JSON.stringify(cacheKey);
+
+    // Cache kontrolü
+    const cachedResult = (await cacheService.get(
+      cacheKeyString
+    )) as VisionCacheData | null;
     if (cachedResult) {
-      return cachedResult;
+      // Cache süresini kontrol et
+      if (Date.now() - cachedResult.timestamp < CACHE_DURATION) {
+        return cachedResult.data;
+      }
+      // Süresi geçmiş cache'i temizle
+      await cacheService.delete(cacheKeyString);
     }
 
-    // If not in cache, make API call with retry
+    // API çağrısı
     const result = await withRetry(async () => {
       try {
         const response = await axios.post(
@@ -59,8 +86,12 @@ export const detectText = async (base64Image: string) => {
       }
     });
 
-    // Cache the result
-    await cacheService.set(cacheKey, result);
+    // Sonucu cache'e kaydet
+    const cacheData: VisionCacheData = {
+      data: result,
+      timestamp: Date.now(),
+    };
+    await cacheService.set(cacheKeyString, cacheData);
 
     return result;
   } catch (error) {

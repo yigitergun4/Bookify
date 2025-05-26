@@ -7,32 +7,93 @@ import {
 } from "react-native";
 import { Text } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
-import HomePageFlatlistRecommendedBooks from "@/components/HomePageFlatlistRecommendedBooks";
 import HomepageCardList from "@/components/HomepageCardList";
 import { router, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
+import { RecommendationService } from "@/services/recommendationService";
+import { getAuth } from "firebase/auth";
 
+const auth = getAuth();
 const cacheService = CacheService.getInstance();
 
 export default function TabOneScreen() {
   const [recentClicks, setRecentClicks] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [inputKey, setInputKey] = useState(Date.now());
+  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
   const { addBook } = useLibrary();
   const navigation = useNavigation();
+  const user = auth.currentUser;
+
+  const recommendationService = RecommendationService.getInstance();
+  const fetchRecommendedBooks = async () => {
+    if (!user) return;
+    try {
+      const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
+
+      if (cachedBooks && cachedBooks.length > 0) {
+        setRecommendedBooks(cachedBooks);
+      } else {
+        // Cache boşsa yeni öneriler al
+        const newBooks = await recommendationService.getRecommendations(
+          user.uid
+        );
+        setRecommendedBooks(newBooks);
+        await cacheService.saveRecommendedBooks(user.uid, newBooks);
+      }
+    } catch (error) {
+      console.error("Error fetching recommended books:", error);
+    }
+  };
+
+  useEffect(() => {
+    const loadRecommendedBooks = async () => {
+      if (!user) return;
+
+      try {
+        const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
+
+        if (cachedBooks && cachedBooks.length > 0) {
+          console.log("📦 Using cached recommended books");
+          setRecommendedBooks(cachedBooks);
+          setIsLoading(false);
+        } else {
+          console.log("⏳ No cache, fetching recommended books");
+          await fetchRecommendedBooks(); // yeni öneri getirir ve cache'e yazar
+        }
+      } catch (error) {
+        console.error("Error loading recommended books:", error);
+        setIsLoading(false);
+      }
+    };
+
+    loadRecommendedBooks();
+  }, [user]);
+  const cacheBooks = async () => {
+    if (!user) return;
+    const recommendedBooks = await recommendationService.getRecommendations(
+      user.uid
+    );
+    await cacheService.saveRecommendedBooks(user.uid, recommendedBooks);
+  };
 
   useEffect(() => {
     const loadAndSubscribe = async () => {
+      if (!user) return;
+
       // İlk yükleme
-      const clicks = await cacheService.getRecentClicks();
+      const clicks = await cacheService.getRecentClicks(user.uid);
       setRecentClicks(clicks.map((click) => click.bookInfo));
 
       // Cache değişikliklerini dinle
       const unsubscribe = cacheService.subscribeToRecentClicks((clicks) => {
-        setRecentClicks(clicks.map((click) => click.bookInfo));
+        if (clicks[0]?.userId === user.uid) {
+          setRecentClicks(clicks.map((click) => click.bookInfo));
+        }
       });
 
       // Cleanup
@@ -42,7 +103,7 @@ export default function TabOneScreen() {
     };
 
     loadAndSubscribe();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -107,7 +168,9 @@ export default function TabOneScreen() {
               <Text style={styles.recommendedText}>Recommended for you</Text>
               <TouchableOpacity
                 onPress={() =>
-                  router.push("/(tabs)/homefolder/recommendbookpage")
+                  router.push({
+                    pathname: "/(tabs)/homefolder/recommendbookpage",
+                  })
                 }
               >
                 <Text style={styles.seeAllText}>See all</Text>
@@ -115,7 +178,7 @@ export default function TabOneScreen() {
             </View>
             <View style={{ marginBottom: 10 }}>
               <HomepageCardList
-                books={recentClicks.slice(11, 20)}
+                books={recommendedBooks.slice(0, 10)}
                 onBookPress={openModal}
                 closeModal={closeModal}
                 modalVisible={modalVisible}
@@ -139,7 +202,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   container2: {
-    paddingHorizontal: 25,
+    paddingHorizontal: 16,
     backgroundColor: "#FFF",
   },
   grayBackGround: {

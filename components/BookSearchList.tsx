@@ -12,8 +12,10 @@ import {
   Alert,
 } from "react-native";
 import { CacheService } from "@/services/cacheService";
+import { getAuth } from "firebase/auth";
 
 const cacheService = CacheService.getInstance();
+const auth = getAuth();
 
 interface BookSearchListProps {
   books: any[];
@@ -40,9 +42,12 @@ const BookSearchList = ({
   const [modalVisible, setModalVisible] = useState(false);
 
   const openModal = async (book: any) => {
+    const user = auth.currentUser;
+    if (user) {
+      await cacheService.addBookClick(book, user.uid);
+    }
     setSelectedBook(book);
     setModalVisible(true);
-    await cacheService.addBookClick(book);
   };
 
   const closeModal = () => {
@@ -60,7 +65,7 @@ const BookSearchList = ({
       <FlatList
         data={books}
         contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) => (item.id ? item.id : String(index))}
+        keyExtractor={(item, index) => `${item.id}_${index}`}
         renderItem={({ item }) => {
           const volume = item?.volumeInfo;
           let imageUrl = volume?.imageLinks?.thumbnail;

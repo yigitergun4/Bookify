@@ -49,6 +49,7 @@ export default function HomePageFlatlistRecentClicks({
     <View style={styles.container}>
       <FlatList
         data={books}
+        keyExtractor={(item, index) => `${item.id}_${index}`}
         horizontal
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (

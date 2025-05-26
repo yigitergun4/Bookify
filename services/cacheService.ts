@@ -9,6 +9,7 @@ interface CacheItem<T> {
 interface BookClick {
   bookInfo: any; // Tıklanan kitabın tüm bilgileri
   clickDate: number;
+  userId: string;
 }
 
 export class CacheService {
@@ -18,6 +19,7 @@ export class CacheService {
   private readonly RECENT_CLICKS_KEY = "recent_book_clicks";
   private readonly MAX_RECENT_CLICKS = 20;
   private recentClicksSubscribers: ((clicks: BookClick[]) => void)[] = [];
+  private RECOMMENDED_BOOKS_KEY = "recommended_books";
 
   private constructor() {}
 
@@ -137,12 +139,13 @@ export class CacheService {
     this.recentClicksSubscribers.forEach((callback) => callback(clicks));
   }
 
-  async addBookClick(book: any) {
+  async addBookClick(book: any, userId: string) {
     try {
-      const clicks = await this.getRecentClicks();
+      const clicks = await this.getRecentClicks(userId);
       const newClick: BookClick = {
         bookInfo: book,
         clickDate: Date.now(),
+        userId: userId,
       };
 
       // Aynı kitap varsa, tarihini güncelle
@@ -161,7 +164,7 @@ export class CacheService {
       }
 
       await AsyncStorage.setItem(
-        this.RECENT_CLICKS_KEY,
+        `${this.RECENT_CLICKS_KEY}_${userId}`,
         JSON.stringify(clicks)
       );
       this.notifyRecentClicksSubscribers(clicks);
@@ -170,9 +173,11 @@ export class CacheService {
     }
   }
 
-  async getRecentClicks(): Promise<BookClick[]> {
+  async getRecentClicks(userId: string): Promise<BookClick[]> {
     try {
-      const clicks = await AsyncStorage.getItem(this.RECENT_CLICKS_KEY);
+      const clicks = await AsyncStorage.getItem(
+        `${this.RECENT_CLICKS_KEY}_${userId}`
+      );
       if (clicks) {
         return JSON.parse(clicks);
       }
@@ -183,11 +188,31 @@ export class CacheService {
     }
   }
 
-  async clearRecentClicks(): Promise<void> {
+  async clearRecentClicks(userId: string): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.RECENT_CLICKS_KEY);
+      await AsyncStorage.removeItem(`${this.RECENT_CLICKS_KEY}_${userId}`);
     } catch (error) {
       console.error("Error clearing recent clicks:", error);
+    }
+  }
+
+  async saveRecommendedBooks(userId: string, books: any[]): Promise<void> {
+    try {
+      const key = `${this.RECOMMENDED_BOOKS_KEY}_${userId}`;
+      await AsyncStorage.setItem(key, JSON.stringify(books));
+    } catch (error) {
+      console.error("Error saving recommended books:", error);
+    }
+  }
+
+  async getRecommendedBooks(userId: string): Promise<any[]> {
+    try {
+      const key = `${this.RECOMMENDED_BOOKS_KEY}_${userId}`;
+      const books = await AsyncStorage.getItem(key);
+      return books ? JSON.parse(books) : [];
+    } catch (error) {
+      console.error("Error getting recommended books:", error);
+      return [];
     }
   }
 }

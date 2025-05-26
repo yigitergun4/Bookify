@@ -10,13 +10,16 @@ import { useLibrary } from "@/contexts/LibraryContext";
 import BookSearchList from "@/components/BookSearchList";
 import { CacheService } from "@/services/cacheService";
 import { useEffect, useState } from "react";
+import { getAuth } from "firebase/auth";
 
 const cacheService = CacheService.getInstance();
+const auth = getAuth();
 
 function recentlyview() {
   const { addBook } = useLibrary();
   const [books, setBooks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const user = auth.currentUser;
 
   const handleAddBook = async (book: any) => {
     try {
@@ -38,7 +41,8 @@ function recentlyview() {
     const loadBooks = async () => {
       try {
         setIsLoading(true);
-        const clicks = await cacheService.getRecentClicks();
+        if (!user) return;
+        const clicks = await cacheService.getRecentClicks(user.uid);
         setBooks(clicks.map((click) => click.bookInfo));
       } catch (error) {
         console.error("Error loading books:", error);
@@ -47,7 +51,7 @@ function recentlyview() {
       }
     };
     loadBooks();
-  }, []);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -65,25 +69,17 @@ function recentlyview() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : (
-        <>
-          <View style={styles.header}>
-            <Text style={styles.screenTitle}>Recently Viewed</Text>
-            <Text style={styles.bookCount}>{books.length} books</Text>
-          </View>
-          <BookSearchList
-            books={books}
-            loadingMore={false}
-            addBook={handleAddBook}
-            handleLoadMore={() => {}}
-            isAddButtonShown={true}
-          />
-        </>
-      )}
+      <View style={styles.header}>
+        <Text style={styles.screenTitle}>Recently Viewed</Text>
+        <Text style={styles.bookCount}>{books.length} books</Text>
+      </View>
+      <BookSearchList
+        books={books}
+        loadingMore={false}
+        addBook={handleAddBook}
+        handleLoadMore={() => {}}
+        isAddButtonShown={true}
+      />
     </SafeAreaView>
   );
 }

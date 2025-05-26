@@ -41,6 +41,7 @@
     "expo-web-browser": "~14.0.2",
     "install": "^0.13.0",
     "npm": "^11.3.0",
+    "openai": "^4.103.0",
     "react": "^18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",

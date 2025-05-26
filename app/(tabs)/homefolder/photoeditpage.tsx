@@ -73,16 +73,6 @@ export default function EditBookScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Image
-            source={require("@/assets/images/arrow-left.png")}
-            resizeMode="contain"
-            style={{ width: 26, height: 26 }}
-          />
-        </TouchableOpacity>
         <Text style={styles.header}>Edit Book Details</Text>
         {photoUri ? (
           <Image

@@ -4,7 +4,6 @@ import {
   ScrollView,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 import { Text } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
@@ -82,12 +81,13 @@ export default function TabOneScreen() {
           <View style={styles.searchInput}>
             <HomePageSearchInput key={inputKey} isHomePage={true} />
           </View>
-
           {recentClicks.length > 0 && (
             <View style={styles.recentClicksView}>
               <View style={styles.recommendedView2}>
                 <Text style={styles.recommendedText}>Recently Viewed</Text>
-                <TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push("/(tabs)/homefolder/recentlyview")}
+                >
                   <Text style={styles.seeAllText}>See all</Text>
                 </TouchableOpacity>
               </View>
@@ -113,8 +113,15 @@ export default function TabOneScreen() {
                 <Text style={styles.seeAllText}>See all</Text>
               </TouchableOpacity>
             </View>
-            <View>
-              <HomePageFlatlistRecommendedBooks />
+            <View style={{ marginBottom: 10 }}>
+              <HomepageCardList
+                books={recentClicks.slice(11, 20)}
+                onBookPress={openModal}
+                closeModal={closeModal}
+                modalVisible={modalVisible}
+                selectedBook={selectedBook}
+                addBook={addBook}
+              />
             </View>
           </View>
         </View>

@@ -1,7 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 
 const PAGE_SIZE = 10;
@@ -105,10 +112,8 @@ export default function SearchResultsScreen() {
         <Text style={styles.subtitle}>Results for “{query}”</Text>
       </View>
       {loading ? (
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <Text style={{ fontSize: 20, color: "#888" }}>Loading...</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : (
         <>
@@ -147,5 +152,10 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: "#555",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

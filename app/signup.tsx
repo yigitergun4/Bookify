@@ -29,7 +29,12 @@ const SignUpScreen = () => {
         email,
         password
       );
-      Alert.alert("You have successfully created an account");
+      Alert.alert("Success", "You have successfully created an account", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/signin"),
+        },
+      ]);
     } catch (error: any) {
       if (error.code === "auth/email-already-in-use") {
         Alert.alert("You already have an account");

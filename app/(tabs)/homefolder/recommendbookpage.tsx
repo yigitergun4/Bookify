@@ -19,18 +19,28 @@ const RecommendedScreen = () => {
   const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [skipCount, setSkipCount] = useState(0);
   const user = auth.currentUser;
 
   useEffect(() => {
     const loadRecommendedBooks = async () => {
       if (!user) return;
       try {
-        // Önce cache'den kontrol et
+        // firstly check the cache
         const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
 
         if (cachedBooks && cachedBooks.length > 0) {
-          console.log("Loading recommendations from cache...");
           setRecommendedBooks(cachedBooks);
+          setSkipCount(cachedBooks.length);
+          setIsLoading(false);
+        } else {
+          // if cache is empty, fetch new recommendations
+          const newBooks = await recommendationService.getRecommendations(
+            user.uid
+          );
+          setRecommendedBooks(newBooks);
+          setSkipCount(newBooks.length);
+          await cacheService.saveRecommendedBooks(user.uid, newBooks);
         }
       } catch (error) {
         console.error("Error loading recommended books:", error);
@@ -43,22 +53,26 @@ const RecommendedScreen = () => {
   }, [user]);
 
   const handleLoadMore = async () => {
-    if (!user || isLoadingMore) return;
-
+    if (isLoadingMore || !user) return;
+    setIsLoadingMore(true);
     try {
-      setIsLoadingMore(true);
-      console.log("Loading more recommendations...");
-      const newBooks = await recommendationService.getRecommendations(user.uid);
+      // Mevcut kitapların ID'lerini al
+      const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
+
+      // Yeni önerileri al
+      const newBooks = await recommendationService.getRecommendations(
+        user.uid,
+        skipCount
+      );
+
+      // Sadece yeni ve benzersiz kitapları filtrele
+      const uniqueNewBooks = newBooks.filter(
+        (book) => !existingBookIds.has(book.id)
+      );
 
       // Yeni kitapları mevcut listeye ekle
-      setRecommendedBooks((prevBooks) => {
-        // Yeni kitapları ekle, ancak aynı ID'ye sahip kitapları ekleme
-        const existingIds = new Set(prevBooks.map((book) => book.id));
-        const uniqueNewBooks = newBooks.filter(
-          (book) => !existingIds.has(book.id)
-        );
-        return [...prevBooks, ...uniqueNewBooks];
-      });
+      setRecommendedBooks((prevBooks) => [...prevBooks, ...uniqueNewBooks]);
+      setSkipCount((prevCount) => prevCount + uniqueNewBooks.length);
     } catch (error) {
       console.error("Error loading more recommendations:", error);
     } finally {

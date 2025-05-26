@@ -38,7 +38,7 @@ export default function TabOneScreen() {
       if (cachedBooks && cachedBooks.length > 0) {
         setRecommendedBooks(cachedBooks);
       } else {
-        // Cache boşsa yeni öneriler al
+        // if cache is empty, fetch new recommendations
         const newBooks = await recommendationService.getRecommendations(
           user.uid
         );
@@ -58,11 +58,9 @@ export default function TabOneScreen() {
         const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
 
         if (cachedBooks && cachedBooks.length > 0) {
-          console.log("📦 Using cached recommended books");
           setRecommendedBooks(cachedBooks);
           setIsLoading(false);
         } else {
-          console.log("⏳ No cache, fetching recommended books");
           await fetchRecommendedBooks(); // yeni öneri getirir ve cache'e yazar
         }
       } catch (error) {

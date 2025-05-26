@@ -20,6 +20,7 @@ import { VisionError } from "../services/visionService";
 import { BooksError } from "../services/booksService";
 import { extractBookInfoWithGPT } from "../services/gptExtractor";
 import { GPTError } from "../services/gptExtractor";
+import { getAuth } from "firebase/auth";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const overlayWidth = screenWidth * 0.65;
@@ -33,6 +34,7 @@ export default function CameraButton() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
+  const auth = getAuth();
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -58,7 +60,10 @@ export default function CameraButton() {
       });
 
       const base64Image = await getBase64FromUri(cropResult.uri);
-      const visionResult = await detectText(base64Image);
+      const visionResult = await detectText(
+        base64Image,
+        auth.currentUser?.uid || ""
+      );
       const detectedText = visionResult.textAnnotations?.[0]?.description || "";
       if (!detectedText) {
         throw new VisionError("No text detected in image.");

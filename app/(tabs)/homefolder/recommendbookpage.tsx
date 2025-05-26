@@ -70,7 +70,7 @@ const RecommendedScreen = () => {
     <SafeAreaView style={styles.container}>
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="#fff" />
         </View>
       ) : (
         <>

@@ -44,7 +44,7 @@ export const withRetry = async <T>(
       }
 
       if (i < retryCount - 1) {
-        await sleep(delay * Math.pow(2, i)); // Exponential backoff
+        await sleep(delay * Math.pow(2, i));
       }
     }
   }

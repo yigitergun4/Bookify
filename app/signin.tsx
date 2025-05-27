@@ -83,6 +83,7 @@ const SignInScreen = () => {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              style={styles.inputText}
             />
           </View>
           <View style={styles.input}>
@@ -94,6 +95,7 @@ const SignInScreen = () => {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               placeholderTextColor="gray"
+              autoCapitalize="none"
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               {showPassword ? (
@@ -167,12 +169,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    alignSelf: "center",
-    marginBottom: 20,
-  },
   input: {
     height: 40,
     fontSize: 14,
@@ -186,21 +182,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
   },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginBottom: 16,
+  inputText: {
+    flex: 1,
+    fontSize: 14,
   },
   passwordInput: {
     flex: 1,
     fontSize: 16,
-  },
-  eyeIcon: {
-    fontSize: 18,
   },
   signInButton: {
     marginTop: 15,
@@ -232,16 +220,5 @@ const styles = StyleSheet.create({
   linkBold: {
     fontWeight: "bold",
     color: "#000",
-  },
-  googleButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 50,
-    alignItems: "center",
-  },
-  googleText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
   },
 });

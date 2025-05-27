@@ -1,6 +1,7 @@
 import { CacheService } from "./cacheService";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import ENV from "../config/env";
+import SHA256 from "crypto-js/sha256";
 
 const cacheService = CacheService.getInstance();
 
@@ -18,6 +19,11 @@ export interface BookInfo {
   english_title?: string;
 }
 
+interface GPTCacheData {
+  data: BookInfo;
+  timestamp: number;
+}
+
 export async function extractBookInfoWithGPT(
   ocrText: string
 ): Promise<BookInfo> {
@@ -31,13 +37,18 @@ export async function extractBookInfoWithGPT(
       throw new GPTError("OCR text is empty");
     }
 
-    // Generate cache key from OCR text
-    const cacheKey = `gpt_${ocrText.substring(0, 50)}`;
+    // Daha güvenli cache key oluşturma
+    const cacheKey = `gpt_${SHA256(ocrText).toString()}`;
 
-    // Check cache first
-    const cachedResult = await cacheService.get<BookInfo>(cacheKey);
+    // Cache kontrolü
+    const cachedResult = await cacheService.get<GPTCacheData>(cacheKey);
     if (cachedResult) {
-      return cachedResult;
+      // Cache süresini kontrol et
+      if (Date.now() - cachedResult.timestamp < ENV.CACHE_DURATION) {
+        return cachedResult.data;
+      }
+      // Süresi geçmiş cache'i temizle
+      await cacheService.delete(cacheKey);
     }
 
     // If not in cache, make API call with retry
@@ -140,8 +151,12 @@ If you are not 100% certain of a value, use:
       }
     });
 
-    // Cache the result
-    await cacheService.set(cacheKey, result);
+    // Cache'e kaydet
+    const cacheData: GPTCacheData = {
+      data: result,
+      timestamp: Date.now(),
+    };
+    await cacheService.set(cacheKey, cacheData);
 
     return result;
   } catch (error) {

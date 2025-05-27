@@ -4,13 +4,26 @@ import {
   doc,
   getDoc,
   setDoc,
-  arrayUnion,
   arrayRemove,
   onSnapshot,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
-const LibraryContext = createContext<any>(null);
+interface LibraryContextType {
+  books: any[];
+  libraryBooks: any[];
+  addBook: (book: any) => Promise<void>;
+  removeBook: (bookId: string) => Promise<void>;
+  refreshBooks: () => Promise<void>;
+}
+
+const LibraryContext = createContext<LibraryContextType>({
+  books: [],
+  libraryBooks: [],
+  addBook: async () => {},
+  removeBook: async () => {},
+  refreshBooks: async () => {},
+});
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [libraryBooks, setLibraryBooks] = useState<any[]>([]);
@@ -48,20 +61,28 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) return;
 
     try {
-      setLibraryBooks((prev) => [book, ...prev]);
-
-      // Save to Firebase
       const userRef = doc(FIREBASE_DB, "Users", currentUser.uid);
+      const userDoc = await getDoc(userRef);
+      const currentBooks = userDoc.data()?.libraryBooks || [];
+
+      // if book is already in library, throw error
+      if (currentBooks.some((b: any) => b.id === book.id)) {
+        throw new Error("This book is already in your library.");
+      }
+
+      // add book to the beginning of the array
+      const updatedBooks = [book, ...currentBooks];
+
       await setDoc(
         userRef,
         {
-          libraryBooks: arrayUnion(book),
+          libraryBooks: updatedBooks,
         },
         { merge: true }
       );
+
+      setLibraryBooks(updatedBooks);
     } catch (error) {
-      // Revert local state if Firebase update fails
-      setLibraryBooks((prev) => prev.filter((b) => b.id !== book.id));
       throw error;
     }
   };

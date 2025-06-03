@@ -8,10 +8,16 @@ import {
   SafeAreaView,
   Image,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import SignInButtonWithGoogle from "../components/SignInButtonWithGoogle";
 import { router } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
+} from "firebase/auth";
 import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -20,6 +26,9 @@ const SignInScreen = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetModalVisible, setResetModalVisible] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
   const signIn = async () => {
     setLoading(true);
@@ -61,6 +70,39 @@ const SignInScreen = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = () => {
+    setResetEmail(email); // Pre-fill with current email if any
+    setResetModalVisible(true);
+  };
+
+  const checkEmailAndSendReset = async () => {
+    if (!resetEmail) {
+      Alert.alert("Error", "Please enter your email address");
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      // Send reset email directly
+      await sendPasswordResetEmail(FIREBASE_AUTH, resetEmail);
+      Alert.alert(
+        "Password Reset Email Sent",
+        "Please check your email for instructions to reset your password."
+      );
+      setResetModalVisible(false);
+    } catch (error: any) {
+      let errorMessage = "Failed to send reset email. Please try again.";
+      if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address.";
+      } else if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email address.";
+      }
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsCheckingEmail(false);
     }
   };
 
@@ -114,7 +156,7 @@ const SignInScreen = () => {
           <TouchableOpacity style={styles.signInButton} onPress={signIn}>
             <Text style={styles.signInButtonText}>Sign In</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleForgotPassword}>
             <Text style={styles.linkText}>Forgot Password?</Text>
           </TouchableOpacity>
           <View style={styles.bottomTextView}>
@@ -126,6 +168,55 @@ const SignInScreen = () => {
           <SignInButtonWithGoogle />
         </View>
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={resetModalVisible}
+        onRequestClose={() => setResetModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your email address to receive password reset instructions.
+            </Text>
+
+            <View style={styles.modalInput}>
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="gray"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.inputText}
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setResetModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.resetButton]}
+                onPress={checkEmailAndSendReset}
+                disabled={isCheckingEmail}
+              >
+                {isCheckingEmail ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -220,5 +311,64 @@ const styles = StyleSheet.create({
   linkBold: {
     fontWeight: "bold",
     color: "#000",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalInput: {
+    height: 40,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f0f0f0",
+  },
+  resetButton: {
+    backgroundColor: "#fdfedb",
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "bold",
+  },
+  resetButtonText: {
+    color: "#000",
+    fontWeight: "bold",
   },
 });

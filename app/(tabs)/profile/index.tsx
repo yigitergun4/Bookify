@@ -10,32 +10,17 @@ import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
+import { RecommendationService } from "@/services/recommendationService";
+import { CacheService } from "@/services/cacheService";
 
-const recommendedBooks = [
-  {
-    id: "1",
-    title: "Future Minds",
-    genre: "Science Fiction",
-    image: require("@/assets/images/bookimage.png"),
-  },
-  {
-    id: "2",
-    title: "The Quantum Leap",
-    genre: "Non-Fiction",
-    image: require("@/assets/images/bookimage2.png"),
-  },
-  {
-    id: "3",
-    title: "The Quantum Leap",
-    genre: "Non-Fiction",
-    image: require("@/assets/images/bookimage2.png"),
-  },
-];
+const cacheService = CacheService.getInstance();
+const recommendationService = RecommendationService.getInstance();
 
 export default function MyProfileScreen() {
   const user = FIREBASE_AUTH.currentUser;
   const [userName, setUserName] = useState("");
   const [userGenres, setUserGenres] = useState<string[]>([]);
+  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -51,8 +36,36 @@ export default function MyProfileScreen() {
         }
       }
     };
+
+    const fetchRecommendedBooks = async () => {
+      if (!user) return;
+      try {
+        const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
+        if (cachedBooks && cachedBooks.length > 0) {
+          setRecommendedBooks(cachedBooks.slice(0, 3));
+        } else {
+          const newBooks = await recommendationService.getRecommendations(
+            user.uid
+          );
+          setRecommendedBooks(newBooks.slice(0, 3));
+          await cacheService.saveRecommendedBooks(user.uid, newBooks);
+        }
+      } catch (error) {
+        console.error("Error loading recommended books:", error);
+      }
+    };
+
     fetchUserName();
+    fetchRecommendedBooks();
   }, [user]);
+
+  const getImageSource = (book: any) => {
+    if (book?.volumeInfo?.imageLinks?.thumbnail) {
+      const imageUrl = book.volumeInfo.imageLinks.thumbnail;
+      return { uri: imageUrl.replace("http://", "https://") };
+    }
+    return require("@/assets/images/not-avaliable-book-photo.png");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,15 +85,18 @@ export default function MyProfileScreen() {
               </View>
             ))}
           </View>
-          {/* Buraya yeni feature eklenecek */}
           <Text style={styles.sectionTitle}>AI Recommended Books</Text>
           <View>
             {recommendedBooks.map((book) => (
               <View key={book.id} style={styles.bookRow}>
-                <Image source={book.image} style={styles.bookImage} />
-                <View style={{ marginLeft: 10 }}>
-                  <Text style={styles.bookTitle}>{book.title}</Text>
-                  <Text style={styles.bookGenre}>{book.genre}</Text>
+                <Image source={getImageSource(book)} style={styles.bookImage} />
+                <View style={{ marginLeft: 10, flex: 1 }}>
+                  <Text style={styles.bookTitle} numberOfLines={1}>
+                    {book.volumeInfo?.title}
+                  </Text>
+                  <Text style={styles.bookGenre} numberOfLines={1}>
+                    {book.volumeInfo?.authors?.join(", ") || "Unknown Author"}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -132,28 +148,24 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
   },
-  activityText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#444",
-    marginTop: 8,
-  },
   bookRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    backgroundColor: "#f8f8f8",
+    padding: 10,
+    borderRadius: 8,
   },
   bookImage: {
     width: 50,
     height: 70,
     borderRadius: 6,
+    resizeMode: "contain",
   },
   bookTitle: {
     fontSize: 15,
     fontWeight: "bold",
+    marginBottom: 4,
   },
   bookGenre: {
     fontSize: 13,

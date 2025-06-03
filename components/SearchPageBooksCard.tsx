@@ -49,7 +49,7 @@ const BookCard: React.FC<BookCardProps> = ({
     if (bookData) {
       Alert.alert(
         "Add to Library",
-        "Do you want to add this book to your library?",
+        `Do you want to add "${bookData.volumeInfo.title}" to your library?`,
         [
           {
             text: "Cancel",

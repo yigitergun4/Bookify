@@ -63,7 +63,7 @@ export default function SearchResultsScreen() {
   const handleAddBook = async (book: any) => {
     Alert.alert(
       "Add to Library",
-      "Do you want to add this book to your library?",
+      `Do you want to add "${book.volumeInfo.title}" to your library?`,
       [
         {
           text: "Cancel",
@@ -113,7 +113,7 @@ export default function SearchResultsScreen() {
       </View>
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="gray" />
         </View>
       ) : (
         <>

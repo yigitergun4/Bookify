@@ -71,6 +71,7 @@ export default function TabOneScreen() {
 
     loadRecommendedBooks();
   }, [user]);
+
   const cacheBooks = async () => {
     if (!user) return;
     const recommendedBooks = await recommendationService.getRecommendations(
@@ -176,7 +177,7 @@ export default function TabOneScreen() {
             </View>
             <View style={{ marginBottom: 10 }}>
               <HomepageCardList
-                books={recommendedBooks.slice(0, 10)}
+                books={recommendedBooks.slice(0, 5)}
                 onBookPress={openModal}
                 closeModal={closeModal}
                 modalVisible={modalVisible}

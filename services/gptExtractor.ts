@@ -101,7 +101,7 @@ If you are not 100% certain of a value, use:
             Authorization: `Bearer ${OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-4-turbo",
+            model: "gpt-3.5-turbo",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },

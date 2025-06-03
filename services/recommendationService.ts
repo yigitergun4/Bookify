@@ -53,7 +53,8 @@ export class RecommendationService {
 
   async getRecommendations(
     userId: string,
-    skipCount: number = 0
+    skipCount: number = 0,
+    count: number = 10
   ): Promise<any[]> {
     try {
       // firstly check the cache
@@ -73,13 +74,13 @@ export class RecommendationService {
 
       const { favoriteGenres, favoriteBooks } = userData;
 
-      // Kullanıcının kütüphanesindeki kitapları al
+      // get the books in the user's library
       const libraryRef = doc(FIREBASE_DB, "Libraries", userId);
       const libraryDoc = await getDoc(libraryRef);
       const libraryData = libraryDoc.data();
       const userLibrary = libraryData?.books || [];
 
-      // Kullanıcının kütüphanesindeki kitapların detaylarını al
+      // get the details of the books in the user's library
       const userLibraryDetails = await Promise.all(
         userLibrary.map(async (bookId: string) => {
           const bookRef = doc(FIREBASE_DB, "Books", bookId);
@@ -101,7 +102,7 @@ export class RecommendationService {
         .join("\n\n");
 
       // create the prompt for ChatGPT
-      const prompt = `Based on the following information, recommend 20 books that the user might enjoy (skip the first ${skipCount} recommendations):
+      const prompt = `Based on the following information, recommend exactly ${count} books that the user might enjoy (skip the first ${skipCount} recommendations):
 
 User's Favorite Genres: ${favoriteGenres.join(", ")}
 User's Favorite Books: ${favoriteBooks.join(", ")}
@@ -118,104 +119,178 @@ Guidelines:
 6. Consider the user's favorite genres and books
 7. Include a mix of popular and lesser-known books
 8. Ensure recommendations are available on Google Books
-9. Skip the first ${skipCount} recommendations and provide the next 20 books
+9. Skip the first ${skipCount} recommendations and provide exactly ${count} books
+10. Always return exactly ${count} books, no more and no less
 
-Please provide a JSON array of 20 books, each with the following format:
-{
-  "title": "Book Title",
-  "author": "Author Name",
-  "description": "Book Description",
-  "genre": "Primary Genre"
-}`;
+Please provide a JSON array of exactly ${count} books in the following format:
+[
+  {
+    "title": "Book Title",
+    "author": "Author Name",
+    "description": "Book Description",
+    "genre": "Primary Genre"
+  },
+  ... (exactly ${count} books)
+]`;
 
-      // ChatGPT'den önerileri al
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${openai.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a book recommendation expert. Provide recommendations in the exact JSON format specified.",
+      // take recommendations from ChatGPT with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      let lastError;
+
+      while (retryCount <= maxRetries) {
+        try {
+          const response = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${openai.apiKey}`,
               },
-              { role: "user", content: prompt },
-            ],
-            temperature: 0.7,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("GPT API Error:", errorData);
-        throw new RecommendationError(
-          `Failed to get recommendations from GPT: ${
-            errorData.error?.message || "Unknown error"
-          }`
-        );
-      }
-
-      const data = await response.json();
-      if (!data.choices?.[0]?.message?.content) {
-        throw new RecommendationError("Invalid response format from GPT");
-      }
-
-      let recommendations;
-      try {
-        recommendations = JSON.parse(data.choices[0].message.content);
-      } catch (parseError) {
-        console.error(
-          "Failed to parse GPT response:",
-          data.choices[0].message.content
-        );
-        throw new RecommendationError("Failed to parse GPT response");
-      }
-
-      // Her bir önerilen kitap için Google Books'tan detaylı bilgileri al
-      const recommendedBooks = await Promise.all(
-        recommendations.map(async (book: any) => {
-          const googleBook = await this.searchBookOnGoogleBooks(
-            book.title,
-            book.author
+              body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [
+                  {
+                    role: "system",
+                    content:
+                      "You are a book recommendation expert. You must provide exactly the requested number of book recommendations in the specified JSON format. Do not include any additional text or explanations in your response, only the JSON array.",
+                  },
+                  { role: "user", content: prompt },
+                ],
+                temperature: 0.7,
+              }),
+            }
           );
-          if (googleBook) {
-            return {
-              ...googleBook,
-              id:
-                googleBook.id ||
-                `${book.title}_${book.author}`.replace(/[^a-zA-Z0-9]/g, "_"),
-            };
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("GPT API Error:", errorData);
+
+            // Check if it's a quota exceeded error
+            if (errorData.error?.message?.includes("quota")) {
+              throw new RecommendationError(
+                "We've reached our daily limit for book recommendations. Please try again tomorrow."
+              );
+            }
+
+            throw new RecommendationError(
+              `Failed to get recommendations from GPT: ${
+                errorData.error?.message || "Unknown error"
+              }`
+            );
           }
-          return null;
-        })
-      );
 
-      // Null değerleri filtrele ve benzersiz kitapları al
-      const uniqueBooks = recommendedBooks
-        .filter((book): book is any => book !== null)
-        .filter(
-          (book, index, self) =>
-            index === self.findIndex((b) => b.id === book.id)
-        );
+          const data = await response.json();
+          if (!data.choices?.[0]?.message?.content) {
+            throw new RecommendationError("Invalid response format from GPT");
+          }
 
-      // Önerileri Firebase'e kaydet
-      const recommendationsRef = doc(FIREBASE_DB, "Recommendations", userId);
-      await setDoc(recommendationsRef, {
-        books: uniqueBooks,
-        timestamp: new Date().toISOString(),
-      });
+          let recommendations;
+          try {
+            recommendations = JSON.parse(data.choices[0].message.content);
+            // Validate the recommendations format
+            if (
+              !Array.isArray(recommendations) ||
+              recommendations.length === 0
+            ) {
+              throw new Error("Invalid recommendations format");
+            }
+            // Check if each recommendation has required fields
+            recommendations.forEach((book) => {
+              if (!book.title || !book.author) {
+                throw new Error("Missing required fields in recommendations");
+              }
+            });
 
-      // Önerileri cache'e kaydet
-      await cacheService.saveRecommendedBooks(userId, uniqueBooks);
+            // for each recommended book, get the detailed information from Google Books
+            const recommendedBooks = await Promise.all(
+              recommendations.map(async (book: any) => {
+                const googleBook = await this.searchBookOnGoogleBooks(
+                  book.title,
+                  book.author
+                );
+                if (googleBook) {
+                  return {
+                    ...googleBook,
+                    id:
+                      googleBook.id ||
+                      `${book.title}_${book.author}`.replace(
+                        /[^a-zA-Z0-9]/g,
+                        "_"
+                      ),
+                  };
+                }
+                return null;
+              })
+            );
 
-      return uniqueBooks;
+            // filter out null values and get unique books
+            const uniqueBooks = recommendedBooks
+              .filter((book): book is any => book !== null)
+              .filter(
+                (book, index, self) =>
+                  index === self.findIndex((b) => b.id === book.id)
+              );
+
+            // save the recommendations to firebase
+            const recommendationsRef = doc(
+              FIREBASE_DB,
+              "Recommendations",
+              userId
+            );
+
+            // Get existing recommendations first
+            const existingDoc = await getDoc(recommendationsRef);
+            const existingBooks = existingDoc.exists()
+              ? existingDoc.data().books || []
+              : [];
+
+            // Merge existing books with new books and remove duplicates
+            const allBooks = [...existingBooks, ...uniqueBooks];
+            const mergedBooks = allBooks.filter(
+              (book, index, self) =>
+                index === self.findIndex((b) => b.id === book.id)
+            );
+
+            // Save merged books to firebase
+            await setDoc(recommendationsRef, {
+              books: mergedBooks,
+              timestamp: new Date().toISOString(),
+            });
+
+            // save the recommendations to cache
+            await cacheService.saveRecommendedBooks(userId, mergedBooks);
+
+            return uniqueBooks;
+          } catch (parseError) {
+            console.error(`Parse attempt failed:`, parseError);
+            throw new RecommendationError(
+              "We're having trouble processing the book recommendations. Please try again in a few minutes."
+            );
+          }
+        } catch (error) {
+          lastError = error;
+          console.error(`Network attempt ${retryCount + 1} failed:`, error);
+
+          if (retryCount === maxRetries) {
+            if (
+              error instanceof TypeError &&
+              error.message === "Network request failed"
+            ) {
+              throw new RecommendationError(
+                "Please check your internet connection and try again."
+              );
+            }
+            throw error;
+          }
+
+          retryCount++;
+          // No waiting time between retries
+        }
+      }
+
+      throw lastError;
     } catch (error) {
       console.error("Error getting recommendations:", error);
       if (error instanceof RecommendationError) {

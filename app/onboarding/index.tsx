@@ -57,6 +57,131 @@ export default function OnboardingFlow() {
       .join(" ");
   }
 
+  const formatBookTitle = (title: string): string => {
+    // Noktalama işaretlerini kaldır
+    let formatted = title.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+
+    // Fazla boşlukları temizle
+    formatted = formatted.replace(/\s+/g, " ").trim();
+
+    // Bağlaçları küçük harfe çevir
+    const conjunctions = [
+      // Turkish conjunctions
+      "ve",
+      "ile",
+      "veya",
+      "ya da",
+      "ama",
+      "fakat",
+      "ancak",
+      "çünkü",
+      "eğer",
+      "ki",
+      "de",
+      "da",
+      "ise",
+      "gibi",
+      "için",
+      "kadar",
+      "dolayı",
+      "üzere",
+      "rağmen",
+
+      // English conjunctions
+      "and",
+      "or",
+      "but",
+      "nor",
+      "for",
+      "yet",
+      "so",
+      "because",
+      "if",
+      "than",
+      "as",
+      "since",
+      "unless",
+      "while",
+      "where",
+      "although",
+      "though",
+      "whether",
+
+      // French conjunctions
+      "et",
+      "ou",
+      "mais",
+      "car",
+      "donc",
+      "or",
+      "ni",
+      "que",
+      "si",
+      "comme",
+
+      // German conjunctions
+      "und",
+      "oder",
+      "aber",
+      "denn",
+      "weil",
+      "wenn",
+      "als",
+      "ob",
+      "da",
+      "damit",
+
+      // Spanish conjunctions
+      "y",
+      "o",
+      "pero",
+      "porque",
+      "pues",
+      "que",
+      "si",
+      "como",
+      "aunque",
+      "mientras",
+
+      // Italian conjunctions
+      "e",
+      "o",
+      "ma",
+      "perché",
+      "quindi",
+      "che",
+      "se",
+      "come",
+      "mentre",
+      "sebbene",
+    ];
+
+    // first convert all conjunctions to lowercase
+    conjunctions.forEach((conj) => {
+      const regex = new RegExp(`\\b${conj}\\b`, "gi");
+      formatted = formatted.replace(regex, conj.toLowerCase());
+    });
+
+    // make the first letter of each word uppercase
+    formatted = formatted
+      .split(" ")
+      .map((word) => {
+        // if the word is not a conjunction and not a number, make the first letter uppercase
+        if (!conjunctions.includes(word.toLowerCase()) && !/^\d+$/.test(word)) {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }
+        return word.toLowerCase();
+      })
+      .join(" ");
+
+    return formatted;
+  };
+
+  const handleBookChange = (text: string, setter: (text: string) => void) => {
+    // when the user is typing, don't format the text, just set it
+    setter(text);
+  };
+
   // Step 1: Name
   const renderNameScreen = () => (
     <View style={styles.centered}>
@@ -171,14 +296,14 @@ export default function OnboardingFlow() {
         style={styles.input}
         placeholder="Book 1"
         value={book1}
-        onChangeText={setBook1}
+        onChangeText={(text) => handleBookChange(text, setBook1)}
         returnKeyType="next"
       />
       <TextInput
         style={styles.input}
         placeholder="Book 2"
         value={book2}
-        onChangeText={setBook2}
+        onChangeText={(text) => handleBookChange(text, setBook2)}
         editable={!!book1}
         returnKeyType="next"
       />
@@ -186,7 +311,7 @@ export default function OnboardingFlow() {
         style={styles.input}
         placeholder="Book 3"
         value={book3}
-        onChangeText={setBook3}
+        onChangeText={(text) => handleBookChange(text, setBook3)}
         editable={!!book2}
         returnKeyType="done"
       />
@@ -203,6 +328,10 @@ export default function OnboardingFlow() {
   async function handleDone() {
     if (!user) return;
     const userRef = doc(FIREBASE_DB, "Users", user.uid);
+
+    // Kaydetmeden önce kitap isimlerini formatla
+    const formattedBooks = [book1, book2, book3].map(formatBookTitle);
+
     await setDoc(
       userRef,
       {
@@ -210,7 +339,7 @@ export default function OnboardingFlow() {
         email: user.email,
         favoriteGenres: selectedGenres,
         goal,
-        favoriteBooks: [book1, book2, book3].map(toTitleCase),
+        favoriteBooks: formattedBooks,
         firstLaunchCompleted: true,
       },
       { merge: true }

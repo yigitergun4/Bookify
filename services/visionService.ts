@@ -30,7 +30,7 @@ interface VisionCacheData {
 export const detectText = async (base64Image: string, userId: string) => {
   const VISION_API_KEY = ENV.VISION_API_KEY;
   try {
-    // Cache key oluşturma
+    // create cache key
     const cacheKey: VisionCacheKey = {
       userId,
       imageHash: SHA256(base64Image).toString(),
@@ -40,20 +40,20 @@ export const detectText = async (base64Image: string, userId: string) => {
 
     const cacheKeyString = JSON.stringify(cacheKey);
 
-    // Cache kontrolü
+    // check cache
     const cachedResult = (await cacheService.get(
       cacheKeyString
     )) as VisionCacheData | null;
     if (cachedResult) {
-      // Cache süresini kontrol et
+      // if cache is not expired, return it
       if (Date.now() - cachedResult.timestamp < CACHE_DURATION) {
         return cachedResult.data;
       }
-      // Süresi geçmiş cache'i temizle
+      // if cache is expired, delete it
       await cacheService.delete(cacheKeyString);
     }
 
-    // API çağrısı
+    // API call
     const result = await withRetry(async () => {
       try {
         const response = await axios.post(
@@ -86,7 +86,7 @@ export const detectText = async (base64Image: string, userId: string) => {
       }
     });
 
-    // Sonucu cache'e kaydet
+    // save result to cache
     const cacheData: VisionCacheData = {
       data: result,
       timestamp: Date.now(),

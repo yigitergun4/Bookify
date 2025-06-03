@@ -7,7 +7,7 @@ interface CacheItem<T> {
 }
 
 interface BookClick {
-  bookInfo: any; // Tıklanan kitabın tüm bilgileri
+  bookInfo: any; // all book information
   clickDate: number;
   userId: string;
 }
@@ -34,14 +34,14 @@ export class CacheService {
     const now = Date.now();
     const expiredKeys: string[] = [];
 
-    // Memory cache'den süresi geçmiş verileri bul
+    // find expired items in memory cache
     for (const [key, item] of this.cache.entries()) {
       if (now - item.timestamp > ENV.CACHE_DURATION) {
         expiredKeys.push(key);
       }
     }
 
-    // Süresi geçmiş verileri temizle
+    // delete expired items
     for (const key of expiredKeys) {
       this.cache.delete(key);
       try {
@@ -95,7 +95,7 @@ export class CacheService {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(cacheItem));
 
-      // Her cleanupThreshold yazma işleminde bir cleanup yap
+      // if cleanupThreshold is reached, cleanup expired items
       if (this.cache.size % this.cleanupThreshold === 0) {
         await this.cleanupExpiredItems();
       }
@@ -148,7 +148,7 @@ export class CacheService {
         userId: userId,
       };
 
-      // Aynı kitap varsa, tarihini güncelle
+      // if same book exists, update the date
       const existingIndex = clicks.findIndex(
         (click) => click.bookInfo.id === book.id
       );
@@ -158,7 +158,7 @@ export class CacheService {
         clicks.unshift(newClick);
       }
 
-      // Maksimum sayıyı kontrol et
+      // check if the maximum number of clicks is reached
       if (clicks.length > this.MAX_RECENT_CLICKS) {
         clicks.pop();
       }

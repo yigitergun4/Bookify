@@ -37,17 +37,17 @@ export async function extractBookInfoWithGPT(
       throw new GPTError("OCR text is empty");
     }
 
-    // Daha güvenli cache key oluşturma
+    // more secure cache key
     const cacheKey = `gpt_${SHA256(ocrText).toString()}`;
 
-    // Cache kontrolü
+    // check cache
     const cachedResult = await cacheService.get<GPTCacheData>(cacheKey);
     if (cachedResult) {
-      // Cache süresini kontrol et
+      // if cache is not expired, return it
       if (Date.now() - cachedResult.timestamp < ENV.CACHE_DURATION) {
         return cachedResult.data;
       }
-      // Süresi geçmiş cache'i temizle
+      // if cache is expired, delete it
       await cacheService.delete(cacheKey);
     }
 
@@ -83,8 +83,7 @@ Instructions:
 
 If you are not 100% certain of a value, use:
 - "Unknown" for title, authors, or english_title
-- "und" for language
-
+- "Unknown" for language
 `;
 
       console.log(
@@ -142,7 +141,7 @@ If you are not 100% certain of a value, use:
           authors: Array.isArray(parsed.authors)
             ? parsed.authors
             : ["Unknown Author"],
-          language: parsed.language || "und",
+          language: parsed.language || "Unknown",
           english_title: parsed.english_title || undefined,
         };
       } catch (e) {
@@ -151,7 +150,7 @@ If you are not 100% certain of a value, use:
       }
     });
 
-    // Cache'e kaydet
+    // save to cache
     const cacheData: GPTCacheData = {
       data: result,
       timestamp: Date.now(),

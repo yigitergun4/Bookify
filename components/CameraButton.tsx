@@ -73,6 +73,7 @@ export default function CameraButton() {
 
       let bookData: any = null;
 
+      // 1. İlk deneme: Orijinal başlık ve yazar
       try {
         console.log(
           "[CameraButton] Orijinal başlık/yazar/dil ile arama:",
@@ -80,82 +81,110 @@ export default function CameraButton() {
           bookInfo.authors[0],
           bookInfo.language
         );
+        bookData = await searchBook(
+          bookInfo.title,
+          bookInfo.authors[0] || "",
+          bookInfo.language || ""
+        );
+      } catch (err) {
+        console.log("[CameraButton] Orijinal başlıkla kitap bulunamadı.");
+      }
 
-        // 1. Orijinal başlık ile arama
-        try {
-          bookData = await searchBook(
-            bookInfo.title,
-            bookInfo.authors[0] || "",
-            bookInfo.language || ""
-          );
-        } catch (err) {
-          console.log("[CameraButton] Orijinal başlıkla kitap bulunamadı.");
-        }
+      // 2. Başlık parçalama ve alternatif aramalar
+      if (!bookData) {
+        console.log("[CameraButton] Alternatif aramalar yapılıyor...");
 
-        // 2. Eğer kitap bulunamadıysa, İngilizce başlıkla dene
-        if (bookInfo.english_title && bookInfo.english_title !== "Unknown") {
-          try {
-            console.log(
-              "[CameraButton] English title ile arama:",
-              bookInfo.english_title
-            );
-            bookData = await searchBook(
-              bookInfo.english_title,
-              bookInfo.authors[0] || "",
-              "en"
-            );
-          } catch (err) {
-            console.log(
-              "[CameraButton] English title ile de kitap bulunamadı."
-            );
-          }
-        }
+        // Başlığı parçalara ayır
+        const titleParts = bookInfo.title.split(/[:\-]/);
+        const mainTitle = titleParts[0].trim();
+        const subtitle = titleParts[1]?.trim();
 
-        // 3. Hâlâ kitap bulunamadıysa, alternatif kitap listesini getir
+        // Yazar adını parçalara ayır
+        const authorParts = (bookInfo.authors[0] || "").split(" ");
+        const lastName = authorParts[authorParts.length - 1] || "";
+
+        // 2.1 Ana başlık + tam yazar
         if (!bookData) {
           try {
-            const listOfBooks = await searchBookList(
-              bookInfo.title,
+            bookData = await searchBook(
+              mainTitle,
               bookInfo.authors[0] || "",
               bookInfo.language || ""
             );
-            console.log(
-              "[CameraButton] Alternatif kitap listesi bulundu:",
-              listOfBooks
-            );
-
-            router.replace({
-              pathname: "/(tabs)/homefolder/notexactbookfound",
-              params: {
-                results: JSON.stringify(listOfBooks),
-              },
-            });
-
-            return;
+            if (bookData)
+              console.log("[CameraButton] Ana başlık + tam yazar ile bulundu");
           } catch (err) {
-            console.log(
-              "[CameraButton] Alternatif kitap listesi de bulunamadı."
-            );
-            throw new BooksError("No book found after extended search");
+            console.log("[CameraButton] Ana başlık + tam yazar ile bulunamadı");
           }
         }
 
+        // 2.2 Ana başlık + soyad
         if (!bookData) {
-          throw new BooksError("Invalid book data received");
+          try {
+            bookData = await searchBook(
+              mainTitle,
+              lastName,
+              bookInfo.language || ""
+            );
+            if (bookData)
+              console.log("[CameraButton] Ana başlık + soyad ile bulundu");
+          } catch (err) {
+            console.log("[CameraButton] Ana başlık + soyad ile bulunamadı");
+          }
         }
 
-        router.push({
-          pathname: "/(tabs)/homefolder/photoeditpage" as any,
-          params: {
-            book: JSON.stringify(bookData),
-          },
-        });
-      } catch (error: any) {
-        console.error("[CameraButton] Error:", error);
-        Alert.alert("Error", error.message || "An unexpected error occurred");
+        // 2.3 Tam başlık + soyad
+        if (!bookData) {
+          try {
+            bookData = await searchBook(
+              bookInfo.title,
+              lastName,
+              bookInfo.language || ""
+            );
+            if (bookData)
+              console.log("[CameraButton] Tam başlık + soyad ile bulundu");
+          } catch (err) {
+            console.log("[CameraButton] Tam başlık + soyad ile bulunamadı");
+          }
+        }
+
+        // 2.4 Alt başlık + tam yazar (eğer varsa)
+        if (!bookData && subtitle) {
+          try {
+            bookData = await searchBook(
+              subtitle,
+              bookInfo.authors[0] || "",
+              bookInfo.language || ""
+            );
+            if (bookData)
+              console.log("[CameraButton] Alt başlık + tam yazar ile bulundu");
+          } catch (err) {
+            console.log("[CameraButton] Alt başlık + tam yazar ile bulunamadı");
+          }
+        }
+
+        // 2.5 Alt başlık + soyad (eğer varsa)
+        if (!bookData && subtitle) {
+          try {
+            bookData = await searchBook(
+              subtitle,
+              lastName,
+              bookInfo.language || ""
+            );
+            if (bookData)
+              console.log("[CameraButton] Alt başlık + soyad ile bulundu");
+          } catch (err) {
+            console.log("[CameraButton] Alt başlık + soyad ile bulunamadı");
+          }
+        }
       }
 
-      // if all processes are successful, redirect to photoeditpage
+      if (!bookData) {
+        console.log("[CameraButton] Hiçbir kombinasyonla kitap bulunamadı.");
+        throw new BooksError("No book found after extended search");
+      }
+
+      // Kitap bulunduysa yönlendir
       router.push({
         pathname: "/(tabs)/homefolder/photoeditpage" as any,
         params: {

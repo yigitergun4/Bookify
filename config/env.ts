@@ -7,6 +7,7 @@ interface Env {
   API_RETRY_COUNT: number;
   API_RETRY_DELAY: number;
   CACHE_DURATION: number;
+  WEB_CLIENT_ID: string;
 }
 
 const ENV: Env = {
@@ -22,6 +23,9 @@ const ENV: Env = {
   API_RETRY_COUNT: 3,
   API_RETRY_DELAY: 1000,
   CACHE_DURATION: 1000 * 60 * 60,
+  WEB_CLIENT_ID:
+    Constants.expoConfig?.extra?.GOOGLE_CLIENT_ID ||
+    "78369109206-cbvqqgcq0l7001v0q44vj73g8i9uo6pu.apps.googleusercontent.com",
 };
 
 export default ENV;

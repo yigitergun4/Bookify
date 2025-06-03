@@ -33,7 +33,7 @@ const SearchInput = ({
     if (search.trim()) {
       if (isHomePage) {
         router.push({
-          pathname: "/(tabs)/homefolder/searchresults",
+          pathname: "/(tabs)/homefolder/SearchResults",
           params: { query: search },
         });
       } else if (onSubmit) {

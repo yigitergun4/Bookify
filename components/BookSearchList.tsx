@@ -81,7 +81,11 @@ const BookSearchList = ({
                 <Image
                   source={
                     imageUrl
-                      ? { uri: imageUrl }
+                      ? {
+                          uri: imageUrl.startsWith("http:")
+                            ? imageUrl.replace("http:", "https:")
+                            : imageUrl,
+                        }
                       : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={styles.bookImage}
@@ -173,7 +177,11 @@ const BookSearchList = ({
                 <Image
                   source={
                     modalImageUrl
-                      ? { uri: modalImageUrl }
+                      ? {
+                          uri: modalImageUrl.startsWith("http:")
+                            ? modalImageUrl.replace("http:", "https:")
+                            : modalImageUrl,
+                        }
                       : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={{

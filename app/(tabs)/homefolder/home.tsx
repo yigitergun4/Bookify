@@ -61,7 +61,7 @@ export default function TabOneScreen() {
           setRecommendedBooks(cachedBooks);
           setIsLoading(false);
         } else {
-          await fetchRecommendedBooks(); // yeni öneri getirir ve cache'e yazar
+          await fetchRecommendedBooks(); // bring new recommendations and save to cache
         }
       } catch (error) {
         console.error("Error loading recommended books:", error);

@@ -10,6 +10,8 @@ import { useState, useEffect } from "react";
 import { CacheService } from "@/services/cacheService";
 import { getAuth } from "firebase/auth";
 import { RecommendationService } from "@/services/recommendationService";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { FIREBASE_DB } from "@/FirebaseConfig";
 
 const cacheService = CacheService.getInstance();
 const auth = getAuth();
@@ -56,23 +58,49 @@ const RecommendedScreen = () => {
     if (isLoadingMore || !user) return;
     setIsLoadingMore(true);
     try {
-      // Mevcut kitapların ID'lerini al
+      // get existing book ids
       const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
 
-      // Yeni önerileri al
+      // get new recommendations
       const newBooks = await recommendationService.getRecommendations(
         user.uid,
         skipCount
       );
 
-      // Sadece yeni ve benzersiz kitapları filtrele
+      // filter out new books that are already in the list
       const uniqueNewBooks = newBooks.filter(
         (book) => !existingBookIds.has(book.id)
       );
 
-      // Yeni kitapları mevcut listeye ekle
+      // add new books to the list
       setRecommendedBooks((prevBooks) => [...prevBooks, ...uniqueNewBooks]);
       setSkipCount((prevCount) => prevCount + uniqueNewBooks.length);
+
+      // save new books to firebase
+      if (uniqueNewBooks.length > 0) {
+        const recommendationsRef = doc(
+          FIREBASE_DB,
+          "Recommendations",
+          user.uid
+        );
+        const currentRecommendations = await getDoc(recommendationsRef);
+        const currentBooks = currentRecommendations.exists()
+          ? currentRecommendations.data().books || []
+          : [];
+
+        // merge current books with new books and remove duplicates
+        const allBooks = [...currentBooks, ...uniqueNewBooks];
+        const uniqueBooks = allBooks.filter(
+          (book, index, self) =>
+            index === self.findIndex((b) => b.id === book.id)
+        );
+
+        // save to firebase
+        await setDoc(recommendationsRef, {
+          books: uniqueBooks,
+          timestamp: new Date().toISOString(),
+        });
+      }
     } catch (error) {
       console.error("Error loading more recommendations:", error);
     } finally {
@@ -83,9 +111,7 @@ const RecommendedScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fff" />
-        </View>
+        <ActivityIndicator size="large" color="#fff" />
       ) : (
         <>
           <View style={styles.header}>
@@ -124,10 +150,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#222",
     marginBottom: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

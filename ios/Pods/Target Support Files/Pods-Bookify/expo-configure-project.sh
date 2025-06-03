@@ -48,4 +48,4 @@ with_node \
   --target "/Users/yigitergun/Desktop/Bookify/ios/Pods/Target Support Files/Pods-Bookify/ExpoModulesProvider.swift" \
   --entitlement "/Users/yigitergun/Desktop/Bookify/ios/Bookify/Bookify.entitlements" \
   --platform "apple" \
-  --packages "expo" "expo-application" "expo-asset" "expo-constants" "expo-crypto" "expo-file-system" "expo-font" "expo-image-picker" "expo-keep-awake" "expo-linking" "expo-random" "expo-router" "expo-splash-screen" "expo-system-ui" "expo-web-browser"
+  --packages "@react-native-google-signin/google-signin" "expo" "expo-application" "expo-asset" "expo-camera" "expo-constants" "expo-crypto" "expo-file-system" "expo-font" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linking" "expo-random" "expo-router" "expo-splash-screen" "expo-system-ui" "expo-web-browser"

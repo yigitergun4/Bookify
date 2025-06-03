@@ -6,13 +6,16 @@
  */
 
 import ExpoModulesCore
+import ExpoAdapterGoogleSignIn
 import Expo
 import EXApplication
 import ExpoAsset
+import ExpoCamera
 import EXConstants
 import ExpoCrypto
 import ExpoFileSystem
 import ExpoFont
+import ExpoImageManipulator
 import ExpoImagePicker
 import ExpoKeepAwake
 import ExpoLinking
@@ -29,11 +32,13 @@ public class ExpoModulesProvider: ModulesProvider {
       ExpoFetchModule.self,
       ApplicationModule.self,
       AssetModule.self,
+      CameraViewModule.self,
       ConstantsModule.self,
       CryptoModule.self,
       FileSystemModule.self,
       FileSystemNextModule.self,
       FontLoaderModule.self,
+      ImageManipulatorModule.self,
       ImagePickerModule.self,
       KeepAwakeModule.self,
       ExpoLinkingModule.self,
@@ -47,6 +52,7 @@ public class ExpoModulesProvider: ModulesProvider {
 
   public override func getAppDelegateSubscribers() -> [ExpoAppDelegateSubscriber.Type] {
     return [
+      GoogleSignInAppDelegate.self,
       FileSystemBackgroundSessionHandler.self,
       LinkingAppDelegateSubscriber.self,
       ExpoHeadAppDelegateSubscriber.self,

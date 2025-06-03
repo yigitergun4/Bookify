@@ -61,9 +61,19 @@ export default function HomePageFlatlistRecentClicks({
               style={styles.bookImage}
               source={
                 item.volumeInfo?.imageLinks?.thumbnail
-                  ? { uri: item.volumeInfo.imageLinks.thumbnail }
+                  ? {
+                      uri: item.volumeInfo.imageLinks.thumbnail.startsWith(
+                        "http:"
+                      )
+                        ? item.volumeInfo.imageLinks.thumbnail.replace(
+                            "http:",
+                            "https:"
+                          )
+                        : item.volumeInfo.imageLinks.thumbnail,
+                    }
                   : require("@/assets/images/not-avaliable-book-photo.png")
               }
+              resizeMode="contain"
             />
             <View style={styles.bookTexts}>
               <Text style={styles.titleText} numberOfLines={1}>

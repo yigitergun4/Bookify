@@ -10,7 +10,12 @@ import {
   Alert,
 } from "react-native";
 import { useLibrary } from "@/contexts/LibraryContext";
+import { CacheService } from "@/services/cacheService";
+import { getAuth } from "firebase/auth";
 import ScrollView = Animated.ScrollView;
+
+const cacheService = CacheService.getInstance();
+const auth = getAuth();
 
 type BookCardProps = {
   title: string;
@@ -31,6 +36,14 @@ const BookCard: React.FC<BookCardProps> = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const { addBook } = useLibrary();
+
+  const openModal = async () => {
+    const user = auth.currentUser;
+    if (user && bookData) {
+      await cacheService.addBookClick(bookData, user.uid);
+    }
+    setModalVisible(true);
+  };
 
   const handleAddToLibrary = async () => {
     if (bookData) {
@@ -64,10 +77,7 @@ const BookCard: React.FC<BookCardProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => setModalVisible(true)}
-      >
+      <TouchableOpacity style={styles.card} onPress={openModal}>
         <View style={styles.imageWrapper}>
           {/* kendime not: Eğer image local bir foto ise bu number tipindedir, eğer internetten gelen bir foto ise bu object tipindedir. */}
           <Image

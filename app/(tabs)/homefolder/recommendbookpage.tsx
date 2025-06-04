@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { CacheService } from "@/services/cacheService";
 import { getAuth } from "firebase/auth";
 import { RecommendationService } from "@/services/recommendationService";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
 
@@ -66,7 +66,36 @@ const RecommendedScreen = () => {
       if (!user) return;
       try {
         setError(null);
-        // firstly check the cache
+
+        // First check Firebase for existing recommendations
+        const recommendationsRef = collection(
+          FIREBASE_DB,
+          "Users",
+          user.uid,
+          "Recommendations"
+        );
+        const recommendationsSnap = await getDocs(recommendationsRef);
+
+        if (!recommendationsSnap.empty) {
+          const firebaseBooks = recommendationsSnap.docs
+            .map((doc) => doc.data().books)
+            .flat();
+          if (firebaseBooks.length > 0) {
+            // Shuffle the books
+            const shuffledBooks = [...firebaseBooks].sort(
+              () => Math.random() - 0.5
+            );
+            setRecommendedBooks(shuffledBooks);
+            setSkipCount(shuffledBooks.length);
+            setIsLoading(false);
+
+            // Also update cache with shuffled books
+            await cacheService.saveRecommendedBooks(user.uid, shuffledBooks);
+            return;
+          }
+        }
+
+        // If no Firebase recommendations, check cache
         const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
 
         if (cachedBooks && cachedBooks.length > 0) {
@@ -85,15 +114,7 @@ const RecommendedScreen = () => {
           await cacheService.saveRecommendedBooks(user.uid, newBooks);
 
           // save to firebase
-          const recommendationsRef = doc(
-            FIREBASE_DB,
-            "Recommendations",
-            user.uid
-          );
-          await setDoc(recommendationsRef, {
-            books: newBooks,
-            timestamp: new Date().toISOString(),
-          });
+          await recommendationService.saveRecommendations(user.uid, newBooks);
         }
       } catch (error) {
         console.error("Error loading recommended books:", error);
@@ -148,24 +169,35 @@ const RecommendedScreen = () => {
             readBooks
           );
 
-          // Try each generated query
+          // Try all generated queries and combine results
+          let allNewBooks: any[] = [];
           for (const query of queries) {
             const books =
               await recommendationService.searchBooksWithQuery(query);
             if (books.length > 0) {
-              newBooks = books;
-              // If we found new books, break the loop
-              if (
-                newBooks.some(
+              allNewBooks = [...allNewBooks, ...books];
+            }
+          }
+
+          // Remove duplicates and filter out existing books
+          const uniqueNewBooks = Array.from(
+            new Map(
+              allNewBooks
+                .filter(
                   (book) =>
                     !existingBookIds.has(book.id) &&
                     !libraryBookIds.has(book.id)
                 )
-              ) {
-                console.log("Found new books with query:", query);
-                break;
-              }
-            }
+                .map((book) => [book.id, book])
+            ).values()
+          );
+
+          if (uniqueNewBooks.length > 0) {
+            newBooks = uniqueNewBooks;
+            console.log(
+              "Found new books from all queries:",
+              uniqueNewBooks.length
+            );
           }
         } catch (error) {
           console.error("Error getting recommendations from ChatGPT:", error);

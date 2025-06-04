@@ -201,7 +201,7 @@ export class CacheService {
       const key = `${this.RECOMMENDED_BOOKS_KEY}_${userId}`;
       await AsyncStorage.setItem(key, JSON.stringify(books));
     } catch (error) {
-      console.error("Error saving recommended books:", error);
+      console.log("Error saving recommended books:", error);
     }
   }
 

@@ -24,7 +24,31 @@ function recentlyview() {
   const handleAddBook = async (book: any) => {
     try {
       await addBook(book);
-      Alert.alert("Book added to library");
+      Alert.alert(
+        "Add to Library",
+        `Do you want to add "${book.volumeInfo.title}" to your library?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Yes",
+            onPress: async () => {
+              try {
+                await addBook(book);
+                Alert.alert("Success", "Book added to your library!");
+              } catch (err: any) {
+                if (err?.message === "This book is already in your library.") {
+                  Alert.alert("Error", err.message);
+                } else {
+                  Alert.alert("Error", "Failed to add book.");
+                }
+              }
+            },
+          },
+        ]
+      );
     } catch (error) {
       if (
         error instanceof Error &&

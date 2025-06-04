@@ -14,11 +14,9 @@ import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { RecommendationService } from "@/services/recommendationService";
-import { getAuth } from "firebase/auth";
 import { useRouter } from "expo-router";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
 
-const auth = getAuth();
 const cacheService = CacheService.getInstance();
 
 export default function TabOneScreen() {
@@ -32,11 +30,9 @@ export default function TabOneScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const user = FIREBASE_AUTH.currentUser;
-
   const recommendationService = RecommendationService.getInstance();
 
   const fetchRecommendedBooks = async () => {
-    console.log("fetchRecommendedBooks", recommendedBooks);
     if (!user) return;
     try {
       setIsLoading(true);
@@ -54,21 +50,25 @@ export default function TabOneScreen() {
     const loadAndSubscribe = async () => {
       if (!user) return;
 
-      // get recent clicks from cache
-      // const clicks = await cacheService.getRecentClicks(user.uid);
-      // setRecentClicks(clicks.map((click) => click.bookInfo));
+      try {
+        // Load initial cache data
+        const clicks = await cacheService.getRecentClicks(user.uid);
+        setRecentClicks(clicks.map((click) => click.bookInfo));
 
-      // Cache değişikliklerini dinle
-      const unsubscribe = cacheService.subscribeToRecentClicks((clicks) => {
-        if (clicks[0]?.userId === user.uid) {
-          setRecentClicks(clicks.map((click) => click.bookInfo));
-        }
-      });
+        // Subscribe to cache changes
+        const unsubscribe = cacheService.subscribeToRecentClicks((clicks) => {
+          if (clicks[0]?.userId === user.uid) {
+            setRecentClicks(clicks.map((click) => click.bookInfo));
+          }
+        });
 
-      // Cleanup
-      return () => {
-        unsubscribe();
-      };
+        // Cleanup
+        return () => {
+          unsubscribe();
+        };
+      } catch (error) {
+        console.error("Error loading recent clicks:", error);
+      }
     };
 
     loadAndSubscribe();

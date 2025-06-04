@@ -77,7 +77,7 @@ export function SessionProvider(props: React.PropsWithChildren) {
     try {
       setIsLoading(true);
       const response = await auth().signInWithEmailAndPassword(email, password);
-      router.replace("//signup"); // Login sonrası loading screen'e yönlendir
+      router.replace("//signup"); // after login redirect to loading screen
     } catch (error: any) {
       if (error.code === "auth/invalid-credential") {
         setError("Invalid email or password");
@@ -94,17 +94,17 @@ export function SessionProvider(props: React.PropsWithChildren) {
       setIsLoading(true);
       setError(null);
 
-      // Önce kullanıcıyı Authentication'da oluştur
+      // create user in authentication
       const userCredential = await auth().createUserWithEmailAndPassword(
         email,
         password
       );
       const user = userCredential.user;
 
-      // Sonra Firestore'da users collection'ında yeni bir döküman oluştur
+      // create user in firestore
       await firestore()
         .collection("Users")
-        .doc(user.uid) // Kullanıcı UID'si ile döküman oluştur
+        .doc(user.uid) // user id
         .set(
           {
             email: user.email,
@@ -114,20 +114,20 @@ export function SessionProvider(props: React.PropsWithChildren) {
             displayName: user.displayName || null,
             photoURL: user.photoURL || null,
             emailVerified: user.emailVerified,
-            onboardingCompleted: false,
+            firstLaunchCompleted: false,
             goals: [],
             preferences: {},
-            isActive: true, // Kullanıcı aktif durumda
-            role: "user", // Varsayılan kullanıcı rolü
+            isActive: true, // user is active
+            role: "user", // default user role
             notifications: {
               enabled: true,
               token: null,
             },
           },
           { merge: true }
-        ); // merge: true ile varolan dökümanı güncelle
+        ); // merge: true to update existing document
 
-      router.replace("//signup"); // Kayıt sonrası loading screen'e yönlendir
+      router.replace("//signup"); // after signup redirect to loading screen
     } catch (error: any) {
       setError(error.message);
     } finally {

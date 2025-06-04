@@ -26,7 +26,7 @@ const RecommendedScreen = () => {
   const [skipCount, setSkipCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const user = auth.currentUser;
-  const { addBook } = useLibrary();
+  const { addBook, libraryBooks } = useLibrary();
 
   const handleAddBook = async (book: any) => {
     if (!user) return;
@@ -79,7 +79,7 @@ const RecommendedScreen = () => {
             user.uid
           );
           setRecommendedBooks(newBooks);
-          setSkipCount(newBooks.length);
+          setSkipCount((prevCount) => prevCount + newBooks.length);
 
           // save to both cache and firebase
           await cacheService.saveRecommendedBooks(user.uid, newBooks);
@@ -113,21 +113,86 @@ const RecommendedScreen = () => {
   const handleLoadMore = async () => {
     if (isLoadingMore || !user) return;
     setIsLoadingMore(true);
-    setError(null); // Reset error state before loading more
-    try {
-      // get existing book ids
-      const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
+    setError(null);
 
-      // get new recommendations with increased count
-      const newBooks = await recommendationService.getRecommendations(
-        user.uid,
-        skipCount,
-        10
+    try {
+      // Get existing book IDs to avoid duplicates
+      const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
+      console.log(
+        "[RecommendedScreen] Existing book count:",
+        existingBookIds.size
       );
 
-      // filter out new books that are already in the list
+      // Get user's favorite genres and books for better recommendations
+      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      const favoriteGenres = userData?.favoriteGenres || [];
+      const favoriteBooks = userData?.favoriteBooks || [];
+      const readBooks = userData?.readBooks || [];
+      console.log(favoriteGenres, "favoriteGenres, : recommendbookpage:133");
+      console.log(favoriteBooks, "favoriteBooks, : recommendbookpage:134");
+      console.log(readBooks, "readBooks, : recommendbookpage:135");
+      let newBooks: any[] = [];
+
+      // Get library book IDs
+      const libraryBookIds = new Set(libraryBooks.map((book: any) => book.id));
+
+      // If we've loaded more than 40 books, try different search strategies
+      if (skipCount >= 40) {
+        try {
+          // Get ChatGPT recommendations
+          const queries = await recommendationService.getChatGPTRecommendations(
+            favoriteGenres,
+            favoriteBooks,
+            readBooks
+          );
+
+          // Try each generated query
+          for (const query of queries) {
+            const books =
+              await recommendationService.searchBooksWithQuery(query);
+            if (books.length > 0) {
+              newBooks = books;
+              // If we found new books, break the loop
+              if (
+                newBooks.some(
+                  (book) =>
+                    !existingBookIds.has(book.id) &&
+                    !libraryBookIds.has(book.id)
+                )
+              ) {
+                console.log("Found new books with query:", query);
+                break;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error getting recommendations from ChatGPT:", error);
+          // Fallback to random genre if ChatGPT fails
+          if (favoriteGenres.length > 0) {
+            const randomGenre =
+              favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
+            newBooks = await recommendationService.searchBooksWithQuery(
+              `subject:${randomGenre}`
+            );
+          }
+        }
+      } else {
+        // Normal search with all preferences
+        newBooks = await recommendationService.searchBooksWithQuery(
+          [...favoriteGenres, ...favoriteBooks].join(" ")
+        );
+      }
+
+      // Filter out books that are already in the list or in the library
       const uniqueNewBooks = newBooks.filter(
-        (book) => !existingBookIds.has(book.id)
+        (book: any) =>
+          !existingBookIds.has(book.id) && !libraryBookIds.has(book.id)
+      );
+      console.log(
+        "[RecommendedScreen] Unique new books:",
+        uniqueNewBooks.length
       );
 
       if (uniqueNewBooks.length === 0) {
@@ -136,33 +201,33 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // add new books to the list
+      // Add new books to the list
       setRecommendedBooks((prevBooks) => [...prevBooks, ...uniqueNewBooks]);
       setSkipCount((prevCount) => prevCount + uniqueNewBooks.length);
 
-      // save new books to firebase
+      // Save new books to Firebase
       const recommendationsRef = doc(FIREBASE_DB, "Recommendations", user.uid);
       const currentRecommendations = await getDoc(recommendationsRef);
       const currentBooks = currentRecommendations.exists()
         ? currentRecommendations.data().books || []
         : [];
 
-      // merge current books with new books and remove duplicates
+      // Merge current books with new books and remove duplicates
       const allBooks = [...currentBooks, ...uniqueNewBooks];
-      const uniqueBooks = allBooks.filter(
-        (book, index, self) => index === self.findIndex((b) => b.id === book.id)
+      const uniqueBooks = Array.from(
+        new Map(allBooks.map((book) => [book.id, book])).values()
       );
 
-      // save to firebase
+      // Save to Firebase
       await setDoc(recommendationsRef, {
         books: uniqueBooks,
         timestamp: new Date().toISOString(),
       });
-
-      // also update cache
-      await cacheService.saveRecommendedBooks(user.uid, uniqueBooks);
     } catch (error) {
-      console.error("Error loading more recommendations:", error);
+      console.error(
+        "[RecommendedScreen] Error loading more recommendations:",
+        error
+      );
       if (error instanceof Error) {
         setError(error.message);
       } else {

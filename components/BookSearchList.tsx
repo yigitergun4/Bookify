@@ -145,7 +145,7 @@ const BookSearchList = ({
           </View>
         }
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0}
         refreshing={refreshing}
         onRefresh={onRefresh}
       />

@@ -6,10 +6,20 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { router } from "expo-router";
+
+// types
+interface UserGoal {
+  id: string;
+  title: string;
+  searchStrategy: string;
+  categories: string[];
+  description: string;
+}
 
 const GENRES = [
   "Fiction",
@@ -29,157 +39,68 @@ const GENRES = [
   "Historical fiction",
   "Inspirational",
   "Wellness",
-  "Fitness & Exercise",
+  "Sports",
+  "Horror",
+  "Dystopian",
+  "Adventure",
+  "Drama",
+  "Poetry",
+  "Philosophy",
+  "Art",
 ];
 
-const GOALS = [
-  "Find new books to read",
-  "Track my reading habits",
-  "Join a reading community",
-  "Improve my reading skills",
+const GOALS: UserGoal[] = [
+  {
+    id: "classics",
+    title: "Discover Classic Literature",
+    searchStrategy: "subject:classics+subject:literature",
+    categories: ["Classics", "Literature", "Historical Fiction"],
+    description: "Explore timeless masterpieces and literary classics",
+  },
+  {
+    id: "contemporary",
+    title: "Stay Current with Modern Books",
+    searchStrategy: "subject:contemporary+subject:fiction",
+    categories: ["Contemporary", "Fiction", "Modern Literature"],
+    description: "Find the latest bestsellers and trending books",
+  },
+  {
+    id: "genres",
+    title: "Explore Different Genres",
+    searchStrategy:
+      "subject:fiction+subject:fantasy+subject:mystery+subject:romance",
+    categories: ["Fantasy", "Mystery", "Romance", "Science Fiction"],
+    description: "Discover books across various genres and styles",
+  },
+  {
+    id: "authors",
+    title: "Follow Favorite Authors",
+    searchStrategy: "subject:fiction+subject:literature",
+    categories: ["Fiction", "Literature", "Authors"],
+    description: "Get recommendations based on your favorite writers",
+  },
 ];
 
 export default function OnboardingFlow() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [goal, setGoal] = useState("");
+  const countSelectedGenre: number = 5;
+  const [goal, setGoal] = useState<(typeof GOALS)[0] | null>(null);
   const [book1, setBook1] = useState("");
   const [book2, setBook2] = useState("");
   const [book3, setBook3] = useState("");
   const user = FIREBASE_AUTH.currentUser;
-
-  function toTitleCase(str: string) {
-    return str
-      .toLowerCase()
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  }
-
-  const formatBookTitle = (title: string): string => {
-    // Noktalama işaretlerini kaldır
-    let formatted = title.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-
-    // Fazla boşlukları temizle
-    formatted = formatted.replace(/\s+/g, " ").trim();
-
-    // Bağlaçları küçük harfe çevir
-    const conjunctions = [
-      // Turkish conjunctions
-      "ve",
-      "ile",
-      "veya",
-      "ya da",
-      "ama",
-      "fakat",
-      "ancak",
-      "çünkü",
-      "eğer",
-      "ki",
-      "de",
-      "da",
-      "ise",
-      "gibi",
-      "için",
-      "kadar",
-      "dolayı",
-      "üzere",
-      "rağmen",
-
-      // English conjunctions
-      "and",
-      "or",
-      "but",
-      "nor",
-      "for",
-      "yet",
-      "so",
-      "because",
-      "if",
-      "than",
-      "as",
-      "since",
-      "unless",
-      "while",
-      "where",
-      "although",
-      "though",
-      "whether",
-
-      // French conjunctions
-      "et",
-      "ou",
-      "mais",
-      "car",
-      "donc",
-      "or",
-      "ni",
-      "que",
-      "si",
-      "comme",
-
-      // German conjunctions
-      "und",
-      "oder",
-      "aber",
-      "denn",
-      "weil",
-      "wenn",
-      "als",
-      "ob",
-      "da",
-      "damit",
-
-      // Spanish conjunctions
-      "y",
-      "o",
-      "pero",
-      "porque",
-      "pues",
-      "que",
-      "si",
-      "como",
-      "aunque",
-      "mientras",
-
-      // Italian conjunctions
-      "e",
-      "o",
-      "ma",
-      "perché",
-      "quindi",
-      "che",
-      "se",
-      "come",
-      "mentre",
-      "sebbene",
-    ];
-
-    // first convert all conjunctions to lowercase
-    conjunctions.forEach((conj) => {
-      const regex = new RegExp(`\\b${conj}\\b`, "gi");
-      formatted = formatted.replace(regex, conj.toLowerCase());
-    });
-
-    // make the first letter of each word uppercase
-    formatted = formatted
-      .split(" ")
-      .map((word) => {
-        // if the word is not a conjunction and not a number, make the first letter uppercase
-        if (!conjunctions.includes(word.toLowerCase()) && !/^\d+$/.test(word)) {
-          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        }
-        return word.toLowerCase();
-      })
-      .join(" ");
-
-    return formatted;
-  };
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleBookChange = (text: string, setter: (text: string) => void) => {
-    // when the user is typing, don't format the text, just set it
-    setter(text);
+    // Capitalize first letter of each word
+    const formattedText = text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+
+    setter(formattedText);
   };
 
   // Step 1: Name
@@ -192,9 +113,17 @@ export default function OnboardingFlow() {
         placeholder="Enter your name"
         value={name}
         onChangeText={setName}
+        autoCorrect={false}
+        autoCapitalize="words"
       />
       <TouchableOpacity
-        style={styles.button}
+        style={[
+          styles.button,
+          {
+            opacity: name.trim() ? 1 : 0.8,
+            backgroundColor: name.trim() ? "#000" : "#ccc",
+          },
+        ]}
         disabled={!name.trim()}
         onPress={() => setStep(1)}
       >
@@ -208,7 +137,7 @@ export default function OnboardingFlow() {
     setSelectedGenres((prev) => {
       if (prev.includes(genre)) {
         return prev.filter((g) => g !== genre);
-      } else if (prev.length < 3) {
+      } else if (prev.length < countSelectedGenre) {
         return [...prev, genre];
       } else {
         return prev;
@@ -222,7 +151,8 @@ export default function OnboardingFlow() {
       <View style={styles.genreList}>
         {GENRES.map((genre) => {
           const isSelected = selectedGenres.includes(genre);
-          const isDisabled = !isSelected && selectedGenres.length >= 3;
+          const isDisabled =
+            !isSelected && selectedGenres.length >= countSelectedGenre;
           return (
             <TouchableOpacity
               key={genre}
@@ -247,8 +177,14 @@ export default function OnboardingFlow() {
         })}
       </View>
       <TouchableOpacity
-        style={styles.button}
-        disabled={selectedGenres.length !== 3}
+        style={[
+          styles.button,
+          {
+            opacity: selectedGenres.length === 0 ? 0.8 : 1,
+            backgroundColor: selectedGenres.length === 0 ? "#ccc" : "#000",
+          },
+        ]}
+        disabled={selectedGenres.length === 0}
         onPress={() => setStep(2)}
       >
         <Text style={styles.buttonText}>Continue</Text>
@@ -261,22 +197,37 @@ export default function OnboardingFlow() {
     <View style={styles.centered}>
       <Text style={styles.title}>What is your goal with this app?</Text>
       <View style={{ width: "100%", marginBottom: 32 }}>
-        {GOALS.map((g) => (
+        {GOALS.map((goalItem) => (
           <TouchableOpacity
-            key={g}
-            style={[styles.goalButton, goal === g && styles.goalButtonSelected]}
-            onPress={() => setGoal(g)}
+            key={goalItem.id}
+            style={[
+              styles.goalButton,
+              goal?.id === goalItem.id && styles.goalButtonSelected,
+            ]}
+            onPress={() =>
+              setGoal((prev) => (prev?.id === goalItem.id ? null : goalItem))
+            }
           >
             <Text
-              style={[styles.goalText, goal === g && styles.goalTextSelected]}
+              style={[
+                styles.goalText,
+                goal?.id === goalItem.id && styles.goalTextSelected,
+              ]}
             >
-              {g}
+              {goalItem.title}
             </Text>
+            <Text style={styles.goalDescription}>{goalItem.description}</Text>
           </TouchableOpacity>
         ))}
       </View>
       <TouchableOpacity
-        style={styles.button}
+        style={[
+          styles.button,
+          {
+            opacity: goal ? 1 : 0.8,
+            backgroundColor: goal ? "#000" : "#ccc",
+          },
+        ]}
         disabled={!goal}
         onPress={() => setStep(3)}
       >
@@ -298,6 +249,8 @@ export default function OnboardingFlow() {
         value={book1}
         onChangeText={(text) => handleBookChange(text, setBook1)}
         returnKeyType="next"
+        autoCorrect={false}
+        autoCapitalize="words"
       />
       <TextInput
         style={styles.input}
@@ -306,6 +259,8 @@ export default function OnboardingFlow() {
         onChangeText={(text) => handleBookChange(text, setBook2)}
         editable={!!book1}
         returnKeyType="next"
+        autoCorrect={false}
+        autoCapitalize="words"
       />
       <TextInput
         style={styles.input}
@@ -314,9 +269,16 @@ export default function OnboardingFlow() {
         onChangeText={(text) => handleBookChange(text, setBook3)}
         editable={!!book2}
         returnKeyType="done"
+        autoCorrect={false}
       />
       <TouchableOpacity
-        style={styles.button}
+        style={[
+          styles.button,
+          {
+            opacity: book1 && book2 && book3 ? 1 : 0.8,
+            backgroundColor: book1 && book2 && book3 ? "#000" : "#ccc",
+          },
+        ]}
         onPress={handleDone}
         disabled={!book1 || !book2 || !book3}
       >
@@ -325,28 +287,57 @@ export default function OnboardingFlow() {
     </View>
   );
 
-  async function handleDone() {
-    if (!user) return;
-    const userRef = doc(FIREBASE_DB, "Users", user.uid);
+  const handleDone = async () => {
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to continue.");
+      return;
+    }
 
-    // Kaydetmeden önce kitap isimlerini formatla
-    const formattedBooks = [book1, book2, book3].map(formatBookTitle);
+    try {
+      setIsLoading(true);
+      const books = [book1, book2, book3].filter(Boolean);
 
-    await setDoc(
-      userRef,
-      {
-        name: toTitleCase(name),
-        email: user.email,
-        favoriteGenres: selectedGenres,
-        goal,
-        favoriteBooks: formattedBooks,
-        firstLaunchCompleted: true,
-      },
-      { merge: true }
-    );
+      // Save all user data to Firebase
+      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+      await setDoc(
+        userRef,
+        {
+          name: name,
+          email: user.email,
+          favoriteGenres: selectedGenres,
+          goal: goal
+            ? {
+                id: goal.id,
+                title: goal.title,
+                searchStrategy: goal.searchStrategy,
+                categories: goal.categories,
+              }
+            : null,
+          favoriteBooks: books.map((title) => ({
+            volumeInfo: {
+              title: title,
+              authors: [],
+              description: "",
+              imageLinks: { thumbnail: "" },
+            },
+          })),
+          firstLaunchCompleted: true,
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
 
-    router.replace("/(tabs)/homefolder/home");
-  }
+      router.replace("/(tabs)/homefolder/home");
+    } catch (error) {
+      console.error("Error in handleDone:", error);
+      Alert.alert(
+        "Error",
+        "Failed to save your preferences. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -446,7 +437,6 @@ const styles = StyleSheet.create({
     color: "#222",
   },
   genreTextSelected: {
-    fontWeight: "bold",
     color: "#000",
   },
   goalButton: {
@@ -474,5 +464,10 @@ const styles = StyleSheet.create({
   goalTextSelected: {
     fontWeight: "bold",
     color: "#000",
+  },
+  goalDescription: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 4,
   },
 });

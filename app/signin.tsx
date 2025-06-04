@@ -16,7 +16,6 @@ import { router } from "expo-router";
 import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";

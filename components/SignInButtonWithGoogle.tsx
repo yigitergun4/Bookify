@@ -8,14 +8,14 @@ import {
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import ENV from "@/config/env";
+import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithCredential,
-} from "firebase/auth";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { FIREBASE_AUTH } from "../FirebaseConfig";
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
+import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { router } from "expo-router";
+import { getDoc, doc, setDoc } from "firebase/firestore";
 
 interface GoogleButtonProps {
   style?: ViewStyle;
@@ -30,13 +30,52 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ style }) => {
   const signInWithGoogle = async () => {
     try {
       await GoogleSignin.hasPlayServices();
+
       const userInfo = await GoogleSignin.signIn();
-      console.log("userInfo", userInfo);
-      const { idToken } = await GoogleSignin.getTokens();
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(FIREBASE_AUTH, googleCredential);
-      router.replace("/(tabs)/homefolder/home");
-    } catch (error) {
+
+      if (!userInfo || !userInfo?.data?.idToken) {
+        return;
+      }
+
+      const googleCredential = GoogleAuthProvider.credential(
+        userInfo?.data?.idToken
+      );
+      const userCredential = await signInWithCredential(
+        FIREBASE_AUTH,
+        googleCredential
+      );
+
+      const user = userCredential.user;
+      if (user) {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
+          router.replace("/(tabs)/homefolder/home");
+        } else {
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              firstLaunchCompleted: false,
+              favoriteGenres: [],
+              favoriteBooks: [],
+              libraryBooks: [],
+              createdAt: new Date().toISOString(),
+            });
+          }
+          router.replace("/onboarding");
+        }
+      }
+    } catch (error: any) {
+      if (
+        error.code === statusCodes.SIGN_IN_CANCELLED ||
+        error.message?.includes("cancel")
+      ) {
+        console.log("User cancelled the sign-in process");
+        return;
+      }
       console.error("Google Sign-In Error:", error);
     }
   };

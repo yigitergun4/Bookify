@@ -50,7 +50,6 @@ export const searchBook = async (
 
       url += `&key=${BOOKS_API_KEY}`;
 
-      console.log("[BooksService] Searching with URL:", url);
       const response = await axios.get(url);
       const items = response.data.items || [];
 

@@ -25,26 +25,11 @@ export default function TabOneScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [inputKey, setInputKey] = useState(Date.now());
-  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
-  const { addBook } = useLibrary();
+  const { recommendedBooks, addBook, loadRecommendedBooks } = useLibrary();
   const navigation = useNavigation();
   const router = useRouter();
   const user = FIREBASE_AUTH.currentUser;
   const recommendationService = RecommendationService.getInstance();
-
-  const fetchRecommendedBooks = async () => {
-    if (!user) return;
-    try {
-      setIsLoading(true);
-      const newBooks = await recommendationService.getRecommendations(user.uid);
-      setRecommendedBooks(newBooks);
-      await cacheService.saveRecommendedBooks(user.uid, newBooks);
-    } catch (error) {
-      console.error("Error fetching recommended books:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
     const loadAndSubscribe = async () => {
@@ -82,9 +67,24 @@ export default function TabOneScreen() {
     return unsubscribe;
   }, [navigation]);
 
-  const openModal = (book: any) => {
+  useEffect(() => {
+    if (user) {
+      loadRecommendedBooks();
+    }
+  }, [user]);
+
+  const openModal = async (book: any) => {
     setSelectedBook(book);
     setModalVisible(true);
+
+    // Add to recently viewed
+    if (user) {
+      try {
+        await cacheService.addBookClick(book, user.uid);
+      } catch (error) {
+        console.error("Error adding to recently viewed:", error);
+      }
+    }
   };
 
   const closeModal = () => {
@@ -104,9 +104,8 @@ export default function TabOneScreen() {
       setIsLoading(true);
       // Clear recommendations using the service
       await recommendationService.deleteRecommendations(user.uid);
-
-      // Reset state
-      setRecommendedBooks([]);
+      // Reload recommendations from context
+      await loadRecommendedBooks();
     } catch (error) {
       console.error("[HomeScreen] Error clearing recommendations:", error);
     } finally {
@@ -165,16 +164,10 @@ export default function TabOneScreen() {
             {recommendedBooks.length === 0 ? (
               <TouchableOpacity
                 style={styles.getRecommendationsButton}
-                onPress={fetchRecommendedBooks}
+                onPress={loadRecommendedBooks}
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <Text style={styles.getRecommendationsText}>
-                    Get Book Recommendations
-                  </Text>
-                )}
+                {isLoading && <ActivityIndicator color="#000" />}
               </TouchableOpacity>
             ) : (
               <View style={{ marginBottom: 10 }}>
@@ -189,17 +182,6 @@ export default function TabOneScreen() {
               </View>
             )}
           </View>
-          <TouchableOpacity
-            style={{
-              marginTop: 10,
-              backgroundColor: "#fdfedb",
-              padding: 14,
-              borderRadius: 25,
-            }}
-            onPress={handleClearRecommendations}
-          >
-            <Text>Clear Recommendations</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

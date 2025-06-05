@@ -1,5 +1,12 @@
 import { FIREBASE_DB } from "@/FirebaseConfig";
-import { collection, getDocs, deleteDoc, addDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  addDoc,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { CacheService } from "./cacheService";
 import { ApiError } from "../utils/apiUtils";
 import { GoogleBooksItem } from "@/types/booksapitypes";
@@ -34,37 +41,85 @@ export class RecommendationService {
     return RecommendationService.instance;
   }
 
-  async getRecommendations(userId: string): Promise<GoogleBooksItem[]> {
+  async getRecommendations(
+    userId: string,
+    userPreferences?: {
+      favoriteGenres?: string[];
+      favoriteBooks?: string[];
+      readBooks?: string[];
+      libraryBooks?: any[];
+    }
+  ): Promise<any[]> {
     try {
-      // First try to get from cache
-      const cachedBooks = await cacheService.getRecommendedBooks(userId);
-      if (cachedBooks && cachedBooks.length > 0) {
-        return cachedBooks;
+      // If user preferences are provided, use them directly
+      if (userPreferences) {
+        const {
+          favoriteGenres = [],
+          favoriteBooks = [],
+          readBooks = [],
+          libraryBooks = [],
+        } = userPreferences;
+
+        // Combine all preferences for better recommendations
+        const searchTerms = [
+          ...favoriteGenres,
+          ...favoriteBooks,
+          ...readBooks.map((book: any) => book.volumeInfo?.title || ""),
+          ...libraryBooks.map((book: any) => book.volumeInfo?.title || ""),
+        ].filter(Boolean);
+
+        // Remove duplicates
+        const uniqueTerms = [...new Set(searchTerms)];
+
+        // Get recommendations based on combined preferences
+        const recommendations = await this.searchBooksWithQuery(
+          uniqueTerms.join(" ")
+        );
+
+        // Filter out books that are already in the library
+        const libraryBookIds = new Set(
+          libraryBooks.map((book: any) => book.id)
+        );
+        return recommendations.filter(
+          (book: any) => !libraryBookIds.has(book.id)
+        );
       }
 
-      // If not in cache, get from Firebase subcollection
-      const recommendationsRef = collection(
-        FIREBASE_DB,
-        "Users",
-        userId,
-        "Recommendations"
+      // If no preferences provided, fetch from Firebase
+      const userRef = doc(FIREBASE_DB, "Users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+
+      if (!userData) {
+        throw new Error("User data not found");
+      }
+
+      const favoriteGenres = userData.favoriteGenres || [];
+      const favoriteBooks = userData.favoriteBooks || [];
+      const readBooks = userData.readBooks || [];
+      const libraryBooks = userData.library || [];
+
+      // Combine all preferences for better recommendations
+      const searchTerms = [
+        ...favoriteGenres,
+        ...favoriteBooks,
+        ...readBooks.map((book: any) => book.volumeInfo?.title || ""),
+        ...libraryBooks.map((book: any) => book.volumeInfo?.title || ""),
+      ].filter(Boolean);
+
+      // Remove duplicates
+      const uniqueTerms = [...new Set(searchTerms)];
+
+      // Get recommendations based on combined preferences
+      const recommendations = await this.searchBooksWithQuery(
+        uniqueTerms.join(" ")
       );
-      const recommendationsSnap = await getDocs(recommendationsRef);
 
-      if (recommendationsSnap.empty) {
-        return [];
-      }
-
-      // Combine all chunks and sort by chunkIndex
-      const allBooks = recommendationsSnap.docs
-        .map((doc) => doc.data().books)
-        .flat()
-        .sort((a, b) => a.chunkIndex - b.chunkIndex);
-
-      // Save to cache for next time
-      await cacheService.saveRecommendedBooks(userId, allBooks);
-
-      return allBooks;
+      // Filter out books that are already in the library
+      const libraryBookIds = new Set(libraryBooks.map((book: any) => book.id));
+      return recommendations.filter(
+        (book: any) => !libraryBookIds.has(book.id)
+      );
     } catch (error) {
       console.error(
         "[RecommendationService] Error getting recommendations:",
@@ -217,78 +272,15 @@ export class RecommendationService {
     }
   }
 
-  private async getBooksFromGoogleBooks(
-    favoriteGenres: string[],
-    favoriteBooks: string[]
-  ): Promise<any[]> {
-    try {
-      let allBooks: any[] = [];
-
-      // Search by genres
-      for (const genre of favoriteGenres) {
-        const response = await fetch(
-          `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(
-            genre
-          )}&maxResults=20&langRestrict=en,tr&orderBy=relevance`
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.items) {
-            allBooks = [...allBooks, ...data.items];
-          }
-        }
-      }
-
-      // Search by favorite books to get similar books
-      for (const book of favoriteBooks) {
-        const response = await fetch(
-          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-            book
-          )}&maxResults=20&langRestrict=en,tr&orderBy=relevance`
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.items) {
-            allBooks = [...allBooks, ...data.items];
-          }
-        }
-      }
-
-      // Remove duplicates and filter out books without required fields
-      const uniqueBooks = Array.from(
-        new Map(
-          allBooks
-            .filter(
-              (book) =>
-                book.id &&
-                book.volumeInfo?.title &&
-                book.volumeInfo?.authors &&
-                book.volumeInfo?.imageLinks?.thumbnail
-            )
-            .map((book) => [book.id, book])
-        ).values()
-      );
-
-      // Shuffle the array to get random recommendations
-      const shuffledBooks = uniqueBooks.sort(() => Math.random() - 0.5);
-
-      return shuffledBooks;
-    } catch (error) {
-      console.error(
-        "[RecommendationService] Error fetching books from Google Books:",
-        error
-      );
-      return [];
-    }
-  }
-
   async saveRecommendations(
     userId: string,
     books: GoogleBooksItem[]
   ): Promise<void> {
     try {
+      console.log(
+        `[RecommendationService] Starting to save ${books.length} books`
+      );
+
       // Split books into chunks of 100
       const CHUNK_SIZE = 100;
       const chunks: GoogleBooksItem[][] = [];
@@ -296,29 +288,60 @@ export class RecommendationService {
         chunks.push(books.slice(i, i + CHUNK_SIZE));
       }
 
-      // Save each chunk as a separate document in the subcollection
+      console.log(`[RecommendationService] Split into ${chunks.length} chunks`);
+
+      // Delete existing recommendations first
       const recommendationsRef = collection(
         FIREBASE_DB,
         "Users",
         userId,
         "Recommendations"
       );
+      const existingDocs = await getDocs(recommendationsRef);
+      const deletePromises = existingDocs.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log(
+        `[RecommendationService] Deleted ${existingDocs.docs.length} existing documents`
+      );
 
-      // Save new recommendations
-      const savePromises = chunks.map((chunk) =>
-        addDoc(recommendationsRef, {
+      // Save each chunk as a separate document in the subcollection
+      const savePromises = chunks.map((chunk, index) => {
+        console.log(
+          `[RecommendationService] Saving chunk ${index + 1}/${chunks.length} with ${chunk.length} books`
+        );
+        return addDoc(recommendationsRef, {
           books: chunk,
           createdAt: new Date().toISOString(),
-          chunkIndex: chunks.indexOf(chunk),
-        })
+          chunkIndex: index,
+          totalBooks: books.length, // Add total count for verification
+        });
+      });
+
+      const savedDocs = await Promise.all(savePromises);
+      console.log(
+        `[RecommendationService] Successfully saved ${savedDocs.length} chunks`
       );
-      await Promise.all(savePromises);
+
+      // Verify total books saved
+      const verifyRef = collection(
+        FIREBASE_DB,
+        "Users",
+        userId,
+        "Recommendations"
+      );
+      const verifyDocs = await getDocs(verifyRef);
+      const totalSavedBooks = verifyDocs.docs
+        .map((doc) => doc.data().books)
+        .flat().length;
+
+      console.log(
+        `[RecommendationService] Verification: ${totalSavedBooks} books saved in Firebase`
+      );
 
       // Save to cache
       await cacheService.saveRecommendedBooks(userId, books);
-
       console.log(
-        `[RecommendationService] Saved ${books.length} books in ${chunks.length} chunks`
+        `[RecommendationService] Saved ${books.length} books to cache`
       );
     } catch (error) {
       console.error(

@@ -20,13 +20,16 @@ const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
 
 const RecommendedScreen = () => {
-  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [skipCount, setSkipCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const user = auth.currentUser;
-  const { addBook, libraryBooks } = useLibrary();
+  const {
+    addBook,
+    libraryBooks,
+    recommendedBooks,
+    loadRecommendedBooks,
+    isLoading,
+  } = useLibrary();
 
   const handleAddBook = async (book: any) => {
     if (!user) return;
@@ -61,76 +64,6 @@ const RecommendedScreen = () => {
     );
   };
 
-  useEffect(() => {
-    const loadRecommendedBooks = async () => {
-      if (!user) return;
-      try {
-        setError(null);
-
-        // First check Firebase for existing recommendations
-        const recommendationsRef = collection(
-          FIREBASE_DB,
-          "Users",
-          user.uid,
-          "Recommendations"
-        );
-        const recommendationsSnap = await getDocs(recommendationsRef);
-
-        if (!recommendationsSnap.empty) {
-          const firebaseBooks = recommendationsSnap.docs
-            .map((doc) => doc.data().books)
-            .flat();
-          if (firebaseBooks.length > 0) {
-            // Shuffle the books
-            const shuffledBooks = [...firebaseBooks].sort(
-              () => Math.random() - 0.5
-            );
-            setRecommendedBooks(shuffledBooks);
-            setSkipCount(shuffledBooks.length);
-            setIsLoading(false);
-
-            // Also update cache with shuffled books
-            await cacheService.saveRecommendedBooks(user.uid, shuffledBooks);
-            return;
-          }
-        }
-
-        // If no Firebase recommendations, check cache
-        const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
-
-        if (cachedBooks && cachedBooks.length > 0) {
-          setRecommendedBooks(cachedBooks);
-          setSkipCount(cachedBooks.length);
-          setIsLoading(false);
-        } else {
-          // if cache is empty, fetch new recommendations
-          const newBooks = await recommendationService.getRecommendations(
-            user.uid
-          );
-          setRecommendedBooks(newBooks);
-          setSkipCount((prevCount) => prevCount + newBooks.length);
-
-          // save to both cache and firebase
-          await cacheService.saveRecommendedBooks(user.uid, newBooks);
-
-          // save to firebase
-          await recommendationService.saveRecommendations(user.uid, newBooks);
-        }
-      } catch (error) {
-        console.error("Error loading recommended books:", error);
-        if (error instanceof Error) {
-          setError(error.message);
-        } else {
-          setError("An unexpected error occurred. Please try again later.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadRecommendedBooks();
-  }, [user]);
-
   const handleLoadMore = async () => {
     if (isLoadingMore || !user) return;
     setIsLoadingMore(true);
@@ -151,16 +84,13 @@ const RecommendedScreen = () => {
       const favoriteGenres = userData?.favoriteGenres || [];
       const favoriteBooks = userData?.favoriteBooks || [];
       const readBooks = userData?.readBooks || [];
-      console.log(favoriteGenres, "favoriteGenres, : recommendbookpage:133");
-      console.log(favoriteBooks, "favoriteBooks, : recommendbookpage:134");
-      console.log(readBooks, "readBooks, : recommendbookpage:135");
       let newBooks: any[] = [];
 
       // Get library book IDs
       const libraryBookIds = new Set(libraryBooks.map((book: any) => book.id));
 
       // If we've loaded more than 40 books, try different search strategies
-      if (skipCount >= 40) {
+      if (recommendedBooks.length >= 40) {
         try {
           // Get ChatGPT recommendations
           const queries = await recommendationService.getChatGPTRecommendations(
@@ -233,28 +163,11 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // Add new books to the list
-      setRecommendedBooks((prevBooks) => [...prevBooks, ...uniqueNewBooks]);
-      setSkipCount((prevCount) => prevCount + uniqueNewBooks.length);
+      // Save new books to Firebase using subcollection structure
+      await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);
 
-      // Save new books to Firebase
-      const recommendationsRef = doc(FIREBASE_DB, "Recommendations", user.uid);
-      const currentRecommendations = await getDoc(recommendationsRef);
-      const currentBooks = currentRecommendations.exists()
-        ? currentRecommendations.data().books || []
-        : [];
-
-      // Merge current books with new books and remove duplicates
-      const allBooks = [...currentBooks, ...uniqueNewBooks];
-      const uniqueBooks = Array.from(
-        new Map(allBooks.map((book) => [book.id, book])).values()
-      );
-
-      // Save to Firebase
-      await setDoc(recommendationsRef, {
-        books: uniqueBooks,
-        timestamp: new Date().toISOString(),
-      });
+      // Reload recommended books to get the updated list
+      await loadRecommendedBooks();
     } catch (error) {
       console.error(
         "[RecommendedScreen] Error loading more recommendations:",
@@ -278,6 +191,9 @@ const RecommendedScreen = () => {
         <>
           <View style={styles.header}>
             <Text style={styles.headerText}>Recommended for you</Text>
+            <Text style={styles.countBooksText}>
+              {recommendedBooks.length} books
+            </Text>
           </View>
           <BookSearchList
             books={recommendedBooks}
@@ -311,12 +227,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerText: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#222",
     marginBottom: 4,
+  },
+  countBooksText: {
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Poppins-Regular",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    position: "absolute",
+    right: 16,
   },
   errorContainer: {
     flex: 1,

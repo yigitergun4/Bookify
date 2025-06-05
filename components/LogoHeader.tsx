@@ -37,7 +37,7 @@ export default function LogoHeader({
         <View>
           <TouchableOpacity onPress={() => setShowPopup(!showPopup)}>
             <Image
-              source={require("@/assets/images/bookimage.png")}
+              source={require("@/assets/images/profileicon.png")}
               style={styles.profileIcon}
             />
           </TouchableOpacity>

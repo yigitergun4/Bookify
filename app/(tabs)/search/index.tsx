@@ -101,7 +101,7 @@ export default function TabTwoScreen() {
             <Text style={styles.discoverText}>Discover</Text>
             <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
               <Image
-                source={require("@/assets/images/bookimage.png")}
+                source={require("@/assets/images/profileicon.png")}
                 style={styles.myProfileImage}
               />
             </TouchableOpacity>

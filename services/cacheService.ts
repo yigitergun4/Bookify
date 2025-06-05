@@ -12,6 +12,12 @@ interface BookClick {
   userId: string;
 }
 
+interface RecentClick {
+  userId: string;
+  bookInfo: any;
+  timestamp: string;
+}
+
 export class CacheService {
   private static instance: CacheService;
   private cache: Map<string, CacheItem<any>> = new Map();
@@ -126,19 +132,6 @@ export class CacheService {
     }
   }
 
-  subscribeToRecentClicks(callback: (clicks: BookClick[]) => void) {
-    this.recentClicksSubscribers.push(callback);
-    return () => {
-      this.recentClicksSubscribers = this.recentClicksSubscribers.filter(
-        (sub) => sub !== callback
-      );
-    };
-  }
-
-  private notifyRecentClicksSubscribers(clicks: BookClick[]) {
-    this.recentClicksSubscribers.forEach((callback) => callback(clicks));
-  }
-
   async addBookClick(book: any, userId: string) {
     try {
       const clicks = await this.getRecentClicks(userId);
@@ -186,6 +179,19 @@ export class CacheService {
       console.error("Error getting recent clicks:", error);
       return [];
     }
+  }
+
+  subscribeToRecentClicks(callback: (clicks: BookClick[]) => void) {
+    this.recentClicksSubscribers.push(callback);
+    return () => {
+      this.recentClicksSubscribers = this.recentClicksSubscribers.filter(
+        (sub) => sub !== callback
+      );
+    };
+  }
+
+  private notifyRecentClicksSubscribers(clicks: BookClick[]) {
+    this.recentClicksSubscribers.forEach((callback) => callback(clicks));
   }
 
   async clearRecentClicks(userId: string): Promise<void> {

@@ -48,30 +48,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       const recommendationsSnap = await getDocs(recommendationsRef);
 
-      console.log(
-        "[LibraryContext] Firebase docs count:",
-        recommendationsSnap.docs.length
-      );
-
       if (!recommendationsSnap.empty) {
         const firebaseBooks = recommendationsSnap.docs
           .map((doc) => {
             const data = doc.data();
-            console.log("[LibraryContext] Doc data:", {
-              id: doc.id,
-              booksCount: data.books?.length || 0,
-              chunkIndex: data.chunkIndex,
-              totalBooks: data.totalBooks,
-            });
             return data.books;
           })
           .flat();
-
-        console.log(
-          "[LibraryContext] Total books from Firebase:",
-          firebaseBooks.length
-        );
-
         if (firebaseBooks.length > 0) {
           // Shuffle the books
           const shuffledBooks = [...firebaseBooks].sort(
@@ -87,7 +70,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // If no Firebase recommendations, check cache
       const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
-      console.log("[LibraryContext] Books in cache:", cachedBooks?.length || 0);
 
       if (cachedBooks && cachedBooks.length > 0) {
         setRecommendedBooks(cachedBooks);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  Image,
+  ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { router } from "expo-router";
+import { RecommendationService } from "@/services/recommendationService";
 
 // types
 interface UserGoal {
@@ -87,11 +91,12 @@ export default function OnboardingFlow() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const countSelectedGenre: number = 5;
   const [goal, setGoal] = useState<(typeof GOALS)[0] | null>(null);
-  const [book1, setBook1] = useState("");
-  const [book2, setBook2] = useState("");
-  const [book3, setBook3] = useState("");
+  const [selectedBooks, setSelectedBooks] = useState<any[]>([]);
+  const [popularBooks, setPopularBooks] = useState<any[]>([]);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
   const user = FIREBASE_AUTH.currentUser;
   const [isLoading, setIsLoading] = useState(false);
+  const recommendationService = RecommendationService.getInstance();
 
   const handleNameChange = (text: string) => {
     const formattedText = text
@@ -247,53 +252,107 @@ export default function OnboardingFlow() {
     </View>
   );
 
+  // Load popular books when genres are selected
+  useEffect(() => {
+    if (step === 3) {
+      loadPopularBooks();
+    }
+  }, [step]);
+
+  const loadPopularBooks = async () => {
+    setIsLoadingBooks(true);
+    try {
+      const books: any[] = [];
+      // bring popular books from genres
+      const genreBooks =
+        await recommendationService.getPopularBooks(selectedGenres);
+
+      setPopularBooks(genreBooks);
+    } catch (error) {
+      console.error("Error loading popular books:", error);
+      Alert.alert("Error", "Failed to load popular books. Please try again.");
+    } finally {
+      setIsLoadingBooks(false);
+    }
+  };
+
+  const toggleBookSelection = (book: any) => {
+    setSelectedBooks((prev) => {
+      if (prev.find((b) => b.id === book.id)) {
+        return prev.filter((b) => b.id !== book.id);
+      } else if (prev.length < 3) {
+        return [...prev, book];
+      }
+      return prev;
+    });
+  };
+  console.log(popularBooks, "popularBooks");
   // Step 4: Favorite Books
   const renderFavoriteBooksScreen = () => (
     <View style={styles.centered}>
-      <Text style={styles.title}>Which books do you love?</Text>
+      <Text style={styles.title}>Choose Your Favorite Books</Text>
       <Text style={styles.subtitleSmall}>
-        Share your favorite 3 books to get personalized recommendations.
+        Select up to 3 books from your favorite genres to get personalized
+        recommendations.
       </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Book 1"
-        value={book1}
-        onChangeText={(text) => handleBookChange(text, setBook1)}
-        returnKeyType="next"
-        autoCorrect={false}
-        autoCapitalize="words"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Book 2"
-        value={book2}
-        onChangeText={(text) => handleBookChange(text, setBook2)}
-        editable={!!book1}
-        returnKeyType="next"
-        autoCorrect={false}
-        autoCapitalize="words"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Book 3"
-        value={book3}
-        onChangeText={(text) => handleBookChange(text, setBook3)}
-        editable={!!book2}
-        returnKeyType="done"
-        autoCorrect={false}
-      />
+
+      {isLoadingBooks ? (
+        <ActivityIndicator size="large" color="#000" style={styles.loader} />
+      ) : (
+        <ScrollView style={styles.bookList}>
+          {popularBooks.map((book) => {
+            const isSelected = selectedBooks.some((b) => b.id === book.id);
+            const volume = book.volumeInfo;
+            let imageUrl = volume?.imageLinks?.thumbnail;
+            if (imageUrl && imageUrl?.startsWith("http:")) {
+              imageUrl = imageUrl?.replace("http:", "https:");
+            }
+
+            return (
+              <TouchableOpacity
+                key={book.id}
+                style={[styles.bookCard, isSelected && styles.bookCardSelected]}
+                onPress={() => toggleBookSelection(book)}
+              >
+                <Image
+                  source={
+                    imageUrl
+                      ? { uri: imageUrl }
+                      : require("@/assets/images/not-avaliable-book-photo.png")
+                  }
+                  style={styles.bookImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.bookInfo}>
+                  <Text style={styles.bookTitle} numberOfLines={2}>
+                    {volume?.title}
+                  </Text>
+                  <Text style={styles.bookAuthor} numberOfLines={1}>
+                    {volume?.authors?.join(", ") || "Unknown Author"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <TouchableOpacity
         style={[
           styles.button,
           {
-            opacity: book1 && book2 && book3 ? 1 : 0.8,
-            backgroundColor: book1 && book2 && book3 ? "#000" : "#ccc",
+            opacity: selectedBooks.length > 0 ? 1 : 0.8,
+            backgroundColor: selectedBooks.length > 0 ? "#000" : "#ccc",
           },
         ]}
         onPress={handleDone}
-        disabled={!book1 || !book2 || !book3}
+        disabled={selectedBooks.length === 0}
       >
-        <Text style={styles.buttonText}>Done</Text>
+        <Text style={styles.buttonText}>
+          {selectedBooks.length > 0
+            ? `Continue (${selectedBooks.length}/3)`
+            : "Select at least one book"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -306,7 +365,6 @@ export default function OnboardingFlow() {
 
     try {
       setIsLoading(true);
-      const books = [book1, book2, book3].filter(Boolean);
 
       // Save all user data to Firebase
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
@@ -324,14 +382,7 @@ export default function OnboardingFlow() {
                 categories: goal.categories,
               }
             : null,
-          favoriteBooks: books.map((title) => ({
-            volumeInfo: {
-              title: title,
-              authors: [],
-              description: "",
-              imageLinks: { thumbnail: "" },
-            },
-          })),
+          favoriteBooks: selectedBooks,
           firstLaunchCompleted: true,
           createdAt: new Date().toISOString(),
         },
@@ -480,5 +531,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#888",
     marginTop: 4,
+  },
+  bookList: {
+    width: "100%",
+    maxHeight: "70%",
+  },
+  bookCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  bookCardSelected: {
+    borderColor: "#000",
+    backgroundColor: "#f8f8f8",
+  },
+  bookImage: {
+    width: 60,
+    height: 90,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  bookInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#222",
+  },
+  bookAuthor: {
+    fontSize: 14,
+    color: "#666",
+  },
+  loader: {
+    marginVertical: 20,
   },
 });

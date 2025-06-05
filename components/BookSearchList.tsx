@@ -38,13 +38,13 @@ const BookSearchList = ({
   const cacheService = CacheService.getInstance();
   const auth = getAuth();
   const listRef = useRef<FlatList>(null);
-  const previousOffsetY = useRef(0);
+  const previousOffsetY = useRef<number>(0);
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const [contentHeight, setContentHeight] = useState(0);
-  const [layoutHeight, setLayoutHeight] = useState(0);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+  const [showScrollBottom, setShowScrollBottom] = useState<boolean>(false);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const [layoutHeight, setLayoutHeight] = useState<number>(0);
 
   const scrollToTop = () => {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });

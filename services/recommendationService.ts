@@ -249,46 +249,40 @@ Instructions:
   async getChatGPTRecommendations(
     favoriteGenres: string[],
     favoriteBooks: GoogleBooksItem[],
-    readBooks: GoogleBooksItem[],
+    libraryBooks: GoogleBooksItem[],
     userGoal?: UserGoal
   ): Promise<string[]> {
     console.log("[getChatGPTRecommendations] Called with:", {
       favoriteGenres,
       favoriteBooksCount: favoriteBooks.length,
-      readBooksCount: readBooks.length,
+      readBooksCount: libraryBooks.length,
       userGoal,
     });
     try {
-      const prompt = `You are a book recommendation assistant.
+      const prompt = `You are a smart book recommendation assistant.
 
-      A user is interested in the following preferences:
+      User preferences:
       - Favorite Genres: ${favoriteGenres.join(", ")}
       - Favorite Books: ${favoriteBooks.map((book) => book.volumeInfo?.title).join(", ")}
-      - Books already read: ${readBooks.map((book) => book.volumeInfo?.title).join(", ")}
+      - Books already read or owned: ${libraryBooks.map((book) => book.volumeInfo?.title).join(", ")}
       - Reading Goal: ${userGoal?.title || "General reading"}
       
-      Your task is to generate 3 diverse and creative search query strings that can be used with the Google Books API to find highly relevant book results.
+      Your task:
+      Generate 3 creative and specific **Google Books API** search query strings based on the user's preferences.
       
-      ${
-        userGoal?.id === "classics"
-          ? `Based on the user's favorite genres (${favoriteGenres.join(", ")}), create queries that focus on classic literature in these genres. Consider books that have stood the test of time and influenced the genre.`
-          : userGoal?.id === "contemporary"
-            ? `Looking at the user's favorite books (${favoriteBooks.map((book) => book.volumeInfo?.title).join(", ")}), create queries for modern books with similar themes, writing styles, or authors. Focus on recent publications that match their taste.`
-            : userGoal?.id === "genres"
-              ? `The user enjoys ${favoriteGenres.join(", ")}. Create queries that explore different subgenres and cross-genre works within these categories. Include both popular and niche books in these genres.`
-              : userGoal?.id === "authors"
-                ? `Based on the authors in the user's favorite books (${favoriteBooks
-                    .map((book) => book.volumeInfo?.authors?.[0])
-                    .filter(Boolean)
-                    .join(
-                      ", "
-                    )}), create queries that find books with similar writing styles, themes, or from the same literary movement.`
-                : `Create diverse queries that combine the user's favorite genres (${favoriteGenres.join(", ")}) and books (${favoriteBooks.map((book) => book.volumeInfo?.title).join(", ")}). Consider their reading history (${readBooks.map((book) => book.volumeInfo?.title).join(", ")}) to avoid repetition.`
-      }
+      Focus:
+      - Suggest books that are **not already read**, but **similar readers also enjoyed**.
+      - Use themes, genres, or tones similar to the user’s favorite and read books.
+      - Instead of repeating exact books, use inspiration from **similar genres**, **authors with comparable writing styles**, or books often found in **similar recommendation lists**.
+      - Include books by **different authors**, even if they write in similar genres or with similar topics.
       
-      Each query should be specific and targeted, avoiding generic terms. Use exact genre names, author names, or specific themes from their preferences. Avoid repeating books they've already read.
+      Avoid:
+      - Repeating exact titles or authors from the read books.
+      - Using generic terms like "top books" or "popular books".
       
-      Return ONLY the 3 queries. Each on a new line. Do NOT include any explanation, labels, or formatting.`;
+      Return format:
+      Only return the 3 search queries, each on a new line, with no numbers, labels, or extra text.`;
+
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
         {
@@ -448,5 +442,40 @@ Instructions:
       );
       throw error;
     }
+  }
+  async getPopularBooks(genres: string[]): Promise<GoogleBooksItem[]> {
+    const recommendationService = RecommendationService.getInstance();
+    const uniqueBooks = new Map<string, GoogleBooksItem>();
+
+    const allQueries: string[] = [];
+
+    for (const genre of genres) {
+      const queries = [
+        `subject:${genre}`,
+        `subject:${genre}`,
+        `subject:${genre}`,
+        `subject:${genre}`,
+        `subject:${genre}`,
+      ];
+      allQueries.push(...queries);
+    }
+
+    // parallel queries
+    const results = await Promise.all(
+      allQueries.map((query) =>
+        recommendationService.searchBooksWithQuery(query)
+      )
+    );
+
+    // add all books to map (filter duplicates)
+    for (const bookList of results) {
+      for (const book of bookList) {
+        if (!uniqueBooks.has(book.id)) {
+          uniqueBooks.set(book.id, book);
+        }
+      }
+    }
+
+    return Array.from(uniqueBooks.values()).slice(0, 20);
   }
 }

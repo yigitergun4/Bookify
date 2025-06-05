@@ -105,7 +105,7 @@ const RecommendedScreen = () => {
       const userData = userSnap.data();
       const favoriteGenres = userData?.favoriteGenres || [];
       const favoriteBooks = userData?.favoriteBooks || [];
-      const readBooks = userData?.readBooks || [];
+      const libraryBooks = userData?.library || [];
       let newBooks: any[] = [];
 
       // Get library book IDs
@@ -121,9 +121,9 @@ const RecommendedScreen = () => {
           const queries = await recommendationService.getChatGPTRecommendations(
             favoriteGenres,
             favoriteBooks,
-            readBooks
+            libraryBooks
           );
-
+          console.log(queries, "queries");
           // Try all generated queries and combine results
           let allNewBooks: any[] = [];
           for (const query of queries) {
@@ -172,7 +172,7 @@ const RecommendedScreen = () => {
         );
         // Normal search with all preferences
         newBooks = await recommendationService.searchBooksWithQuery(
-          [...favoriteGenres, ...favoriteBooks].join(" ")
+          [...favoriteGenres, ...favoriteBooks, ...libraryBooks].join(" ")
         );
       }
 

@@ -23,13 +23,8 @@ const RecommendedScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const user = auth.currentUser;
-  const {
-    addBook,
-    libraryBooks,
-    recommendedBooks,
-    isLoading,
-    setRecommendedBooks,
-  } = useLibrary();
+  const { addBook, recommendedBooks, isLoading, setRecommendedBooks } =
+    useLibrary();
 
   // Filter books based on search query
   const filteredBooks = recommendedBooks.filter((book) => {
@@ -129,8 +124,14 @@ const RecommendedScreen = () => {
           for (const query of queries) {
             const books =
               await recommendationService.searchBooksWithQuery(query);
+            console.log(
+              books.map((book) => book.volumeInfo?.title),
+              "books"
+            );
+
             if (books.length > 0) {
               allNewBooks = [...allNewBooks, ...books];
+              allNewBooks = allNewBooks.sort(() => Math.random() - 0.5);
             }
           }
 

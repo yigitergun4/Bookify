@@ -10,8 +10,8 @@ import {
 } from "firebase/firestore";
 import { CacheService } from "./cacheService";
 import { ApiError } from "../utils/apiUtils";
-import { GoogleBooksItem } from "@/types/booksapitypes";
 import ENV from "@/config/env";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const cacheService = CacheService.getInstance();
 
@@ -259,29 +259,40 @@ Instructions:
       userGoal,
     });
     try {
+      const recommendationThresholdForLibraryBasedPrompt: number = 10;
+      const useLibraryBasedPrompt =
+        libraryBooks.length > recommendationThresholdForLibraryBasedPrompt;
       const prompt = `You are a smart book recommendation assistant.
-
+      
       User preferences:
-      - Favorite Genres: ${favoriteGenres.join(", ")}
+      ${useLibraryBasedPrompt ? "" : `- Favorite Genres (initial selection): ${favoriteGenres.join(", ")}`}
       - Favorite Books: ${favoriteBooks.map((book) => book.volumeInfo?.title).join(", ")}
       - Books already read or owned: ${libraryBooks.map((book) => book.volumeInfo?.title).join(", ")}
       - Reading Goal: ${userGoal?.title || "General reading"}
       
       Your task:
-      Generate 3 creative and specific **Google Books API** search query strings based on the user's preferences.
+      Generate 3 highly creative and specific Google Books API search query strings based on the user's preferences.
       
-      Focus:
-      - Suggest books that are **not already read**, but **similar readers also enjoyed**.
-      - Use themes, genres, or tones similar to the user’s favorite and read books.
-      - Instead of repeating exact books, use inspiration from **similar genres**, **authors with comparable writing styles**, or books often found in **similar recommendation lists**.
-      - Include books by **different authors**, even if they write in similar genres or with similar topics.
+      ${
+        useLibraryBasedPrompt
+          ? `This user has read many books. Focus mostly on:
+      - Their actual reading history (books read or owned).
+      - Suggest books that are commonly read by similar readers.
+      - Identify patterns or themes in their past reads and use that to build queries.
+      
+      Use favorite genres only as a minor reference for variety.`
+          : `The user is new or has fewer reads. Focus on:
+      - Their selected favorite genres and favorite books.
+      - Generate diverse queries using genres, authors, and themes from those books.`
+      }
       
       Avoid:
-      - Repeating exact titles or authors from the read books.
-      - Using generic terms like "top books" or "popular books".
+      - Repeating books from their library.
+      - Recommending books by the same author unless it's essential.
+      - Using vague or generic search terms.
       
-      Return format:
-      Only return the 3 search queries, each on a new line, with no numbers, labels, or extra text.`;
+      Format:
+      Return only 3 search queries, each on a new line. No numbering or explanation.`;
 
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -443,39 +454,97 @@ Instructions:
       throw error;
     }
   }
-  async getPopularBooks(genres: string[]): Promise<GoogleBooksItem[]> {
-    const recommendationService = RecommendationService.getInstance();
-    const uniqueBooks = new Map<string, GoogleBooksItem>();
 
-    const allQueries: string[] = [];
+  async getPopularBooks({
+    favoriteGenres,
+    selectedCountry,
+  }: {
+    favoriteGenres: string[];
+    selectedCountry: string;
+  }): Promise<GoogleBooksItem[]> {
+    const prompt = `You are a smart book recommendation assistant.
+  
+  User preferences:
+  - Favorite Genres: ${favoriteGenres.join(", ")}
+  - Country: ${selectedCountry}
+  
+  Your task has TWO parts:
+  
+  1. Generate 3 highly relevant Google Books API search queries based on the user's favorite genres.
+     - Prioritize books that are popular, award-winning, or critically acclaimed in ${selectedCountry}.
+     - Use keywords like: bestseller, award-winning, popular in ${selectedCountry}, trending, etc.
+  
+  2. Then list 5 of the most famous or widely-read authors from ${selectedCountry}.
+  
+  Return format:
+  - First 3 queries (one per line).
+  - Then list 5 authors as "- Author Name"
+  - No extra explanation.`;
 
-    for (const genre of genres) {
-      const queries = [
-        `subject:${genre}`,
-        `subject:${genre}`,
-        `subject:${genre}`,
-        `subject:${genre}`,
-        `subject:${genre}`,
-      ];
-      allQueries.push(...queries);
-    }
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.8,
+      }),
+    });
 
-    // parallel queries
-    const results = await Promise.all(
-      allQueries.map((query) =>
-        recommendationService.searchBooksWithQuery(query)
-      )
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    const lines = content
+      .split("\n")
+      .map((line: string) => line.trim())
+      .filter(Boolean);
+    const queries = lines
+      .filter((line: string) => !line.startsWith("-"))
+      .slice(0, 3);
+    const authors = lines
+      .filter((line: string) => line.startsWith("-"))
+      .map((line: string) => line.replace(/^- /, ""));
+
+    const bookListsFromQueries = await Promise.all(
+      queries.map(async (query: string) => {
+        const res = await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+            query
+          )}&printType=books&maxResults=40`
+        );
+        const json = await res.json();
+        return json.items || [];
+      })
     );
 
-    // add all books to map (filter duplicates)
-    for (const bookList of results) {
-      for (const book of bookList) {
-        if (!uniqueBooks.has(book.id)) {
-          uniqueBooks.set(book.id, book);
-        }
+    const bookListsFromAuthors = await Promise.all(
+      authors.map(async (author: string) => {
+        const res = await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(
+            author
+          )}&printType=books&maxResults=40`
+        );
+        const json = await res.json();
+        return json.items || [];
+      })
+    );
+
+    const allBooks = [...bookListsFromQueries, ...bookListsFromAuthors].flat();
+
+    const uniqueBooksMap = new Map<string, GoogleBooksItem>();
+    for (const book of allBooks) {
+      if (book?.id && !uniqueBooksMap.has(book.id)) {
+        uniqueBooksMap.set(book.id, book);
       }
     }
 
-    return Array.from(uniqueBooks.values()).slice(0, 20);
+    // Convert Map to Array and shuffle
+    const uniqueBooks = Array.from(uniqueBooksMap.values());
+    uniqueBooks.sort(() => Math.random() - 0.5);
+
+    return uniqueBooks;
   }
 }

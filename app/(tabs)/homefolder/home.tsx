@@ -140,7 +140,6 @@ export default function TabOneScreen() {
               />
             </View>
           )}
-
           <View style={styles.recommendedView}>
             <View style={styles.recommendedView2}>
               <Text style={styles.recommendedText}>Recommended for you</Text>

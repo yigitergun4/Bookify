@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,9 +13,6 @@ import {
 } from "react-native";
 import { CacheService } from "@/services/cacheService";
 import { getAuth } from "firebase/auth";
-
-const cacheService = CacheService.getInstance();
-const auth = getAuth();
 
 interface BookSearchListProps {
   books: any[];
@@ -38,8 +35,45 @@ const BookSearchList = ({
   refreshing = false,
   onRefresh,
 }: BookSearchListProps) => {
+  const cacheService = CacheService.getInstance();
+  const auth = getAuth();
+  const listRef = useRef<FlatList>(null);
+  const previousOffsetY = useRef(0);
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [layoutHeight, setLayoutHeight] = useState(0);
+
+  const scrollToTop = () => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
+  const scrollToBottom = () => {
+    if (contentHeight > layoutHeight) {
+      listRef.current?.scrollToEnd({ animated: true });
+    }
+  };
+
+  const handleScroll = (event: any) => {
+    if (books.length > 40 && contentHeight > layoutHeight) {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const scrollDirection = offsetY > previousOffsetY.current ? "down" : "up";
+      const atTop = offsetY <= 100;
+      const atBottom = offsetY >= contentHeight - layoutHeight - 100;
+
+      if (!atTop && !atBottom) {
+        setShowScrollTop(scrollDirection === "up");
+        setShowScrollBottom(scrollDirection === "down");
+      } else {
+        setShowScrollTop(false);
+        setShowScrollBottom(false);
+      }
+
+      previousOffsetY.current = offsetY;
+    }
+  };
 
   const openModal = async (book: any) => {
     const user = auth.currentUser;
@@ -63,9 +97,12 @@ const BookSearchList = ({
   return (
     <>
       <FlatList
+        ref={listRef}
         data={books}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) => `${item.id}_${index}`}
+        onContentSizeChange={(w, h) => setContentHeight(h)}
+        onLayout={(event) => setLayoutHeight(event.nativeEvent.layout.height)}
         renderItem={({ item }) => {
           const volume = item?.volumeInfo;
           let imageUrl = volume?.imageLinks?.thumbnail;
@@ -148,8 +185,37 @@ const BookSearchList = ({
         onEndReachedThreshold={0}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
+      {showScrollTop && (
+        <TouchableOpacity
+          style={styles.scrollTopButton}
+          onPress={scrollToTop}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={require("@/assets/images/arrow-down.png")}
+            style={[
+              styles.scrollTopIcon,
+              { transform: [{ rotate: "180deg" }] },
+            ]}
+          />
+        </TouchableOpacity>
+      )}
+      {showScrollBottom && (
+        <TouchableOpacity
+          style={styles.scrollBottomButton}
+          onPress={scrollToBottom}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={require("@/assets/images/arrow-down.png")}
+            style={[styles.scrollTopIcon]}
+          />
+        </TouchableOpacity>
+      )}
       {loadingMore && (
         <View style={{ padding: 16, alignItems: "center" }}>
           <ActivityIndicator color="#222" />
@@ -320,6 +386,49 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     position: "relative",
+  },
+  scrollTopButton: {
+    position: "absolute",
+    right: 16,
+    bottom: 30,
+    backgroundColor: "#fff",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scrollTopIcon: {
+    width: 25,
+    height: 25,
+    tintColor: "#666",
+  },
+  scrollBottomButton: {
+    position: "absolute",
+    right: 16,
+    top: 210,
+    backgroundColor: "#fff",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
 

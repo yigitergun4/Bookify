@@ -91,6 +91,11 @@ export class RecommendationService {
       userGoal?: any[];
     }
   ): Promise<any[]> {
+    console.log("[getRecommendations] Called with:", {
+      userId,
+      hasUserPreferences: !!userPreferences,
+      preferences: userPreferences,
+    });
     try {
       // If user preferences are provided, use them directly
       if (userPreferences) {
@@ -103,7 +108,9 @@ export class RecommendationService {
         } = userPreferences;
 
         // Create multiple search queries
-        const prompt = `Generate 5 diverse and creative search queries for the Google Books API based on these preferences:
+        const prompt = `You are a book recommendation assistant generating search queries for the Google Books API.
+
+User Preferences:
 - Favorite Genres: ${favoriteGenres.join(", ")}
 - Favorite Books: ${favoriteBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
 - Books already read: ${readBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
@@ -111,12 +118,13 @@ export class RecommendationService {
 - User's library: ${libraryBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
 
 Instructions:
-1. Do not repeat the exact titles from the favoriteBooks or library lists.
-2. Instead of directly using favorite book titles,after a time used exact titles, use them as inspiration to create queries involving similar authors, subgenres, themes, or time periods. 
-3. Each query should be unique, specific, and tailored to the user's tastes.
-4. Include a variety of genre-based, author-based, and theme-based queries.
-5. Avoid vague or generic terms like "good books" or "bestsellers."
-6. Format: Return ONLY the final queries, one per line, without numbering or extra text.`;
+1. Generate 5 diverse and creative search queries.
+2. Do NOT use the exact titles listed in favoriteBooks or user's library.
+3. Instead, identify patterns such as genres, themes, historical periods, writing styles, or author types from those books and base queries on that.
+4. Include a mix of genre-based, author-inspired, and theme-driven queries. Use rich, specific keywords.
+5. Promote discovery. Suggest queries that might expand the user's interests without straying too far.
+6. Do NOT use generic terms like "great books" or "popular books."
+7. Format: Return only the 5 queries, one per line. No bullet points, numbers, or extra text.`;
 
         const response = await fetch(
           "https://api.openai.com/v1/chat/completions",
@@ -244,6 +252,12 @@ Instructions:
     readBooks: GoogleBooksItem[],
     userGoal?: UserGoal
   ): Promise<string[]> {
+    console.log("[getChatGPTRecommendations] Called with:", {
+      favoriteGenres,
+      favoriteBooksCount: favoriteBooks.length,
+      readBooksCount: readBooks.length,
+      userGoal,
+    });
     try {
       const prompt = `You are a book recommendation assistant.
 
@@ -314,7 +328,7 @@ Instructions:
 
       return queries;
     } catch (error) {
-      console.log("Error getting ChatGPT recommendations:", error);
+      console.log("[getChatGPTRecommendations] Error:", error);
       // Return random fallback queries if ChatGPT fails
       function getRandom<T>(arr: T[], fallback: T): T {
         return arr.length > 0

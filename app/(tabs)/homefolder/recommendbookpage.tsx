@@ -13,7 +13,7 @@ import { RecommendationService } from "@/services/recommendationService";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
-import HomePageSearchInput from "@/components/HomePageSearchInput";
+import SearchInput from "@/components/HomePageSearchInput";
 
 const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
@@ -113,6 +113,9 @@ const RecommendedScreen = () => {
 
       // If we've loaded more than 40 books, try different search strategies
       if (recommendedBooks.length >= 40) {
+        console.log(
+          "[RecommendedScreen] Using ChatGPT recommendations (40+ books)"
+        );
         try {
           // Get ChatGPT recommendations
           const queries = await recommendationService.getChatGPTRecommendations(
@@ -164,6 +167,9 @@ const RecommendedScreen = () => {
           }
         }
       } else {
+        console.log(
+          "[RecommendedScreen] Using regular recommendations (<40 books)"
+        );
         // Normal search with all preferences
         newBooks = await recommendationService.searchBooksWithQuery(
           [...favoriteGenres, ...favoriteBooks].join(" ")
@@ -227,7 +233,7 @@ const RecommendedScreen = () => {
             </Text>
           </View>
           <View style={styles.searchContainer}>
-            <HomePageSearchInput
+            <SearchInput
               isHomePage={false}
               value={searchQuery}
               onSearchChange={setSearchQuery}

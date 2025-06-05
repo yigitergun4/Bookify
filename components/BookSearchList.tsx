@@ -148,6 +148,7 @@ const BookSearchList = ({
         onEndReachedThreshold={0}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        showsVerticalScrollIndicator={false}
       />
       {loadingMore && (
         <View style={{ padding: 16, alignItems: "center" }}>

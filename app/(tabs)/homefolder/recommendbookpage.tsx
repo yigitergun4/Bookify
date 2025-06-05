@@ -7,33 +7,40 @@ import {
   Alert,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
-import { useState, useEffect } from "react";
-import { CacheService } from "@/services/cacheService";
+import { useState } from "react";
 import { getAuth } from "firebase/auth";
 import { RecommendationService } from "@/services/recommendationService";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
+import HomePageSearchInput from "@/components/HomePageSearchInput";
 
-const cacheService = CacheService.getInstance();
 const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
 
 const RecommendedScreen = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const user = auth.currentUser;
   const {
     addBook,
     libraryBooks,
     recommendedBooks,
-    loadRecommendedBooks,
     isLoading,
+    setRecommendedBooks,
   } = useLibrary();
+
+  // Filter books based on search query
+  const filteredBooks = recommendedBooks.filter((book) => {
+    const title = book.volumeInfo?.title?.toLowerCase() || "";
+    const authors = book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
+    const query = searchQuery.toLowerCase();
+    return title.includes(query) || authors.includes(query);
+  });
 
   const handleAddBook = async (book: any) => {
     if (!user) return;
-
     Alert.alert(
       "Add to Library",
       `Would you like to add "${book.volumeInfo.title}" to your library?`,
@@ -65,7 +72,7 @@ const RecommendedScreen = () => {
   };
 
   const handleLoadMore = async () => {
-    if (isLoadingMore || !user) return;
+    if (isLoadingMore || !user || searchQuery.trim() !== "") return;
     setIsLoadingMore(true);
     setError(null);
 
@@ -76,6 +83,21 @@ const RecommendedScreen = () => {
         "[RecommendedScreen] Existing book count:",
         existingBookIds.size
       );
+
+      // Get all previously recommended books from Firebase
+      const recommendationsRef = collection(
+        FIREBASE_DB,
+        "Users",
+        user.uid,
+        "Recommendations"
+      );
+      const recommendationsSnap = await getDocs(recommendationsRef);
+      const previouslyRecommendedIds = new Set<string>();
+
+      recommendationsSnap.docs.forEach((doc) => {
+        const books = doc.data().books || [];
+        books.forEach((book: any) => previouslyRecommendedIds.add(book.id));
+      });
 
       // Get user's favorite genres and books for better recommendations
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
@@ -116,7 +138,8 @@ const RecommendedScreen = () => {
                 .filter(
                   (book) =>
                     !existingBookIds.has(book.id) &&
-                    !libraryBookIds.has(book.id)
+                    !libraryBookIds.has(book.id) &&
+                    !previouslyRecommendedIds.has(book.id)
                 )
                 .map((book) => [book.id, book])
             ).values()
@@ -147,10 +170,12 @@ const RecommendedScreen = () => {
         );
       }
 
-      // Filter out books that are already in the list or in the library
+      // Filter out books that are already in the list, library, or previously recommended
       const uniqueNewBooks = newBooks.filter(
         (book: any) =>
-          !existingBookIds.has(book.id) && !libraryBookIds.has(book.id)
+          !existingBookIds.has(book.id) &&
+          !libraryBookIds.has(book.id) &&
+          !previouslyRecommendedIds.has(book.id)
       );
       console.log(
         "[RecommendedScreen] Unique new books:",
@@ -163,11 +188,17 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // Save new books to Firebase using subcollection structure
-      await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);
+      // Limit to 20 books per load
+      const limitedNewBooks = uniqueNewBooks.slice(0, 20);
 
-      // Reload recommended books to get the updated list
-      await loadRecommendedBooks();
+      // Save new books to Firebase using subcollection structure
+      await recommendationService.saveRecommendations(
+        user.uid,
+        limitedNewBooks
+      );
+
+      // Update the recommended books list by appending new books
+      setRecommendedBooks((prev) => [...prev, ...limitedNewBooks]);
     } catch (error) {
       console.error(
         "[RecommendedScreen] Error loading more recommendations:",
@@ -195,8 +226,16 @@ const RecommendedScreen = () => {
               {recommendedBooks.length} books
             </Text>
           </View>
+          <View style={styles.searchContainer}>
+            <HomePageSearchInput
+              isHomePage={false}
+              value={searchQuery}
+              onSearchChange={setSearchQuery}
+              isSubmitButtonShown={false}
+            />
+          </View>
           <BookSearchList
-            books={recommendedBooks}
+            books={filteredBooks}
             loadingMore={isLoadingMore}
             addBook={handleAddBook}
             handleLoadMore={handleLoadMore}
@@ -219,6 +258,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   header: {
     paddingTop: 20,

@@ -35,7 +35,36 @@ export default function HomePageFlatlistRecentClicks({
   const handleAddToLibrary = async (book: any) => {
     try {
       await addBook(book);
-      Alert.alert("Success", "Book added to your library!");
+      Alert.alert(
+        "Add to Library",
+        `Would you like to add "${book.volumeInfo.title}" to your library?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Add",
+            onPress: async () => {
+              try {
+                await addBook(book);
+                Alert.alert("Success", "Book added to your library!");
+              } catch (error: any) {
+                if (
+                  error?.message === "This book is already in your library."
+                ) {
+                  Alert.alert("Error", error.message);
+                } else {
+                  Alert.alert(
+                    "Error",
+                    "Failed to add book to library. Please try again."
+                  );
+                }
+              }
+            },
+          },
+        ]
+      );
     } catch (err: any) {
       if (err?.message === "This book is already in your library.") {
         Alert.alert("Error", err.message);

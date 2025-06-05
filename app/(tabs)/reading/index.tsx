@@ -12,7 +12,6 @@ export default function LibraryScreen() {
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const user = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook } = useLibrary();
 

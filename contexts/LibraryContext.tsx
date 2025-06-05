@@ -17,6 +17,7 @@ interface LibraryContextType {
   loadRecommendedBooks: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
+  setRecommendedBooks: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -117,55 +118,35 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addBook = async (book: any) => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) throw new Error("User not authenticated");
 
     try {
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data();
-
-      if (userData?.library?.some((b: any) => b.id === book.id)) {
+      // Check if book is already in library
+      if (isBookInLibrary(book.id)) {
         throw new Error("This book is already in your library.");
       }
 
-      const updatedLibrary = [...(userData?.library || []), book];
-      await setDoc(userRef, { library: updatedLibrary }, { merge: true });
-      setLibraryBooks(updatedLibrary);
+      // Add to library
+      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data() || {};
+      const library = userData.library || [];
 
-      // After adding a book, update recommendations based on the new library
-      const userDataAfterUpdate = await getDoc(userRef);
-      const updatedUserData = userDataAfterUpdate.data();
+      await setDoc(userRef, {
+        ...userData,
+        library: [...library, book],
+      });
 
-      // Get user's preferences and updated library
-      const favoriteGenres = updatedUserData?.favoriteGenres || [];
-      const favoriteBooks = updatedUserData?.favoriteBooks || [];
-      const readBooks = updatedUserData?.readBooks || [];
-      const libraryBooks = updatedUserData?.library || [];
-
-      // Get new recommendations based on updated preferences
-      const newRecommendations = await recommendationService.getRecommendations(
+      // Remove from recommendations
+      await recommendationService.removeBookFromRecommendations(
         user.uid,
-        {
-          favoriteGenres,
-          favoriteBooks,
-          readBooks,
-          libraryBooks,
-        }
+        book.id
       );
 
-      // Save new recommendations
-      await recommendationService.saveRecommendations(
-        user.uid,
-        newRecommendations
-      );
-
-      // Update context with new recommendations
-      setRecommendedBooks(newRecommendations);
-
-      // Update cache
-      await cacheService.saveRecommendedBooks(user.uid, newRecommendations);
+      // Update local state
+      setLibraryBooks((prev) => [...prev, book]);
     } catch (error) {
-      console.error("Error adding book to library:", error);
+      console.error("[LibraryContext] Error adding book:", error);
       throw error;
     }
   };
@@ -224,6 +205,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         loadRecommendedBooks,
         isLoading,
         error,
+        setRecommendedBooks,
       }}
     >
       {children}

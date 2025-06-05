@@ -6,6 +6,7 @@ import {
   addDoc,
   doc,
   getDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { CacheService } from "./cacheService";
 import { ApiError } from "../utils/apiUtils";
@@ -41,13 +42,53 @@ export class RecommendationService {
     return RecommendationService.instance;
   }
 
+  private mixBooksFromQueries(results: any[][]): any[] {
+    const mixedBooks: any[] = [];
+    const seenIds = new Set<string>();
+
+    // First, flatten all results into a single array
+    const allBooks = results.flat();
+
+    // Then add books one by one, ensuring no duplicates
+    for (const book of allBooks) {
+      if (book && !seenIds.has(book.id)) {
+        mixedBooks.push(book);
+        seenIds.add(book.id);
+      }
+    }
+
+    return mixedBooks;
+  }
+
+  async searchBooksWithQuery(query: string): Promise<any[]> {
+    try {
+      console.log("[RecommendationService] Searching with query:", query);
+      const response = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}&maxResults=10&orderBy=relevance`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch books");
+      }
+
+      const data = await response.json();
+      return data.items || [];
+    } catch (error) {
+      console.error("[RecommendationService] Error searching books:", error);
+      throw error;
+    }
+  }
+
   async getRecommendations(
     userId: string,
     userPreferences?: {
       favoriteGenres?: string[];
-      favoriteBooks?: string[];
-      readBooks?: string[];
+      favoriteBooks?: any[];
+      readBooks?: any[];
       libraryBooks?: any[];
+      userGoal?: any[];
     }
   ): Promise<any[]> {
     try {
@@ -58,31 +99,67 @@ export class RecommendationService {
           favoriteBooks = [],
           readBooks = [],
           libraryBooks = [],
+          userGoal = [],
         } = userPreferences;
 
-        // Combine all preferences for better recommendations
-        const searchTerms = [
-          ...favoriteGenres,
-          ...favoriteBooks,
-          ...readBooks.map((book: any) => book.volumeInfo?.title || ""),
-          ...libraryBooks.map((book: any) => book.volumeInfo?.title || ""),
-        ].filter(Boolean);
+        // Create multiple search queries
+        const prompt = `Generate 5 diverse and creative search queries for the Google Books API based on these preferences:
+- Favorite Genres: ${favoriteGenres.join(", ")}
+- Favorite Books: ${favoriteBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
+- Books already read: ${readBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
+- User's reading goals: ${userGoal?.map((goal: any) => goal.title).join(", ")}
+- User's library: ${libraryBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
 
-        // Remove duplicates
-        const uniqueTerms = [...new Set(searchTerms)];
+Instructions:
+1. Do not repeat the exact titles from the favoriteBooks or library lists.
+2. Instead of directly using favorite book titles,after a time used exact titles, use them as inspiration to create queries involving similar authors, subgenres, themes, or time periods. 
+3. Each query should be unique, specific, and tailored to the user's tastes.
+4. Include a variety of genre-based, author-based, and theme-based queries.
+5. Avoid vague or generic terms like "good books" or "bestsellers."
+6. Format: Return ONLY the final queries, one per line, without numbering or extra text.`;
 
-        // Get recommendations based on combined preferences
-        const recommendations = await this.searchBooksWithQuery(
-          uniqueTerms.join(" ")
+        const response = await fetch(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-3.5-turbo",
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.8,
+              max_tokens: 1000,
+            }),
+          }
         );
+
+        if (!response.ok) {
+          throw new Error("Failed to generate queries with ChatGPT");
+        }
+
+        const data = await response.json();
+        const generatedQueries = data.choices[0].message.content
+          .split("\n")
+          .filter(Boolean)
+          .map((query: string) => query.trim());
+
+        // Get books from all queries in parallel
+        const allResults = await Promise.all(
+          generatedQueries.map((query: string) =>
+            this.searchBooksWithQuery(query)
+          )
+        );
+
+        // Mix books from all queries
+        const mixedBooks = this.mixBooksFromQueries(allResults);
 
         // Filter out books that are already in the library
         const libraryBookIds = new Set(
           libraryBooks.map((book: any) => book.id)
         );
-        return recommendations.filter(
-          (book: any) => !libraryBookIds.has(book.id)
-        );
+        return mixedBooks.filter((book: any) => !libraryBookIds.has(book.id));
       }
 
       // If no preferences provided, fetch from Firebase
@@ -99,27 +176,59 @@ export class RecommendationService {
       const readBooks = userData.readBooks || [];
       const libraryBooks = userData.library || [];
 
-      // Combine all preferences for better recommendations
-      const searchTerms = [
-        ...favoriteGenres,
-        ...favoriteBooks,
-        ...readBooks.map((book: any) => book.volumeInfo?.title || ""),
-        ...libraryBooks.map((book: any) => book.volumeInfo?.title || ""),
-      ].filter(Boolean);
+      // Create multiple search queries
+      const prompt = `Generate 5 diverse and creative search queries for Google Books API based on these preferences:
+      - Favorite Genres: ${favoriteGenres.join(", ")}
+      - Favorite Books: ${favoriteBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
+      - Books already read: ${readBooks.map((book: any) => book.volumeInfo?.title).join(", ")}
+      
+      Requirements:
+      1. Each query should be specific and targeted
+      2. Include a mix of genre-based, author-based, and theme-based queries
+      3. Avoid generic terms
+      4. Use exact genre names, author names, or specific themes
+      5. Format: Return ONLY the queries, one per line, no numbering or additional text`;
 
-      // Remove duplicates
-      const uniqueTerms = [...new Set(searchTerms)];
-
-      // Get recommendations based on combined preferences
-      const recommendations = await this.searchBooksWithQuery(
-        uniqueTerms.join(" ")
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.8,
+            max_tokens: 1000,
+          }),
+        }
       );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate queries with ChatGPT");
+      }
+
+      const data = await response.json();
+      const generatedQueries = data.choices[0].message.content
+        .split("\n")
+        .filter(Boolean)
+        .map((query: string) => query.trim());
+
+      // Get books from all queries in parallel
+      const allResults = await Promise.all(
+        generatedQueries.map((query: string) =>
+          this.searchBooksWithQuery(query)
+        )
+      );
+
+      // Mix books from all queries
+      const mixedBooks = this.mixBooksFromQueries(allResults);
 
       // Filter out books that are already in the library
       const libraryBookIds = new Set(libraryBooks.map((book: any) => book.id));
-      return recommendations.filter(
-        (book: any) => !libraryBookIds.has(book.id)
-      );
+      return mixedBooks.filter((book: any) => !libraryBookIds.has(book.id));
     } catch (error) {
       console.error(
         "[RecommendationService] Error getting recommendations:",
@@ -166,7 +275,6 @@ export class RecommendationService {
       Each query should be specific and targeted, avoiding generic terms. Use exact genre names, author names, or specific themes from their preferences. Avoid repeating books they've already read.
       
       Return ONLY the 3 queries. Each on a new line. Do NOT include any explanation, labels, or formatting.`;
-      console.log(userGoal?.id, "userGoal?.id, : recommendationService:105");
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
         {
@@ -176,9 +284,9 @@ export class RecommendationService {
             Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.8,
+            temperature: 0.85,
             max_tokens: 1000,
           }),
         }
@@ -191,10 +299,6 @@ export class RecommendationService {
       }
 
       const data = await response.json();
-      console.log(
-        data.choices?.[0]?.message?.content,
-        "data, : recommendationService:226"
-      );
       if (!data.choices?.[0]?.message?.content) {
         throw new Error("Invalid response format from ChatGPT API");
       }
@@ -211,32 +315,23 @@ export class RecommendationService {
       return queries;
     } catch (error) {
       console.log("Error getting ChatGPT recommendations:", error);
-      // Return fallback queries if ChatGPT fails
-      return [
-        `subject:${favoriteGenres[0] || "fiction"}`,
-        `inauthor:"${favoriteBooks[0]?.volumeInfo?.authors?.[0] || "J.K. Rowling"}"`,
-        `intitle:"${favoriteBooks[0]?.volumeInfo?.title || "The"}"`,
-      ];
-    }
-  }
-
-  async searchBooksWithQuery(query: string): Promise<any[]> {
-    try {
-      const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-          query
-        )}&maxResults=40&orderBy=relevance`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch books");
+      // Return random fallback queries if ChatGPT fails
+      function getRandom<T>(arr: T[], fallback: T): T {
+        return arr.length > 0
+          ? arr[Math.floor(Math.random() * arr.length)]
+          : fallback;
       }
-
-      const data = await response.json();
-      return data.items || [];
-    } catch (error) {
-      console.error("Error searching books:", error);
-      throw error;
+      return [
+        `subject:${getRandom(favoriteGenres, "fiction")}`,
+        `inauthor:"${getRandom(
+          favoriteBooks.map((b) => b.volumeInfo?.authors?.[0]).filter(Boolean),
+          "J.K. Rowling"
+        )}"`,
+        `intitle:"${getRandom(
+          favoriteBooks.map((b) => b.volumeInfo?.title),
+          "The"
+        )}"`,
+      ];
     }
   }
 
@@ -264,8 +359,43 @@ export class RecommendationService {
         userId
       );
     } catch (error) {
-      console.error(
+      console.log(
         "[RecommendationService] Error deleting recommendations:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  async removeBookFromRecommendations(userId: string, bookId: string) {
+    try {
+      const recRef = collection(
+        FIREBASE_DB,
+        "Users",
+        userId,
+        "Recommendations"
+      );
+      const snapshots = await getDocs(recRef);
+
+      for (const snap of snapshots.docs) {
+        const data = snap.data();
+        const filteredBooks = (data.books || []).filter(
+          (b: any) => b.id !== bookId
+        );
+        await updateDoc(doc(recRef, snap.id), { books: filteredBooks });
+      }
+
+      // Also update cache
+      const cachedBooks = await cacheService.getRecommendedBooks(userId);
+      if (cachedBooks) {
+        const filteredCachedBooks = cachedBooks.filter(
+          (b: any) => b.id !== bookId
+        );
+        await cacheService.saveRecommendedBooks(userId, filteredCachedBooks);
+      }
+    } catch (error) {
+      console.log(
+        "[RecommendationService] Error removing book from recommendations:",
         error
       );
       throw error;
@@ -277,74 +407,28 @@ export class RecommendationService {
     books: GoogleBooksItem[]
   ): Promise<void> {
     try {
-      console.log(
-        `[RecommendationService] Starting to save ${books.length} books`
-      );
-
-      // Split books into chunks of 100
-      const CHUNK_SIZE = 100;
-      const chunks: GoogleBooksItem[][] = [];
-      for (let i = 0; i < books.length; i += CHUNK_SIZE) {
-        chunks.push(books.slice(i, i + CHUNK_SIZE));
-      }
-
-      console.log(`[RecommendationService] Split into ${chunks.length} chunks`);
-
-      // Delete existing recommendations first
+      // Create a new document in the Recommendations subcollection
       const recommendationsRef = collection(
         FIREBASE_DB,
         "Users",
         userId,
         "Recommendations"
       );
-      const existingDocs = await getDocs(recommendationsRef);
-      const deletePromises = existingDocs.docs.map((doc) => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
-      console.log(
-        `[RecommendationService] Deleted ${existingDocs.docs.length} existing documents`
-      );
 
-      // Save each chunk as a separate document in the subcollection
-      const savePromises = chunks.map((chunk, index) => {
-        console.log(
-          `[RecommendationService] Saving chunk ${index + 1}/${chunks.length} with ${chunk.length} books`
-        );
-        return addDoc(recommendationsRef, {
-          books: chunk,
-          createdAt: new Date().toISOString(),
-          chunkIndex: index,
-          totalBooks: books.length, // Add total count for verification
-        });
+      // Add the new recommendations with timestamp
+      await addDoc(recommendationsRef, {
+        books: books,
+        createdAt: new Date().toISOString(),
+        totalBooks: books.length,
       });
-
-      const savedDocs = await Promise.all(savePromises);
-      console.log(
-        `[RecommendationService] Successfully saved ${savedDocs.length} chunks`
-      );
-
-      // Verify total books saved
-      const verifyRef = collection(
-        FIREBASE_DB,
-        "Users",
-        userId,
-        "Recommendations"
-      );
-      const verifyDocs = await getDocs(verifyRef);
-      const totalSavedBooks = verifyDocs.docs
-        .map((doc) => doc.data().books)
-        .flat().length;
-
-      console.log(
-        `[RecommendationService] Verification: ${totalSavedBooks} books saved in Firebase`
-      );
 
       // Save to cache
       await cacheService.saveRecommendedBooks(userId, books);
       console.log(
-        `[RecommendationService] Saved ${books.length} books to cache`
+        `[RecommendationService] Saved ${books.length} books to cache and Firebase`
       );
     } catch (error) {
-      console.error(
+      console.log(
         "[RecommendationService] Error saving recommendations:",
         error
       );

@@ -13,7 +13,6 @@ import { useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
-import { RecommendationService } from "@/services/recommendationService";
 import { useRouter } from "expo-router";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
 
@@ -29,7 +28,6 @@ export default function TabOneScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const user = FIREBASE_AUTH.currentUser;
-  const recommendationService = RecommendationService.getInstance();
 
   useEffect(() => {
     const loadAndSubscribe = async () => {
@@ -68,9 +66,20 @@ export default function TabOneScreen() {
   }, [navigation]);
 
   useEffect(() => {
-    if (user) {
-      loadRecommendedBooks();
-    }
+    const fetchRecommendations = async () => {
+      if (user) {
+        try {
+          setIsLoading(true); // first loading
+          await loadRecommendedBooks();
+        } catch (error) {
+          console.error("Error loading recommended books:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchRecommendations();
   }, [user]);
 
   const openModal = async (book: any) => {
@@ -96,22 +105,6 @@ export default function TabOneScreen() {
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
-
-  const handleClearRecommendations = async () => {
-    if (!user) return;
-
-    try {
-      setIsLoading(true);
-      // Clear recommendations using the service
-      await recommendationService.deleteRecommendations(user.uid);
-      // Reload recommendations from context
-      await loadRecommendedBooks();
-    } catch (error) {
-      console.error("[HomeScreen] Error clearing recommendations:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -162,13 +155,7 @@ export default function TabOneScreen() {
               </TouchableOpacity>
             </View>
             {recommendedBooks.length === 0 ? (
-              <TouchableOpacity
-                style={styles.getRecommendationsButton}
-                onPress={loadRecommendedBooks}
-                disabled={isLoading}
-              >
-                {isLoading && <ActivityIndicator color="#000" />}
-              </TouchableOpacity>
+              isLoading && <ActivityIndicator color="#000" />
             ) : (
               <View style={{ marginBottom: 10 }}>
                 <HomepageCardList

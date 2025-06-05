@@ -93,6 +93,14 @@ export default function OnboardingFlow() {
   const user = FIREBASE_AUTH.currentUser;
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleNameChange = (text: string) => {
+    const formattedText = text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+
+    setName(formattedText);
+  };
   const handleBookChange = (text: string, setter: (text: string) => void) => {
     // Capitalize first letter of each word
     const formattedText = text
@@ -125,7 +133,10 @@ export default function OnboardingFlow() {
           },
         ]}
         disabled={!name.trim()}
-        onPress={() => setStep(1)}
+        onPress={() => {
+          handleNameChange(name);
+          setStep(1);
+        }}
       >
         <Text style={styles.buttonText}>Continue</Text>
       </TouchableOpacity>

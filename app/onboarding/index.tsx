@@ -22,8 +22,8 @@ import { Ionicons } from "@expo/vector-icons";
 interface UserGoal {
   id: string;
   title: string;
-  searchStrategy: string;
-  categories: string[];
+  searchStrategy: string | ((genres: string[]) => string);
+  categories: string[] | ((genres: string[]) => string[]);
   description: string;
 }
 
@@ -83,52 +83,60 @@ const GENRES = [
   "Art",
 ];
 
-const GOALS: UserGoal[] = [
-  {
-    id: "classics",
-    title: "Discover Classic Literature",
-    searchStrategy: "subject:classics+subject:literature",
-    categories: ["Classics", "Literature", "Historical Fiction"],
-    description: "Explore timeless masterpieces and literary classics",
-  },
-  {
-    id: "contemporary",
-    title: "Stay Current with Modern Books",
-    searchStrategy: "subject:contemporary+subject:fiction",
-    categories: ["Contemporary", "Fiction", "Modern Literature"],
-    description: "Find the latest bestsellers and trending books",
-  },
-  {
-    id: "genres",
-    title: "Explore Different Genres",
-    searchStrategy:
-      "subject:fiction+subject:fantasy+subject:mystery+subject:romance",
-    categories: ["Fantasy", "Mystery", "Romance", "Science Fiction"],
-    description: "Discover books across various genres and styles",
-  },
-  {
-    id: "authors",
-    title: "Follow Favorite Authors",
-    searchStrategy: "subject:fiction+subject:literature",
-    categories: ["Fiction", "Literature", "Authors"],
-    description: "Get recommendations based on your favorite writers",
-  },
-];
+const getGoals = (selectedGenres: string[]): UserGoal[] => {
+  const unselectedGenres = GENRES.filter((g) => !selectedGenres.includes(g));
+
+  return [
+    {
+      id: "classics",
+      title: "Discover Classic Literature",
+      searchStrategy: (genres: string[]) =>
+        `subject:${genres.join("+subject:")}`,
+      categories: (genres: string[]) => genres,
+      description: "Explore timeless masterpieces and literary classics",
+    },
+    {
+      id: "contemporary",
+      title: "Stay Current with Modern Books",
+      searchStrategy: (genres: string[]) =>
+        `subject:${genres.join("+subject:")}`,
+      categories: (genres: string[]) => genres,
+      description: "Find the latest bestsellers and trending books",
+    },
+    {
+      id: "genres",
+      title: `Explore Selected & Other Genres`,
+      searchStrategy: (genres: string[]) =>
+        `subject:${[...genres, ...unselectedGenres].join("+subject:")}`,
+      categories: (genres: string[]) => [...genres, ...unselectedGenres],
+      description:
+        "Discover books across your favorite and other genres you may not know yet",
+    },
+    {
+      id: "authors",
+      title: "Follow Favorite Authors",
+      searchStrategy: (genres: string[]) =>
+        `subject:${genres.join("+subject:")}`,
+      categories: (genres: string[]) => genres,
+      description: "Get recommendations based on your favorite writers",
+    },
+  ];
+};
 
 export default function OnboardingFlow() {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
+  const [step, setStep] = useState<number>(0);
+  const [name, setName] = useState<string>("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const countSelectedGenre: number = 5;
-  const [goal, setGoal] = useState<(typeof GOALS)[0] | null>(null);
+  const [goal, setGoal] = useState<UserGoal | null>(null);
   const [selectedBooks, setSelectedBooks] = useState<any[]>([]);
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
-  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [isLoadingBooks, setIsLoadingBooks] = useState<boolean>(false);
   const user = FIREBASE_AUTH.currentUser;
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const recommendationService = RecommendationService.getInstance();
-  const maxSelectedBooks = 5; // Maximum number of books user can select
+  const maxSelectedBooks: number = 5; // Maximum number of books user can select
 
   const handleNameChange = (text: string) => {
     const formattedText = text
@@ -141,6 +149,10 @@ export default function OnboardingFlow() {
 
   const handleBack = () => {
     if (step > 0) {
+      if (step === 4) {
+        setPopularBooks([]);
+        setSelectedBooks([]);
+      }
       setStep(step - 1);
     }
   };
@@ -312,34 +324,55 @@ export default function OnboardingFlow() {
     </View>
   );
 
+  const goals = getGoals(selectedGenres);
   // Step 4: Goal
   const renderGoalScreen = () => (
     <View style={styles.centered}>
       {renderHeader()}
       <Text style={styles.title}>What is your goal with this app?</Text>
       <View style={{ width: "100%", marginBottom: 20 }}>
-        {GOALS.map((goalItem) => (
-          <TouchableOpacity
-            key={goalItem.id}
-            style={[
-              styles.goalButton,
-              goal?.id === goalItem.id && styles.goalButtonSelected,
-            ]}
-            onPress={() =>
-              setGoal((prev) => (prev?.id === goalItem.id ? null : goalItem))
-            }
-          >
-            <Text
+        {goals.map((goalItem: UserGoal) => {
+          const searchStrategy =
+            typeof goalItem.searchStrategy === "function"
+              ? goalItem.searchStrategy(selectedGenres)
+              : goalItem.searchStrategy;
+
+          const categories =
+            typeof goalItem.categories === "function"
+              ? goalItem.categories(selectedGenres)
+              : goalItem.categories;
+
+          return (
+            <TouchableOpacity
+              key={goalItem.id}
               style={[
-                styles.goalText,
-                goal?.id === goalItem.id && styles.goalTextSelected,
+                styles.goalButton,
+                goal?.id === goalItem.id && styles.goalButtonSelected,
               ]}
+              onPress={() =>
+                setGoal((prev) =>
+                  prev?.id === goalItem.id
+                    ? null
+                    : {
+                        ...goalItem,
+                        searchStrategy,
+                        categories,
+                      }
+                )
+              }
             >
-              {goalItem.title}
-            </Text>
-            <Text style={styles.goalDescription}>{goalItem.description}</Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.goalText,
+                  goal?.id === goalItem.id && styles.goalTextSelected,
+                ]}
+              >
+                {goalItem.title}
+              </Text>
+              <Text style={styles.goalDescription}>{goalItem.description}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <TouchableOpacity
         style={[
@@ -381,17 +414,22 @@ export default function OnboardingFlow() {
     loadBooks();
   }, [step]);
 
-  const toggleBookSelection = (book: any) => {
+  const toggleBookSelection = (book: GoogleBooksItem) => {
     setSelectedBooks((prev) => {
-      if (prev.find((b) => b.id === book.id)) {
+      // Check if the book is already selected
+      const isAlreadySelected = prev.some((b) => b.id === book.id);
+
+      if (isAlreadySelected) {
+        // If already selected, remove it
         return prev.filter((b) => b.id !== book.id);
       } else if (prev.length < maxSelectedBooks) {
+        // If not selected and under max limit, add it
         return [...prev, book];
       }
+      // If at max limit, don't change selection
       return prev;
     });
   };
-  console.log(popularBooks, "popularBooks: index.tsx:393");
   // Step 5: Favorite Books
   const renderFavoriteBooksScreen = () => (
     <View style={styles.centered}>
@@ -401,17 +439,21 @@ export default function OnboardingFlow() {
         Select up to {maxSelectedBooks} books from your favorite genres to get
         personalized recommendations.
       </Text>
-
       {isLoadingBooks ? (
         <ActivityIndicator size="large" color="#000" style={styles.loader} />
       ) : (
-        <ScrollView style={styles.bookList}>
-          {popularBooks.map((book) => {
-            const isSelected = selectedBooks.some((b) => b.id === book.id);
-            const isDisabled =
+        <ScrollView
+          style={styles.bookList}
+          showsVerticalScrollIndicator={false}
+        >
+          {popularBooks.map((book: GoogleBooksItem) => {
+            const isSelected: boolean = selectedBooks.some(
+              (b: GoogleBooksItem) => b.id === book.id
+            );
+            const isDisabled: boolean =
               !isSelected && selectedBooks.length >= maxSelectedBooks;
-            const volume = book.volumeInfo;
-            let imageUrl = volume?.imageLinks?.thumbnail;
+            const volume: any = book.volumeInfo;
+            let imageUrl: string | undefined = volume?.imageLinks?.thumbnail;
             if (imageUrl && imageUrl?.startsWith("http:")) {
               imageUrl = imageUrl?.replace("http:", "https:");
             }
@@ -449,7 +491,6 @@ export default function OnboardingFlow() {
           })}
         </ScrollView>
       )}
-
       <TouchableOpacity
         style={[
           styles.button,
@@ -463,7 +504,7 @@ export default function OnboardingFlow() {
       >
         <Text style={styles.buttonText}>
           {selectedBooks.length > 0
-            ? `Continue (${selectedBooks.length}/${maxSelectedBooks})`
+            ? `Done (${selectedBooks.length}/${maxSelectedBooks})`
             : "Select at least one book"}
         </Text>
       </TouchableOpacity>
@@ -605,7 +646,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    minWidth: 100,
   },
   genreButtonSelected: {
     backgroundColor: "#f4f4f4",

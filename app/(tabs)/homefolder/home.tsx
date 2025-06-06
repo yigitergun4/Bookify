@@ -14,7 +14,8 @@ import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 const cacheService = CacheService.getInstance();
 
@@ -34,6 +35,14 @@ export default function TabOneScreen() {
       if (!user) return;
 
       try {
+        // Check if user has completed onboarding
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+
+        // Only load if onboarding is completed
+        if (!userData?.firstLaunchCompleted) return;
+
         // Load initial cache data
         const clicks = await cacheService.getRecentClicks(user.uid);
         setRecentClicks(clicks.map((click) => click.bookInfo));

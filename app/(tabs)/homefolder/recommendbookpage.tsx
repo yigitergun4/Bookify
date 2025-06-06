@@ -14,6 +14,7 @@ import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
 import SearchInput from "@/components/HomePageSearchInput";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
@@ -70,7 +71,7 @@ const RecommendedScreen = () => {
     if (isLoadingMore || !user || searchQuery.trim() !== "") return;
     setIsLoadingMore(true);
     setError(null);
-
+    console.log("handleLoadMore: recommendbookpage.tsx:73");
     try {
       // Get existing book IDs to avoid duplicates
       const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
@@ -90,27 +91,28 @@ const RecommendedScreen = () => {
       const previouslyRecommendedIds = new Set<string>();
 
       recommendationsSnap.docs.forEach((doc) => {
-        const books = doc.data().books || [];
-        books.forEach((book: any) => previouslyRecommendedIds.add(book.id));
+        const books: GoogleBooksItem[] = doc.data().books || [];
+        books.forEach((book: GoogleBooksItem) =>
+          previouslyRecommendedIds.add(book.id)
+        );
       });
 
       // Get user's favorite genres and books for better recommendations
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
-      const userData = userSnap.data();
-      const favoriteGenres = userData?.favoriteGenres || [];
-      const favoriteBooks = userData?.favoriteBooks || [];
-      const libraryBooks = userData?.library || [];
+      const userData: any = userSnap.data();
+      const favoriteGenres: string[] = userData?.favoriteGenres || [];
+      const favoriteBooks: GoogleBooksItem[] = userData?.favoriteBooks || [];
+      const libraryBooks: GoogleBooksItem[] = userData?.library || [];
       let newBooks: any[] = [];
 
       // Get library book IDs
-      const libraryBookIds = new Set(libraryBooks.map((book: any) => book.id));
+      const libraryBookIds: Set<string> = new Set(
+        libraryBooks.map((book: GoogleBooksItem) => book.id)
+      );
 
       // If we've loaded more than 40 books, try different search strategies
       if (recommendedBooks.length >= 40) {
-        console.log(
-          "[RecommendedScreen] Using ChatGPT recommendations (40+ books)"
-        );
         try {
           // Get ChatGPT recommendations
           const queries = await recommendationService.getChatGPTRecommendations(
@@ -118,25 +120,19 @@ const RecommendedScreen = () => {
             favoriteBooks,
             libraryBooks
           );
-          console.log(queries, "queries");
+          console.log(queries, "queries recommendbookpage.tsx:118");
           // Try all generated queries and combine results
           let allNewBooks: any[] = [];
           for (const query of queries) {
             const books =
               await recommendationService.searchBooksWithQuery(query);
-            console.log(
-              books.map((book) => book.volumeInfo?.title),
-              "books"
-            );
-
             if (books.length > 0) {
               allNewBooks = [...allNewBooks, ...books];
-              allNewBooks = allNewBooks.sort(() => Math.random() - 0.5);
             }
           }
 
           // Remove duplicates and filter out existing books
-          const uniqueNewBooks = Array.from(
+          const uniqueNewBooks: GoogleBooksItem[] = Array.from(
             new Map(
               allNewBooks
                 .filter(
@@ -160,7 +156,7 @@ const RecommendedScreen = () => {
           console.error("Error getting recommendations from ChatGPT:", error);
           // Fallback to random genre if ChatGPT fails
           if (favoriteGenres.length > 0) {
-            const randomGenre =
+            const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
               `subject:${randomGenre}`
@@ -178,7 +174,7 @@ const RecommendedScreen = () => {
       }
 
       // Filter out books that are already in the list, library, or previously recommended
-      const uniqueNewBooks = newBooks.filter(
+      const uniqueNewBooks: GoogleBooksItem[] = newBooks.filter(
         (book: any) =>
           !existingBookIds.has(book.id) &&
           !libraryBookIds.has(book.id) &&
@@ -196,7 +192,9 @@ const RecommendedScreen = () => {
       }
 
       // Limit to 20 books per load
-      const limitedNewBooks = uniqueNewBooks.slice(0, 20);
+      const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
+      // randomize the books
+      limitedNewBooks.sort(() => Math.random() - 0.5);
 
       // Save new books to Firebase using subcollection structure
       await recommendationService.saveRecommendations(

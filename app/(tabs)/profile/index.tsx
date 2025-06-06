@@ -44,9 +44,13 @@ export default function MyProfileScreen() {
         if (cachedBooks && cachedBooks.length > 0) {
           setRecommendedBooks(cachedBooks.slice(0, 3));
         } else {
-          const newBooks = await recommendationService.getRecommendations(
-            user.uid
-          );
+          const newBooks =
+            await recommendationService.getChatGPTRecommendations(
+              userGenres,
+              [],
+              [],
+              undefined
+            );
           setRecommendedBooks(newBooks.slice(0, 3));
           await cacheService.saveRecommendedBooks(user.uid, newBooks);
         }

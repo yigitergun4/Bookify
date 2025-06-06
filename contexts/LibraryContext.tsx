@@ -4,6 +4,7 @@ import { FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { RecommendationService } from "@/services/recommendationService";
 import { CacheService } from "@/services/cacheService";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const cacheService = CacheService.getInstance();
 const recommendationService = RecommendationService.getInstance();
@@ -38,7 +39,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setError(null);
       setIsLoading(true);
-
       // First check Firebase for existing recommendations
       const recommendationsRef = collection(
         FIREBASE_DB,
@@ -69,16 +69,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // If no Firebase recommendations, check cache
-      const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
+      const cachedBooks: GoogleBooksItem[] =
+        await cacheService.getRecommendedBooks(user.uid);
 
       if (cachedBooks && cachedBooks.length > 0) {
         setRecommendedBooks(cachedBooks);
       } else {
         // if cache is empty, fetch new recommendations
-        const newBooks = await recommendationService.getRecommendations(
-          user.uid
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+
+        const queries = await recommendationService.getChatGPTRecommendations(
+          userData?.favoriteGenres || [],
+          [],
+          userData?.library || [],
+          userData?.goal || undefined
         );
-        console.log("[LibraryContext] Fetched new books:", newBooks.length);
+
+        const newBooks: GoogleBooksItem[] = await Promise.all(
+          queries.map((query) =>
+            recommendationService.searchBooksWithQuery(query)
+          )
+        ).then((results) => results.flat());
 
         setRecommendedBooks(newBooks);
 
@@ -142,9 +155,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
 
-      const updatedLibrary = (userData?.library || []).filter(
-        (book: any) => book.id !== bookId
-      );
+      const updatedLibrary: GoogleBooksItem[] = (
+        userData?.library || []
+      ).filter((book: any) => book.id !== bookId);
       await setDoc(userRef, { library: updatedLibrary }, { merge: true });
       setLibraryBooks(updatedLibrary);
     } catch (error) {
@@ -154,7 +167,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const isBookInLibrary = (bookId: string) => {
-    return libraryBooks.some((book) => book.id === bookId);
+    return libraryBooks.some((book: GoogleBooksItem) => book.id === bookId);
   };
 
   useEffect(() => {
@@ -166,7 +179,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         const userRef = doc(FIREBASE_DB, "Users", user.uid);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.data();
-        setLibraryBooks(userData?.library || []);
+        setLibraryBooks(userData?.library || ([] as GoogleBooksItem[]));
       } catch (error) {
         console.error("Error loading library:", error);
       }

@@ -9,6 +9,62 @@ import { GoogleBooksItem } from "@/types/booksapitypes";
 const cacheService = CacheService.getInstance();
 const recommendationService = RecommendationService.getInstance();
 
+export const COUNTRIES: string[] = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Japan",
+  "South Korea",
+  "India",
+  "Brazil",
+  "Mexico",
+  "Turkey",
+  "Netherlands",
+  "Sweden",
+  "Norway",
+  "Denmark",
+  "Finland",
+  "Russia",
+  "China",
+  "Singapore",
+  "New Zealand",
+  "South Africa",
+  "Argentina",
+];
+
+export const GENRES = [
+  "Fiction",
+  "Mystery",
+  "Novel",
+  "Thriller",
+  "Fantasy",
+  "Biography",
+  "Self-help",
+  "Science fiction",
+  "Children's",
+  "Non-fiction",
+  "Historical",
+  "Crime fiction",
+  "Travelogue",
+  "Technology & Science",
+  "Historical fiction",
+  "Inspirational",
+  "Wellness",
+  "Sports",
+  "Horror",
+  "Dystopian",
+  "Adventure",
+  "Drama",
+  "Poetry",
+  "Philosophy",
+  "Art",
+];
+
 interface LibraryContextType {
   libraryBooks: any[];
   recommendedBooks: any[];

@@ -9,7 +9,9 @@ import {
   Alert,
   Image,
   ActivityIndicator,
-  ScrollView,
+  FlatList,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
@@ -17,6 +19,7 @@ import { router } from "expo-router";
 import { RecommendationService } from "@/services/recommendationService";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 import { Ionicons } from "@expo/vector-icons";
+import { COUNTRIES, GENRES } from "@/contexts/LibraryContext";
 
 // types
 interface UserGoal {
@@ -27,64 +30,10 @@ interface UserGoal {
   description: string;
 }
 
-const COUNTRIES: string[] = [
-  "United States",
-  "United Kingdom",
-  "Canada",
-  "Australia",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Japan",
-  "South Korea",
-  "India",
-  "Brazil",
-  "Mexico",
-  "Turkey",
-  "Netherlands",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "Russia",
-  "China",
-  "Singapore",
-  "New Zealand",
-  "South Africa",
-  "Argentina",
-];
-
-const GENRES = [
-  "Fiction",
-  "Mystery",
-  "Novel",
-  "Thriller",
-  "Fantasy",
-  "Biography",
-  "Self-help",
-  "Science fiction",
-  "Children's",
-  "Non-fiction",
-  "Historical",
-  "Crime fiction",
-  "Travelogue",
-  "Technology & Science",
-  "Historical fiction",
-  "Inspirational",
-  "Wellness",
-  "Sports",
-  "Horror",
-  "Dystopian",
-  "Adventure",
-  "Drama",
-  "Poetry",
-  "Philosophy",
-  "Art",
-];
-
 const getGoals = (selectedGenres: string[]): UserGoal[] => {
-  const unselectedGenres = GENRES.filter((g) => !selectedGenres.includes(g));
+  const unselectedGenres: string[] = GENRES.filter(
+    (g: string) => !selectedGenres.includes(g)
+  );
 
   return [
     {
@@ -123,6 +72,35 @@ const getGoals = (selectedGenres: string[]): UserGoal[] => {
   ];
 };
 
+// Define CATEGORY_MAP to map custom genres to Google Books categories
+const CATEGORY_MAP: Record<string, string> = {
+  Fiction: "Fiction",
+  Mystery: "Mystery",
+  Novel: "Fiction",
+  Thriller: "Thriller",
+  Fantasy: "Fantasy",
+  Biography: "Biography & Autobiography",
+  "Self-help": "Self-Help",
+  "Science fiction": "Science",
+  "Children's": "Juvenile Fiction",
+  "Non-fiction": "Non-Classifiable",
+  Historical: "History",
+  "Crime fiction": "True Crime",
+  Travelogue: "Travel",
+  "Technology & Science": "Technology",
+  "Historical fiction": "Fiction / Historical",
+  Inspirational: "Religion / Inspirational",
+  Wellness: "Health & Fitness",
+  Sports: "Sports & Recreation",
+  Horror: "Horror",
+  Dystopian: "Fiction / Dystopian",
+  Adventure: "Adventure",
+  Drama: "Drama",
+  Poetry: "Poetry",
+  Philosophy: "Philosophy",
+  Art: "Art",
+};
+
 export default function OnboardingFlow() {
   const [step, setStep] = useState<number>(0);
   const [name, setName] = useState<string>("");
@@ -137,6 +115,11 @@ export default function OnboardingFlow() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const recommendationService = RecommendationService.getInstance();
   const maxSelectedBooks: number = 5; // Maximum number of books user can select
+  const [favoriteAuthors, setFavoriteAuthors] = useState<string>("");
+  const [unforgettableBook, setUnforgettableBook] = useState<string>("");
+  const [selectedGenreFilter, setSelectedGenreFilter] = useState<string | null>(
+    null
+  );
 
   const handleNameChange = (text: string) => {
     const formattedText = text
@@ -149,7 +132,7 @@ export default function OnboardingFlow() {
 
   const handleBack = () => {
     if (step > 0) {
-      if (step === 4) {
+      if (step === 5) {
         setPopularBooks([]);
         setSelectedBooks([]);
       }
@@ -168,7 +151,7 @@ export default function OnboardingFlow() {
         </TouchableOpacity>
       )}
       <View style={styles.progressContainer}>
-        {[0, 1, 2, 3, 4].map((index) => (
+        {[0, 1, 2, 3, 4, 5].map((index) => (
           <View
             key={index}
             style={[
@@ -184,37 +167,39 @@ export default function OnboardingFlow() {
 
   // Step 1: Name
   const renderNameScreen = () => (
-    <View style={styles.centered}>
-      {renderHeader()}
-      <View style={{ width: "100%", marginTop: "50%" }}>
-        <Text style={styles.title}>Welcome to Bookify!</Text>
-        <Text style={styles.subtitle}>What's your name?</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your name"
-          value={name}
-          onChangeText={setName}
-          autoCorrect={false}
-          autoCapitalize="words"
-        />
-        <TouchableOpacity
-          style={[
-            styles.button,
-            {
-              opacity: name.trim() ? 1 : 0.8,
-              backgroundColor: name.trim() ? "#000" : "#ccc",
-            },
-          ]}
-          disabled={!name.trim()}
-          onPress={() => {
-            handleNameChange(name);
-            setStep(1);
-          }}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-        </TouchableOpacity>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.centered}>
+        {renderHeader()}
+        <View style={{ width: "100%", marginTop: "50%" }}>
+          <Text style={styles.title}>Welcome to Bookify!</Text>
+          <Text style={styles.subtitle}>What's your name?</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your name"
+            value={name}
+            onChangeText={setName}
+            autoCorrect={false}
+            autoCapitalize="words"
+          />
+          <TouchableOpacity
+            style={[
+              styles.button,
+              {
+                opacity: name.trim() ? 1 : 0.8,
+                backgroundColor: name.trim() ? "#000" : "#ccc",
+              },
+            ]}
+            disabled={!name.trim()}
+            onPress={() => {
+              handleNameChange(name);
+              setStep(1);
+            }}
+          >
+            <Text style={styles.buttonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 
   // Step 2: Genres
@@ -393,7 +378,7 @@ export default function OnboardingFlow() {
   // Load popular books when genres are selected
   useEffect(() => {
     const loadBooks = async () => {
-      if (step === 4 && !isLoadingBooks && popularBooks.length === 0) {
+      if (step === 5 && !isLoadingBooks && popularBooks.length === 0) {
         setIsLoadingBooks(true);
         try {
           // bring popular books from genres
@@ -401,6 +386,9 @@ export default function OnboardingFlow() {
             await recommendationService.getPopularBooks({
               favoriteGenres: selectedGenres,
               selectedCountry: selectedCountry,
+              userGoal: goal!,
+              favoriteAuthors: favoriteAuthors,
+              unforgettableBook: unforgettableBook,
             });
           setPopularBooks(genreBooks);
         } catch (error) {
@@ -415,13 +403,17 @@ export default function OnboardingFlow() {
   }, [step]);
 
   const toggleBookSelection = (book: GoogleBooksItem) => {
-    setSelectedBooks((prev) => {
+    setSelectedBooks((prev: GoogleBooksItem[]) => {
       // Check if the book is already selected
-      const isAlreadySelected = prev.some((b) => b.id === book.id);
+      const isAlreadySelected = prev.some(
+        (selectedBook: GoogleBooksItem) => selectedBook.id === book.id
+      );
 
       if (isAlreadySelected) {
         // If already selected, remove it
-        return prev.filter((b) => b.id !== book.id);
+        return prev.filter(
+          (selectedBook: GoogleBooksItem) => selectedBook.id !== book.id
+        );
       } else if (prev.length < maxSelectedBooks) {
         // If not selected and under max limit, add it
         return [...prev, book];
@@ -430,86 +422,151 @@ export default function OnboardingFlow() {
       return prev;
     });
   };
-  // Step 5: Favorite Books
-  const renderFavoriteBooksScreen = () => (
-    <View style={styles.centered}>
-      {renderHeader()}
-      <Text style={styles.title}>Choose Your Favorite Books</Text>
-      <Text style={styles.subtitleSmall}>
-        Select up to {maxSelectedBooks} books from your favorite genres to get
-        personalized recommendations.
-      </Text>
-      {isLoadingBooks ? (
-        <ActivityIndicator size="large" color="#000" style={styles.loader} />
-      ) : (
-        <ScrollView
-          style={styles.bookList}
-          showsVerticalScrollIndicator={false}
+  // Step 5: Favorite Authors and Unforgettable Book
+  const renderFavoriteAuthorsBooksScreen = () => (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.centered}>
+        {renderHeader()}
+        <Text style={styles.title}>Who are your favorite authors?</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your favorite authors"
+          value={favoriteAuthors}
+          onChangeText={handleFavoriteAuthorsChange}
+          autoCorrect={false}
+          autoCapitalize="words"
+        />
+        <Text style={styles.title}>An unforgettable book?</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter an unforgettable book"
+          value={unforgettableBook}
+          onChangeText={setUnforgettableBook}
+          autoCorrect={false}
+          autoCapitalize="words"
+        />
+        <TouchableOpacity
+          style={[
+            styles.button,
+            {
+              opacity:
+                favoriteAuthors.trim() || unforgettableBook.trim() ? 1 : 0.8,
+              backgroundColor:
+                favoriteAuthors.trim() || unforgettableBook.trim()
+                  ? "#000"
+                  : "#ccc",
+            },
+          ]}
+          disabled={!favoriteAuthors.trim() && !unforgettableBook.trim()}
+          onPress={() => setStep(5)}
         >
-          {popularBooks.map((book: GoogleBooksItem) => {
-            const isSelected: boolean = selectedBooks.some(
-              (b: GoogleBooksItem) => b.id === book.id
-            );
-            const isDisabled: boolean =
-              !isSelected && selectedBooks.length >= maxSelectedBooks;
-            const volume: any = book.volumeInfo;
-            let imageUrl: string | undefined = volume?.imageLinks?.thumbnail;
-            if (imageUrl && imageUrl?.startsWith("http:")) {
-              imageUrl = imageUrl?.replace("http:", "https:");
-            }
-
-            return (
-              <TouchableOpacity
-                key={book.id}
-                style={[
-                  styles.bookCard,
-                  isSelected && styles.bookCardSelected,
-                  isDisabled && styles.bookCardDisabled,
-                ]}
-                onPress={() => toggleBookSelection(book)}
-                disabled={isDisabled}
-              >
-                <Image
-                  source={
-                    imageUrl
-                      ? { uri: imageUrl }
-                      : require("@/assets/images/not-avaliable-book-photo.png")
-                  }
-                  style={styles.bookImage}
-                  resizeMode="contain"
-                />
-                <View style={styles.bookInfo}>
-                  <Text style={styles.bookTitle} numberOfLines={2}>
-                    {volume?.title}
-                  </Text>
-                  <Text style={styles.bookAuthor} numberOfLines={1}>
-                    {volume?.authors?.join(", ") || "Unknown Author"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-      <TouchableOpacity
-        style={[
-          styles.button,
-          {
-            opacity: selectedBooks.length > 0 ? 1 : 0.8,
-            backgroundColor: selectedBooks.length > 0 ? "#000" : "#ccc",
-          },
-        ]}
-        onPress={handleDone}
-        disabled={selectedBooks.length === 0}
-      >
-        <Text style={styles.buttonText}>
-          {selectedBooks.length > 0
-            ? `Done (${selectedBooks.length}/${maxSelectedBooks})`
-            : "Select at least one book"}
-        </Text>
-      </TouchableOpacity>
-    </View>
+          <Text style={styles.buttonText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableWithoutFeedback>
   );
+
+  const handleFavoriteAuthorsChange = (text: string) => {
+    const formattedText: string = text.replace(/[^a-zA-Z\s,çÇğĞıİöÖşŞüÜ]/g, ""); // Allow letters, spaces, commas, and Turkish characters
+    setFavoriteAuthors(formattedText);
+  };
+
+  // Step 6: Favorite Books
+  const renderFavoriteBooksScreen = () => {
+    // Ensure popularBooks and selectedBooks are defined and are arrays
+    if (!Array.isArray(popularBooks) || !Array.isArray(selectedBooks)) {
+      console.error("popularBooks or selectedBooks is not an array");
+      return null;
+    }
+    console.log("popularBooks", popularBooks[1]);
+    // Filter books by selected genre (removed category filtering logic)
+    const filteredBooks = popularBooks;
+
+    return (
+      <View style={styles.centered}>
+        {renderHeader()}
+        <Text style={styles.title}>
+          {filteredBooks.length} Choose Your Favorite Books
+        </Text>
+        <Text style={styles.subtitleSmall}>
+          Select up to {maxSelectedBooks} books from your favorite genres to get
+          personalized recommendations.
+        </Text>
+
+        {isLoadingBooks ? (
+          <ActivityIndicator size="large" color="#000" style={styles.loader} />
+        ) : (
+          <FlatList
+            data={filteredBooks}
+            keyExtractor={(item) => item.id || Math.random().toString()}
+            renderItem={({ item: book }) => {
+              const isSelected: boolean = selectedBooks.some(
+                (b: GoogleBooksItem) => b.id === book.id
+              );
+              const isDisabled: boolean =
+                !isSelected && selectedBooks.length >= maxSelectedBooks;
+              const volume: any = book.volumeInfo;
+              let imageUrl: string | undefined = volume?.imageLinks?.thumbnail;
+              if (imageUrl && imageUrl?.startsWith("http:")) {
+                imageUrl = imageUrl?.replace("http:", "https:");
+              }
+
+              return (
+                <TouchableOpacity
+                  key={book.id}
+                  style={[
+                    styles.bookCard,
+                    isSelected && styles.bookCardSelected,
+                    isDisabled && styles.bookCardDisabled,
+                  ]}
+                  onPress={() => toggleBookSelection(book)}
+                  disabled={isDisabled}
+                >
+                  <Image
+                    source={
+                      imageUrl
+                        ? { uri: imageUrl }
+                        : require("@/assets/images/not-avaliable-book-photo.png")
+                    }
+                    style={styles.bookImage}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.bookInfo}>
+                    <Text style={styles.bookTitle} numberOfLines={2}>
+                      {volume?.title}
+                    </Text>
+                    <Text style={styles.bookAuthor} numberOfLines={1}>
+                      {volume?.authors?.join(", ") || "Unknown Author"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+            style={styles.bookList}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        )}
+        <TouchableOpacity
+          style={[
+            styles.button,
+            {
+              opacity: selectedBooks.length > 0 ? 1 : 0.8,
+              backgroundColor: selectedBooks.length > 0 ? "#000" : "#ccc",
+            },
+          ]}
+          onPress={handleDone}
+          disabled={selectedBooks.length === 0}
+        >
+          <Text style={styles.buttonText}>
+            {selectedBooks.length > 0
+              ? `Done (${selectedBooks.length}/${maxSelectedBooks})`
+              : "Select at least one book"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const handleDone = async () => {
     if (!user) {
@@ -519,7 +576,6 @@ export default function OnboardingFlow() {
 
     try {
       setIsLoading(true);
-
       // Save all user data to Firebase
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       await setDoc(
@@ -562,7 +618,8 @@ export default function OnboardingFlow() {
       {step === 1 && renderGenreScreen()}
       {step === 2 && renderCountryScreen()}
       {step === 3 && renderGoalScreen()}
-      {step === 4 && renderFavoriteBooksScreen()}
+      {step === 4 && renderFavoriteAuthorsBooksScreen()}
+      {step === 5 && renderFavoriteBooksScreen()}
     </SafeAreaView>
   );
 }
@@ -797,5 +854,37 @@ const styles = StyleSheet.create({
   },
   progressDotCompleted: {
     backgroundColor: "#666",
+  },
+  genreFilterContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+  },
+  genreFilterButton: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#eee",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  genreFilterButtonSelected: {
+    backgroundColor: "#f4f4f4",
+    borderColor: "#000",
+  },
+  genreFilterText: {
+    fontSize: 15,
+    color: "#222",
+  },
+  genreFilterTextSelected: {
+    color: "#000",
   },
 });

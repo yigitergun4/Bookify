@@ -43,16 +43,13 @@ export default function TabOneScreen() {
         // Only load if onboarding is completed
         if (!userData?.firstLaunchCompleted) return;
 
-        // Load initial cache data
-        const clicks = await cacheService.getRecentClicks(user.uid);
-        setRecentClicks(clicks.map((click) => click.bookInfo));
-
         // Subscribe to cache changes
-        const unsubscribe = cacheService.subscribeToRecentClicks((clicks) => {
-          if (clicks[0]?.userId === user.uid) {
-            setRecentClicks(clicks.map((click) => click.bookInfo));
+        const unsubscribe = cacheService.subscribeToRecentClicks(
+          user.uid,
+          (clicks: any) => {
+            setRecentClicks(clicks.map((click: any) => click.bookInfo));
           }
-        });
+        );
 
         // Cleanup
         return () => {

@@ -26,6 +26,10 @@ export class CacheService {
   private readonly MAX_RECENT_CLICKS = 20;
   private recentClicksSubscribers: ((clicks: BookClick[]) => void)[] = [];
   private RECOMMENDED_BOOKS_KEY = "recommended_books";
+  private userRecentClicksSubscribers: Map<
+    string,
+    ((clicks: BookClick[]) => void)[]
+  > = new Map();
 
   private constructor() {}
 
@@ -182,13 +186,23 @@ export class CacheService {
     }
   }
 
-  subscribeToRecentClicks(callback: (clicks: BookClick[]) => void) {
-    this.recentClicksSubscribers.push(callback);
-    console.log("subscribeToRecentClicks: cacheService.ts:187");
+  subscribeToRecentClicks(
+    userId: string,
+    callback: (clicks: BookClick[]) => void
+  ) {
+    if (!this.userRecentClicksSubscribers.has(userId)) {
+      this.userRecentClicksSubscribers.set(userId, []);
+    }
+    this.userRecentClicksSubscribers.get(userId)!.push(callback);
+    console.log("subscribeToRecentClicks for user:", userId);
     return () => {
-      this.recentClicksSubscribers = this.recentClicksSubscribers.filter(
-        (sub) => sub !== callback
-      );
+      const userSubscribers = this.userRecentClicksSubscribers.get(userId);
+      if (userSubscribers) {
+        this.userRecentClicksSubscribers.set(
+          userId,
+          userSubscribers.filter((sub) => sub !== callback)
+        );
+      }
     };
   }
 

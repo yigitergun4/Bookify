@@ -23,5 +23,8 @@
   "header_mappings_dir": "boost/boost",
   "resource_bundles": {
     "boost_privacy": "boost/PrivacyInfo.xcprivacy"
+  },
+  "pod_target_xcconfig": {
+    "GCC_WARN_INHIBIT_ALL_WARNINGS": "YES"
   }
 }

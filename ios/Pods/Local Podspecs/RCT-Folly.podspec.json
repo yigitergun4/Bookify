@@ -1,6 +1,6 @@
 {
   "name": "RCT-Folly",
-  "version": "2024.10.14.00",
+  "version": "2024.11.18.00",
   "license": {
     "type": "Apache License, Version 2.0"
   },
@@ -9,7 +9,7 @@
   "authors": "Facebook",
   "source": {
     "git": "https://github.com/facebook/folly.git",
-    "tag": "v2024.10.14.00"
+    "tag": "v2024.11.18.00"
   },
   "module_name": "folly",
   "header_mappings_dir": ".",
@@ -17,8 +17,12 @@
     "boost": [],
     "DoubleConversion": [],
     "glog": [],
-    "fast_float": [],
-    "fmt": []
+    "fast_float": [
+      "6.1.4"
+    ],
+    "fmt": [
+      "11.0.2"
+    ]
   },
   "compiler_flags": "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32 -DFOLLY_HAVE_PTHREAD=1 -Wno-documentation -faligned-new",
   "preserve_paths": "folly/*.h",
@@ -93,7 +97,8 @@
     "DEFINES_MODULE": "YES",
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
     "HEADER_SEARCH_PATHS": "\"$(PODS_TARGET_SRCROOT)\" \"$(PODS_ROOT)/boost\" \"$(PODS_ROOT)/DoubleConversion\" \"$(PODS_ROOT)/fast_float/include\" \"$(PODS_ROOT)/fmt/include\"",
-    "OTHER_LDFLAGS": "\"-Wl,-U,_jump_fcontext\" \"-Wl,-U,_make_fcontext\""
+    "OTHER_LDFLAGS": "\"-Wl,-U,_jump_fcontext\" \"-Wl,-U,_make_fcontext\"",
+    "GCC_WARN_INHIBIT_ALL_WARNINGS": "YES"
   },
   "user_target_xcconfig": {
     "HEADER_SEARCH_PATHS": "\"$(PODS_ROOT)/boost\""

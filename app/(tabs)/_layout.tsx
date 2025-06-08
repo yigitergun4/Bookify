@@ -31,6 +31,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarStyle: {
           paddingTop: 10,
+          backgroundColor: "white",
         },
         headerShown: false,
       }}

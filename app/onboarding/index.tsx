@@ -72,35 +72,6 @@ const getGoals = (selectedGenres: string[]): UserGoal[] => {
   ];
 };
 
-// Define CATEGORY_MAP to map custom genres to Google Books categories
-const CATEGORY_MAP: Record<string, string> = {
-  Fiction: "Fiction",
-  Mystery: "Mystery",
-  Novel: "Fiction",
-  Thriller: "Thriller",
-  Fantasy: "Fantasy",
-  Biography: "Biography & Autobiography",
-  "Self-help": "Self-Help",
-  "Science fiction": "Science",
-  "Children's": "Juvenile Fiction",
-  "Non-fiction": "Non-Classifiable",
-  Historical: "History",
-  "Crime fiction": "True Crime",
-  Travelogue: "Travel",
-  "Technology & Science": "Technology",
-  "Historical fiction": "Fiction / Historical",
-  Inspirational: "Religion / Inspirational",
-  Wellness: "Health & Fitness",
-  Sports: "Sports & Recreation",
-  Horror: "Horror",
-  Dystopian: "Fiction / Dystopian",
-  Adventure: "Adventure",
-  Drama: "Drama",
-  Poetry: "Poetry",
-  Philosophy: "Philosophy",
-  Art: "Art",
-};
-
 export default function OnboardingFlow() {
   const [step, setStep] = useState<number>(0);
   const [name, setName] = useState<string>("");
@@ -117,9 +88,7 @@ export default function OnboardingFlow() {
   const maxSelectedBooks: number = 5; // Maximum number of books user can select
   const [favoriteAuthors, setFavoriteAuthors] = useState<string>("");
   const [unforgettableBook, setUnforgettableBook] = useState<string>("");
-  const [selectedGenreFilter, setSelectedGenreFilter] = useState<string | null>(
-    null
-  );
+  const [isAppPrepared, setIsAppPrepared] = useState<boolean>(false);
 
   const handleNameChange = (text: string) => {
     const formattedText = text
@@ -224,6 +193,7 @@ export default function OnboardingFlow() {
           const isSelected = selectedGenres.includes(genre);
           const isDisabled =
             !isSelected && selectedGenres.length >= countSelectedGenre;
+
           return (
             <TouchableOpacity
               key={genre}
@@ -573,7 +543,7 @@ export default function OnboardingFlow() {
       Alert.alert("Error", "You must be logged in to continue.");
       return;
     }
-
+    setIsAppPrepared(true);
     try {
       setIsLoading(true);
       // Save all user data to Firebase
@@ -599,8 +569,8 @@ export default function OnboardingFlow() {
         },
         { merge: true }
       );
-
       router.replace("/(tabs)/homefolder/home");
+      setIsAppPrepared(false);
     } catch (error) {
       console.log("[Onboarding] Error in handleDone:", error);
       Alert.alert(
@@ -620,6 +590,7 @@ export default function OnboardingFlow() {
       {step === 3 && renderGoalScreen()}
       {step === 4 && renderFavoriteAuthorsBooksScreen()}
       {step === 5 && renderFavoriteBooksScreen()}
+      {isAppPrepared && <ActivityIndicator size="large" color="#000" />}
     </SafeAreaView>
   );
 }

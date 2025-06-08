@@ -14,8 +14,7 @@ import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
-import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { FIREBASE_AUTH } from "@/FirebaseConfig";
 
 const cacheService = CacheService.getInstance();
 
@@ -31,51 +30,40 @@ export default function TabOneScreen() {
   const user = FIREBASE_AUTH.currentUser;
 
   useEffect(() => {
-    const loadAndSubscribe = async () => {
-      if (!user) return;
+    if (!user) return;
 
-      try {
-        // Check if user has completed onboarding
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
-
-        // Only load if onboarding is completed
-        if (!userData?.firstLaunchCompleted) return;
-
-        // Subscribe to cache changes
-        const unsubscribe = cacheService.subscribeToRecentClicks(
-          user.uid,
-          (clicks: any) => {
-            setRecentClicks(clicks.map((click: any) => click.bookInfo));
-          }
-        );
-
-        // Cleanup
-        return () => {
-          unsubscribe();
-        };
-      } catch (error) {
-        console.error("Error loading recent clicks:", error);
+    const unsubscribe = cacheService.subscribeToRecentClicks(
+      user.uid,
+      (clicks: any) => {
+        console.log("Recent clicks updated:", clicks);
+        setRecentClicks(clicks.map((click: any) => click.bookInfo));
       }
-    };
+    );
 
-    loadAndSubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, [user]);
 
   useEffect(() => {
+    if (user) {
+      cacheService.getRecentClicks(user.uid).then((clicks) => {
+        setRecentClicks(clicks.map((click: any) => click.bookInfo));
+      });
+    }
+
     const unsubscribe = navigation.addListener("focus", () => {
       setInputKey(Date.now());
     });
 
     return unsubscribe;
-  }, [navigation]);
+  }, [user, navigation]);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (user) {
         try {
-          setIsLoading(true); // first loading
+          setIsLoading(true);
           await loadRecommendedBooks();
         } catch (error) {
           console.error("Error loading recommended books:", error);
@@ -96,6 +84,14 @@ export default function TabOneScreen() {
     if (user) {
       try {
         await cacheService.addBookClick(book, user.uid);
+        setRecentClicks((prev) => {
+          const isAlreadyAdded = prev.some(
+            (b) =>
+              b.id === book.id || b.volumeInfo?.title === book.volumeInfo?.title
+          );
+          if (isAlreadyAdded) return prev;
+          return [book, ...prev].slice(0, 10); // sadece ilk 10 göster
+        });
       } catch (error) {
         console.error("Error adding to recently viewed:", error);
       }
@@ -164,7 +160,7 @@ export default function TabOneScreen() {
             ) : (
               <View style={{ marginBottom: 10 }}>
                 <HomepageCardList
-                  books={recommendedBooks.slice(0, 5)}
+                  books={recommendedBooks.slice(0, 10)}
                   onBookPress={openModal}
                   closeModal={closeModal}
                   modalVisible={modalVisible}

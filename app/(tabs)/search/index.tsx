@@ -131,6 +131,7 @@ export default function TabTwoScreen() {
                 flex: 1,
                 justifyContent: "center",
                 alignItems: "center",
+                backgroundColor: "#FFF",
               }}
             >
               <ActivityIndicator size="large" color="#000" />
@@ -148,7 +149,7 @@ export default function TabTwoScreen() {
                   imageUrl = imageUrl.replace("http:", "https:");
                 }
                 return (
-                  <View style={{ marginBottom: 15 }}>
+                  <View style={{ marginBottom: 15, backgroundColor: "#FFF" }}>
                     <BookCard
                       title={volume.title}
                       description={
@@ -173,19 +174,15 @@ export default function TabTwoScreen() {
                   </Text>
                 </View>
               }
-              ListFooterComponent={
-                loadingMore ? (
-                  <View
-                    style={[styles.loadingMoreContainer, { minHeight: 60 }]}
-                  >
-                    <ActivityIndicator size="small" color="#000" />
-                  </View>
-                ) : (
-                  <View style={{ height: 30 }} />
-                )
-              }
               onEndReached={handleLoadMore}
               onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                loadingMore ? (
+                  <View style={styles.loadingMoreContainer}>
+                    <ActivityIndicator size="small" color="#000" />
+                  </View>
+                ) : null
+              }
             />
           )}
         </View>
@@ -247,16 +244,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 20,
+    backgroundColor: "#FFF",
   },
   loadingMoreContainer: {
     paddingVertical: 10,
     alignItems: "center",
+    backgroundColor: "#FFF",
   },
   emptyContainer: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
+    backgroundColor: "#FFF",
   },
   emptyText: {
     fontSize: 16,

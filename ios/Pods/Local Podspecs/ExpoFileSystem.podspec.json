@@ -1,6 +1,6 @@
 {
   "name": "ExpoFileSystem",
-  "version": "18.0.12",
+  "version": "18.1.10",
   "summary": "Provides access to the local file system on the device.",
   "description": "Provides access to the local file system on the device.",
   "license": "MIT",
@@ -8,7 +8,7 @@
   "homepage": "https://docs.expo.dev/versions/latest/sdk/filesystem/",
   "platforms": {
     "ios": "15.1",
-    "osx": "10.15",
+    "osx": "11.0",
     "tvos": "15.1"
   },
   "swift_versions": "5.4",

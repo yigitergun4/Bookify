@@ -1,6 +1,6 @@
 {
   "name": "React-utils",
-  "version": "0.76.9",
+  "version": "0.79.3",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.76.9"
+    "tag": "v0.79.3"
   },
   "source_files": "**/*.{cpp,h,mm}",
   "compiler_flags": "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32",
@@ -21,17 +21,16 @@
     "HEADER_SEARCH_PATHS": "\"$(PODS_ROOT)/RCT-Folly\" \"$(PODS_TARGET_SRCROOT)\" \"$(PODS_TARGET_SRCROOT)/ReactCommon\" \"${PODS_CONFIGURATION_BUILD_DIR}/React-debug/React_debug.framework/Headers\"",
     "DEFINES_MODULE": "YES"
   },
-  "module_name": "React_utils",
-  "header_mappings_dir": "../..",
   "dependencies": {
     "RCT-Folly": [
-      "2024.10.14.00"
+      "2024.11.18.00"
     ],
     "React-jsi": [
-      "0.76.9"
+      "0.79.3"
     ],
     "glog": [],
     "hermes-engine": [],
+    "React-hermes": [],
     "React-debug": []
   }
 }

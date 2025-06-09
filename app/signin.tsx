@@ -30,25 +30,65 @@ const SignInScreen = () => {
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lastAttemptTime, setLastAttemptTime] = useState<number>(0);
+  const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
+  const MAX_ATTEMPTS = 5;
 
   const signIn = async () => {
+    const now = Date.now();
+
+    // Rate limiting kontrolü
+    if (
+      now - lastAttemptTime < RATE_LIMIT_WINDOW &&
+      loginAttempts >= MAX_ATTEMPTS
+    ) {
+      Alert.alert(
+        "Too Many Attempts",
+        "Please wait a minute before trying again.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log("Attempting to sign in with:", email);
       const response = await signInWithEmailAndPassword(
         FIREBASE_AUTH,
         email,
         password
       );
+      console.log("Sign in successful, checking user data...");
+
+      // Başarılı girişte sayaçları sıfırla
+      setLoginAttempts(0);
+      setLastAttemptTime(0);
+
       // Firestore'dan firstLaunchCompleted kontrolü
       const user = response.user;
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
+
+      console.log(
+        "User data retrieved:",
+        userSnap.exists() ? "User exists" : "User not found"
+      );
+
       if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
+        console.log("First launch completed, redirecting to home...");
         router.replace("/(tabs)/homefolder/home");
       } else {
+        console.log("First launch not completed, redirecting to onboarding...");
         router.replace("/onboarding");
       }
     } catch (error: any) {
+      console.error("Sign in error:", error.code, error.message);
+
+      // Giriş denemesi sayacını güncelle
+      setLoginAttempts((prev) => prev + 1);
+      setLastAttemptTime(now);
+
       switch (error.code) {
         case "auth/user-not-found":
           Alert.alert("No account found with this email");
@@ -60,13 +100,18 @@ const SignInScreen = () => {
           Alert.alert("Invalid email format");
           break;
         case "auth/too-many-requests":
-          Alert.alert("Too many failed attempts. Please try again later");
+        case "auth/quota-exceeded":
+          Alert.alert("Too many attempts. Please try again later");
           break;
         case "auth/invalid-credential":
           Alert.alert("Invalid email or password");
           break;
         default:
-          Alert.alert("An error occurred. Please try again");
+          console.error("Unexpected error:", error);
+          Alert.alert(
+            "An error occurred",
+            "Please try again in a few minutes or use Google Sign-In instead."
+          );
           break;
       }
     } finally {

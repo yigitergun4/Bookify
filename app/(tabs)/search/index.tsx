@@ -13,11 +13,12 @@ import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import BookCard from "@/components/SearchPageBooksCard";
 import CameraButton from "@/components/CameraButton";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useState } from "react";
 import { searchBooksPaginated } from "@/services/booksService";
 import { useFocusEffect } from "expo-router";
 import React from "react";
+import SearchingImage from "@/screens/searchingImage";
 
 // make unique by id
 const uniqueById = (arr: any[]): any[] => {
@@ -37,7 +38,8 @@ export default function TabTwoScreen() {
   const [startIndex, setStartIndex] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-
+  const [isSearchingImage, setIsSearchingImage] = useState<boolean>(false);
+  const navigation = useNavigation();
   const fetchBooks: (query: string, append: boolean) => Promise<void> = async (
     query: string,
     append: boolean
@@ -101,97 +103,102 @@ export default function TabTwoScreen() {
     }, [])
   );
 
+  if (isSearchingImage) {
+    return <SearchingImage />;
+  }
+
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={[styles.container2, { flex: 1 }]}>
-          <View style={styles.discoverView}>
-            <Text style={styles.discoverText}>Discover</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
-              <Image
-                source={require("@/assets/images/profileicon.png")}
-                style={styles.myProfileImage}
-              />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.searchBarView}>
-            <TouchableOpacity onPress={() => router.replace("/(tabs)/reading")}>
-              <Image
-                source={require("@/assets/images/searchpagebookicon.png")}
-                style={styles.searchInputBookIcon}
-              />
-            </TouchableOpacity>
-            <View style={styles.searchbarInputView}>
-              <HomePageSearchInput
-                isHomePage={false}
-                onSearchChange={handleSearch}
-                onSubmit={handleSubmit}
-                isSubmitButtonShown={true}
-                value={searchQuery}
+          <>
+            <View style={styles.discoverView}>
+              <Text style={styles.discoverText}>Discover</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+                <Image
+                  source={require("@/assets/images/profileicon.png")}
+                  style={styles.myProfileImage}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchBarView}>
+              <TouchableOpacity
+                onPress={() => router.replace("/(tabs)/reading")}
+              >
+                <Image
+                  source={require("@/assets/images/searchpagebookicon.png")}
+                  style={styles.searchInputBookIcon}
+                />
+              </TouchableOpacity>
+              <View style={styles.searchbarInputView}>
+                <HomePageSearchInput
+                  isHomePage={false}
+                  onSearchChange={handleSearch}
+                  onSubmit={handleSubmit}
+                  isSubmitButtonShown={true}
+                  value={searchQuery}
+                />
+              </View>
+              <CameraButton
+                onBookDetected={(str: boolean) => setIsSearchingImage(str)}
               />
             </View>
-            <CameraButton />
-          </View>
-          {loading ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                backgroundColor: "#FFF",
-              }}
-            >
-              <ActivityIndicator size="large" color="#000" />
-            </View>
-          ) : (
-            <FlatList
-              data={filteredBooks}
-              keyExtractor={(item: any) => item.id}
-              showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
-              renderItem={({ item }: { item: any }) => {
-                const volume: any = item.volumeInfo;
-                let imageUrl: string | undefined = volume.imageLinks?.thumbnail;
-                if (imageUrl && imageUrl.startsWith("http:")) {
-                  imageUrl = imageUrl.replace("http:", "https:");
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#000" />
+              </View>
+            ) : (
+              <FlatList
+                data={filteredBooks}
+                keyExtractor={(item: any) => item.id}
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
+                renderItem={({ item }: { item: any }) => {
+                  const volume: any = item.volumeInfo;
+                  let imageUrl: string | undefined =
+                    volume.imageLinks?.thumbnail;
+                  if (imageUrl?.startsWith("http:")) {
+                    imageUrl = imageUrl.replace("http:", "https:");
+                  }
+                  return (
+                    <View style={{ marginBottom: 15, backgroundColor: "#FFF" }}>
+                      <BookCard
+                        title={volume.title}
+                        description={
+                          volume.description || "No description available"
+                        }
+                        author={volume.authors?.[0] || "Unknown Author"}
+                        image={
+                          imageUrl
+                            ? { uri: imageUrl }
+                            : require("@/assets/images/not-avaliable-book-photo.png")
+                        }
+                        bookData={item}
+                      />
+                    </View>
+                  );
+                }}
+                contentContainerStyle={styles.booksCardContainer}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      Search to discover books.
+                    </Text>
+                  </View>
                 }
-                return (
-                  <View style={{ marginBottom: 15, backgroundColor: "#FFF" }}>
-                    <BookCard
-                      title={volume.title}
-                      description={
-                        volume.description || "No description available"
-                      }
-                      author={volume.authors?.[0] || "Unknown Author"}
-                      image={
-                        volume.imageLinks?.thumbnail
-                          ? { uri: imageUrl }
-                          : require("@/assets/images/not-avaliable-book-photo.png")
-                      }
-                      bookData={item}
-                    />
-                  </View>
-                );
-              }}
-              contentContainerStyle={styles.booksCardContainer}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>
-                    Search to discover books.
-                  </Text>
-                </View>
-              }
-              onEndReached={handleLoadMore}
-              onEndReachedThreshold={0.5}
-              ListFooterComponent={
-                loadingMore ? (
-                  <View style={styles.loadingMoreContainer}>
-                    <ActivityIndicator size="small" color="#000" />
-                  </View>
-                ) : null
-              }
-            />
-          )}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  loadingMore ? (
+                    <View style={styles.loadingMoreContainer}>
+                      <ActivityIndicator size="small" color="#000" />
+                    </View>
+                  ) : null
+                }
+              />
+            )}
+          </>
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>

@@ -3,7 +3,6 @@ import {
   View,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Text,
   StyleSheet,
   Modal,
@@ -23,6 +22,7 @@ import { getBase64FromUri } from "../utils/imageUtils";
 import {
   extractBookInfoWithGPT,
   GPTError,
+  isSimilarAuthor,
   isSimilarTitle,
 } from "../services/gptExtractor";
 import { getAuth } from "firebase/auth";
@@ -34,9 +34,13 @@ const overlayHeight = screenHeight * 0.5;
 const overlayLeft = (screenWidth - overlayWidth) / 2;
 const overlayTop = (screenHeight - overlayHeight) / 2;
 
-export default function CameraButton() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+export default function CameraButton({
+  onBookDetected,
+}: {
+  onBookDetected: (str: boolean) => void;
+}) {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
@@ -46,38 +50,41 @@ export default function CameraButton() {
     if (!permission?.granted) requestPermission();
   }, [permission]);
 
-  const processImage = async (
+  const processImage: (
+    imageUri: string,
+    photoWidth: number,
+    photoHeight: number
+  ) => Promise<void> = async (
     imageUri: string,
     photoWidth: number,
     photoHeight: number
   ) => {
     try {
       setIsLoading(true);
-      const crop = {
+      const crop: any = {
         originX: (overlayLeft / screenWidth) * photoWidth,
         originY: (overlayTop / screenHeight) * photoHeight,
         width: (overlayWidth / screenWidth) * photoWidth,
         height: (overlayHeight / screenHeight) * photoHeight,
       };
 
-      const cropResult = await manipulateAsync(imageUri, [{ crop }], {
+      const cropResult: any = await manipulateAsync(imageUri, [{ crop }], {
         compress: 1,
         format: SaveFormat.JPEG,
       });
 
-      const base64Image = await getBase64FromUri(cropResult.uri);
-      const visionResult = await detectText(
+      const base64Image: string = await getBase64FromUri(cropResult.uri);
+      const visionResult: any = await detectText(
         base64Image,
         auth.currentUser?.uid || ""
       );
-      const detectedText = visionResult.textAnnotations?.[0]?.description || "";
+      const detectedText: string =
+        visionResult.textAnnotations?.[0]?.description || "";
       if (!detectedText) {
         throw new VisionError("No text detected in image.");
       }
-      const bookInfo = await extractBookInfoWithGPT(detectedText);
+      const bookInfo: any = await extractBookInfoWithGPT(detectedText);
       console.log("Extracted book info:", bookInfo);
-
-      let bookData: any = null;
 
       const trySearch = async (
         title: string,
@@ -85,25 +92,26 @@ export default function CameraButton() {
         language: string
       ) => {
         try {
-          const result = await searchBook(title, author, language);
+          const result: any = await searchBook(title, author, language);
           console.log(
-            "✅ Found:",
+            "Found:",
             result.volumeInfo.title,
             result.volumeInfo.authors
           );
           return result;
         } catch (err) {
-          console.log(`❌ Not found: "${title}" - ${author}`);
+          console.log(`Not found: "${title}" - ${author}`);
           return null;
         }
       };
 
-      const mainTitle = bookInfo.title.split(/[:\-]/)[0].trim();
-      const fullAuthor = bookInfo.authors?.[0] || "";
-      const lastName = fullAuthor.split(" ").pop() || "";
-      const language = bookInfo.language || "";
+      const mainTitle: string = bookInfo.title.split(/[:\-]/)[0].trim();
+      const fullAuthor: string = bookInfo.authors?.[0] || "";
+      const lastName: string = fullAuthor.split(" ").pop() || "";
+      const language: string = bookInfo.language || "";
 
-      const searchAttempts = [
+      // Attempt combinations
+      const searchAttempts: { title: string; author: string }[] = [
         { title: bookInfo.title, author: fullAuthor },
         { title: mainTitle, author: fullAuthor },
         { title: mainTitle, author: lastName },
@@ -112,47 +120,58 @@ export default function CameraButton() {
         { title: "", author: fullAuthor },
       ].filter(Boolean);
 
+      let matched: boolean = false;
+
       for (const attempt of searchAttempts) {
         if (attempt && (attempt.title || attempt.author)) {
-          bookData = await trySearch(attempt.title, attempt.author, "");
+          const result = await trySearch(attempt.title, attempt.author, "");
 
-          if (bookData) {
-            const isTitleSimilar = await isSimilarTitle(
+          if (result) {
+            const titleSim: boolean = await isSimilarTitle(
               bookInfo.title,
-              bookData.volumeInfo.title
+              result.volumeInfo.title
+            );
+            const authorSim: boolean = await isSimilarAuthor(
+              fullAuthor,
+              result.volumeInfo.authors?.[0] || ""
             );
 
-            console.log("🔍 isTitleSimilar:", isTitleSimilar);
+            console.log("isTitleSimilar:", titleSim);
+            console.log("isAuthorSimilar:", authorSim);
 
-            if (isTitleSimilar) {
-              // Benzerse direkt düzenleme sayfasına git
+            // Her iki benzerlik de varsa eşleşme başarılıdır
+            if (titleSim && authorSim) {
               router.push({
                 pathname: "/(tabs)/homefolder/photoeditpage" as any,
                 params: {
-                  book: JSON.stringify(bookData),
+                  book: JSON.stringify(result),
                 },
               });
-              return; // işlem burada biter
-            } else {
-              // Farklıysa alternatif kitap listesi al ve yönlendir
-              const books = await searchBookList(
-                bookInfo.title,
-                "",
-                language !== "Unknown" ? language : ""
-              );
-              router.push({
-                pathname: "/(tabs)/homefolder/notexactbookfound" as any,
-                params: {
-                  books: JSON.stringify(books),
-                },
-              });
-              return;
+              onBookDetected(false);
+              matched = true;
+              break;
             }
           }
         }
       }
 
-      console.log("🚫 No matching book found.");
+      if (!matched) {
+        console.log("No matching book found. Showing alternatives...");
+
+        const books: GoogleBooksItem[] = await searchBookList(
+          bookInfo.title,
+          "",
+          language !== "Unknown" ? language : ""
+        );
+
+        router.push({
+          pathname: "/(tabs)/homefolder/notexactbookfound" as any,
+          params: {
+            books: JSON.stringify(books),
+          },
+        });
+        onBookDetected(false);
+      }
     } catch (error) {
       console.error("[CameraButton] Error:", error);
       if (error instanceof VisionError) {
@@ -171,7 +190,8 @@ export default function CameraButton() {
   };
 
   const takePhoto = async () => {
-    console.log("takePhoto");
+    console.log("tookPhoto");
+    onBookDetected(true);
     if (cameraRef.current) {
       try {
         setIsLoading(true);
@@ -211,14 +231,10 @@ export default function CameraButton() {
         disabled={isLoading}
         style={styles.button}
       >
-        {isLoading ? (
-          <ActivityIndicator color="#000" />
-        ) : (
-          <Image
-            source={require("@/assets/images/camera-icon.png")}
-            style={{ width: 30, height: 30 }}
-          />
-        )}
+        <Image
+          source={require("@/assets/images/camera-icon.png")}
+          style={{ width: 30, height: 30 }}
+        />
       </TouchableOpacity>
       <Modal visible={modalVisible} animationType="slide">
         <View style={styles.cameraContainer}>

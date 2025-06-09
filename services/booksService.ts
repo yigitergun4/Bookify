@@ -1,6 +1,7 @@
 import axios from "axios";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import ENV from "../config/env";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export interface BookData {
   title: string;
@@ -27,7 +28,7 @@ export const searchBook = async (
 
   try {
     const result = await withRetry(async () => {
-      let query = "";
+      let query: string = "";
       const MAX_RESULTS: number = 10;
 
       if (title) {
@@ -73,11 +74,11 @@ export const searchBooksPaginated = async (
   query: string,
   startIndex: number = 0
 ) => {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+  const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
     query
   )}&startIndex=${startIndex}`;
-  const response = await fetch(url);
-  const data = await response.json();
+  const response: any = await fetch(url);
+  const data: any = await response.json();
   return data;
 };
 
@@ -102,7 +103,7 @@ export const searchBookList = async (
   console.log("Search URL:", url);
 
   const response = await axios.get(url);
-  const items = response.data.items || [];
+  const items: GoogleBooksItem[] = response.data.items || [];
   console.log("Search results count:", items.length);
   return items;
 };

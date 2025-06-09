@@ -103,7 +103,7 @@ If you are not 100% certain of a value, use:
             Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
+            model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan işlem için yeterli
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },
@@ -195,4 +195,24 @@ export async function isSimilarTitle(
     console.error("[isSimilarTitle] GPT error:", error);
     return false;
   }
+}
+
+export async function isSimilarAuthor(author1: string, author2: string) {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini", // yapılan işlem için yeterli
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `You are a strict assistant that determines if two author names refer to the same person, even with different name orders, abbreviations, or language variations. You must only reply with "Yes" or "No" — no other text, no punctuation, no explanations.`,
+      },
+      {
+        role: "user",
+        content: `Do these two author names refer to the same person?\n\n1. ${author1}\n2. ${author2}\n\nOnly reply with Yes or No.`,
+      },
+    ],
+  });
+
+  const answer = response.choices[0]?.message?.content?.trim();
+  return answer === "Yes";
 }

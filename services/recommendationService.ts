@@ -825,8 +825,6 @@ Book: ${unforgettableBook}`;
 
         for (const genre of randomUnselectedGenres) {
           const searchQueries = [
-            `popular ${genre} books in ${selectedCountry}`,
-            `best ${genre} books from ${selectedCountry}`,
             `highly rated ${genre} books in ${selectedCountry}`,
             `bestselling ${genre} books from ${selectedCountry}`,
           ];

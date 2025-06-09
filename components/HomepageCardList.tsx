@@ -16,7 +16,7 @@ interface HomePageFlatlistRecentClicksProps {
   closeModal: () => void;
   modalVisible: boolean;
   selectedBook: any;
-  addBook: (book: any) => Promise<void>;
+  addBook?: (book: any) => Promise<void>;
 }
 
 export default function HomePageFlatlistRecentClicks({
@@ -46,7 +46,7 @@ export default function HomePageFlatlistRecentClicks({
             text: "Add",
             onPress: async () => {
               try {
-                await addBook(book);
+                if (addBook) await addBook(book);
                 Alert.alert("Success", "Book added to your library!");
               } catch (error: any) {
                 if (
@@ -147,15 +147,17 @@ export default function HomePageFlatlistRecentClicks({
                   style={styles.modalBookImage}
                   resizeMode="contain"
                 />
-                <TouchableOpacity
-                  style={styles.addtolibrary}
-                  onPress={() => handleAddToLibrary(selectedBook)}
-                >
-                  <Image
-                    source={require("@/assets/images/addtolibrary.png")}
-                    style={styles.iconImage}
-                  />
-                </TouchableOpacity>
+                {addBook && (
+                  <TouchableOpacity
+                    style={styles.addtolibrary}
+                    onPress={() => handleAddToLibrary(selectedBook)}
+                  >
+                    <Image
+                      source={require("@/assets/images/addtolibrary.png")}
+                      style={styles.iconImage}
+                    />
+                  </TouchableOpacity>
+                )}
                 <Text style={styles.modalTitle}>
                   {selectedBook?.volumeInfo?.title}
                 </Text>

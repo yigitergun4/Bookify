@@ -149,7 +149,7 @@ export default function LibraryScreen() {
         </View>
       </View>
       <BookSearchList
-        books={uniqueById(filteredBooks.reverse())}
+        books={uniqueById(filteredBooks)}
         loadingMore={loading}
         addBook={() => {}}
         handleLoadMore={() => {}}

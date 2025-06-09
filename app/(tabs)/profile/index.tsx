@@ -10,17 +10,16 @@ import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { RecommendationService } from "@/services/recommendationService";
-import { CacheService } from "@/services/cacheService";
-
-const cacheService = CacheService.getInstance();
-const recommendationService = RecommendationService.getInstance();
+import HomepageCardList from "@/components/HomepageCardList";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export default function MyProfileScreen() {
   const user = FIREBASE_AUTH.currentUser;
   const [userName, setUserName] = useState<string>("");
   const [userGenres, setUserGenres] = useState<string[]>([]);
-  const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
+  const [favoriteBooks, setFavoriteBooks] = useState<GoogleBooksItem[]>([]);
+  const [selectedBook, setSelectedBook] = useState<GoogleBooksItem[]>([]);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchUserName: () => Promise<void> = async () => {
@@ -31,30 +30,15 @@ export default function MyProfileScreen() {
           const data: any = userSnap.data();
           const fullName: string = data.name || "";
           const firstName: string = fullName.split(" ")[0];
+          const books = data.favoriteBooks || [];
+          setFavoriteBooks(books);
           setUserName(firstName);
           setUserGenres(data.favoriteGenres || []);
         }
       }
     };
 
-    const fetchRecommendedBooks: () => Promise<void> = async () => {
-      if (!user) return;
-      try {
-        const cachedBooks: any[] = await cacheService.getRecommendedBooks(
-          user.uid
-        );
-        if (cachedBooks && cachedBooks.length > 0) {
-          setRecommendedBooks(cachedBooks.slice(0, 3));
-        } else {
-          // TODO: get recommended books from chatgpt
-        }
-      } catch (error) {
-        console.error("Error loading recommended books:", error);
-      }
-    };
-
     fetchUserName();
-    fetchRecommendedBooks();
   }, [user]);
 
   const getImageSource: (book: any) => any = (book: any) => {
@@ -83,21 +67,20 @@ export default function MyProfileScreen() {
               </View>
             ))}
           </View>
-          <Text style={styles.sectionTitle}>AI Recommended Books</Text>
+          <Text style={styles.sectionTitle}>Your Favorite Books</Text>
           <View>
-            {recommendedBooks.map((book: any) => (
-              <View key={book.id} style={styles.bookRow}>
-                <Image source={getImageSource(book)} style={styles.bookImage} />
-                <View style={{ marginLeft: 10, flex: 1 }}>
-                  <Text style={styles.bookTitle} numberOfLines={1}>
-                    {book.volumeInfo?.title}
-                  </Text>
-                  <Text style={styles.bookGenre} numberOfLines={1}>
-                    {book.volumeInfo?.authors?.join(", ") || "Unknown Author"}
-                  </Text>
-                </View>
-              </View>
-            ))}
+            <HomepageCardList
+              books={favoriteBooks}
+              onBookPress={(book) => {
+                setSelectedBook(book);
+                setModalVisible(true);
+              }}
+              closeModal={() => {
+                setModalVisible(false);
+              }}
+              modalVisible={modalVisible}
+              selectedBook={selectedBook}
+            />
           </View>
         </View>
       </ScrollView>

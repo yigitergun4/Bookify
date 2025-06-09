@@ -11,19 +11,22 @@ import {
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 
-const PAGE_SIZE = 10;
-
 export default function SearchResultsScreen() {
   const { query } = useLocalSearchParams<{ query: string }>();
   const [books, setBooks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [startIndex, setStartIndex] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isBooksAddedLoading, setIsBooksAddedLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [isBooksAddedLoading, setIsBooksAddedLoading] =
+    useState<boolean>(false);
+  const PAGE_SIZE: number = 10;
+
   const { addBook } = useLibrary();
 
-  const fetchBooks = async (append = false) => {
+  const fetchBooks: (append: boolean) => Promise<void> = async (
+    append: boolean
+  ) => {
     if (!query) return;
     if (append) setLoadingMore(true);
     else setLoading(true);
@@ -33,15 +36,15 @@ export default function SearchResultsScreen() {
           query
         )}&startIndex=${append ? startIndex : 0}&maxResults=${PAGE_SIZE}`
       );
-      const data = await response.json();
-      const items = data.items || [];
+      const data: any = await response.json();
+      const items: any[] = data.items || [];
       setTotalItems(data.totalItems || 0);
       if (append) {
-        setBooks((prev) => [...prev, ...items]);
+        setBooks((prev: any[]) => [...prev, ...items]);
       } else {
         setBooks(items);
       }
-    } catch (err) {
+    } catch (err: any) {
       Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);
@@ -54,14 +57,14 @@ export default function SearchResultsScreen() {
     fetchBooks(false);
   }, [query]);
 
-  const handleLoadMore = () => {
+  const handleLoadMore: () => void = () => {
     if (books.length < totalItems) {
-      setStartIndex((prev) => prev + PAGE_SIZE);
+      setStartIndex((prev: number) => prev + PAGE_SIZE);
       fetchBooks(true);
     }
   };
 
-  const handleAddBook = async (book: any) => {
+  const handleAddBook: (book: any) => Promise<void> = async (book: any) => {
     Alert.alert(
       "Add to Library",
       `Do you want to add "${book.volumeInfo.title}" to your library?`,
@@ -98,9 +101,9 @@ export default function SearchResultsScreen() {
   }, [startIndex]);
 
   // make unique by id
-  function uniqueById(arr: any[]) {
-    const seen = new Set();
-    return arr.filter((item) => {
+  function uniqueById(arr: any[]): any[] {
+    const seen: Set<any> = new Set();
+    return arr.filter((item: any) => {
       if (!item?.id) return false;
       if (seen.has(item.id)) return false;
       seen.add(item.id);

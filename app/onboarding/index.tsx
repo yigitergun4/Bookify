@@ -90,8 +90,8 @@ export default function OnboardingFlow() {
   const [unforgettableBook, setUnforgettableBook] = useState<string>("");
   const [isAppPrepared, setIsAppPrepared] = useState<boolean>(false);
 
-  const handleNameChange = (text: string) => {
-    const formattedText = text
+  const handleNameChange: (text: string) => void = (text: string) => {
+    const formattedText: string = text
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
@@ -99,7 +99,7 @@ export default function OnboardingFlow() {
     setName(formattedText);
   };
 
-  const handleBack = () => {
+  const handleBack: () => void = () => {
     if (step > 0) {
       if (step === 5) {
         setPopularBooks([]);
@@ -172,10 +172,10 @@ export default function OnboardingFlow() {
   );
 
   // Step 2: Genres
-  const toggleGenre = (genre: string) => {
-    setSelectedGenres((prev) => {
+  const toggleGenre: (genre: string) => void = (genre: string) => {
+    setSelectedGenres((prev: string[]) => {
       if (prev.includes(genre)) {
-        return prev.filter((g) => g !== genre);
+        return prev.filter((g: string) => g !== genre);
       } else if (prev.length < countSelectedGenre) {
         return [...prev, genre];
       } else {
@@ -279,7 +279,7 @@ export default function OnboardingFlow() {
     </View>
   );
 
-  const goals = getGoals(selectedGenres);
+  const goals: UserGoal[] = getGoals(selectedGenres);
   // Step 4: Goal
   const renderGoalScreen = () => (
     <View style={styles.centered}>
@@ -305,7 +305,7 @@ export default function OnboardingFlow() {
                 goal?.id === goalItem.id && styles.goalButtonSelected,
               ]}
               onPress={() =>
-                setGoal((prev) =>
+                setGoal((prev: UserGoal | null) =>
                   prev?.id === goalItem.id
                     ? null
                     : {
@@ -347,7 +347,7 @@ export default function OnboardingFlow() {
 
   // Load popular books when genres are selected
   useEffect(() => {
-    const loadBooks = async () => {
+    const loadBooks: () => Promise<void> = async () => {
       if (step === 5 && !isLoadingBooks && popularBooks.length === 0) {
         setIsLoadingBooks(true);
         try {
@@ -372,7 +372,9 @@ export default function OnboardingFlow() {
     loadBooks();
   }, [step]);
 
-  const toggleBookSelection = (book: GoogleBooksItem) => {
+  const toggleBookSelection: (book: GoogleBooksItem) => void = (
+    book: GoogleBooksItem
+  ) => {
     setSelectedBooks((prev: GoogleBooksItem[]) => {
       // Check if the book is already selected
       const isAlreadySelected = prev.some(
@@ -436,7 +438,9 @@ export default function OnboardingFlow() {
     </TouchableWithoutFeedback>
   );
 
-  const handleFavoriteAuthorsChange = (text: string) => {
+  const handleFavoriteAuthorsChange: (text: string) => void = (
+    text: string
+  ) => {
     const formattedText: string = text.replace(/[^a-zA-Z\s,çÇğĞıİöÖşŞüÜ]/g, ""); // Allow letters, spaces, commas, and Turkish characters
     setFavoriteAuthors(formattedText);
   };
@@ -448,9 +452,8 @@ export default function OnboardingFlow() {
       console.error("popularBooks or selectedBooks is not an array");
       return null;
     }
-    console.log("popularBooks", popularBooks[1]);
     // Filter books by selected genre (removed category filtering logic)
-    const filteredBooks = popularBooks;
+    const filteredBooks: GoogleBooksItem[] = popularBooks;
 
     return (
       <View style={styles.centered}>
@@ -538,7 +541,7 @@ export default function OnboardingFlow() {
     );
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit: () => Promise<void> = async () => {
     if (!user) {
       Alert.alert("Error", "Please sign in to continue");
       return;
@@ -547,12 +550,14 @@ export default function OnboardingFlow() {
     try {
       setIsLoading(true);
       // Convert favorite authors and books to arrays
-      const authorsArray = favoriteAuthors
+      const authorsArray: string[] = favoriteAuthors
         .split(",")
         .map((author) => author.trim())
         .filter(Boolean);
-      const booksArray = selectedBooks.map((book) => book).filter(Boolean);
-      const unforgettableBookArray = unforgettableBook
+      const booksArray: GoogleBooksItem[] = selectedBooks
+        .map((book) => book)
+        .filter(Boolean);
+      const unforgettableBookArray: string[] = unforgettableBook
         .split(",")
         .map((book) => book)
         .filter(Boolean);
@@ -588,11 +593,11 @@ export default function OnboardingFlow() {
           userData?.favoriteAuthors || []
         );
 
-        const newBooks = await Promise.all(
-          queries.map((query) =>
+        const newBooks: GoogleBooksItem[] = await Promise.all(
+          queries.map((query: string) =>
             recommendationService.searchBooksWithQuery(query)
           )
-        ).then((results) => results.flat());
+        ).then((results: GoogleBooksItem[][]) => results.flat());
 
         // Save recommendations to Firebase
         await recommendationService.saveRecommendations(user.uid, newBooks);

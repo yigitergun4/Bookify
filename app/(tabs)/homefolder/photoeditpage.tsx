@@ -12,28 +12,31 @@ import { useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export default function EditBookScreen() {
   const { book = "" } = useLocalSearchParams();
   const { addBook } = useLibrary();
   const router = useRouter();
 
-  let parsedBook: any = null;
+  let parsedBook: GoogleBooksItem | null = null;
   try {
     parsedBook = book ? JSON.parse(Array.isArray(book) ? book[0] : book) : null;
-  } catch (e) {
+  } catch (e: any) {
     parsedBook = null;
   }
 
-  const [bookTitle, setBookTitle] = useState(
+  const [bookTitle, setBookTitle] = useState<string>(
     parsedBook?.volumeInfo?.title || ""
   );
-  const [author, setAuthor] = useState(
+  const [author, setAuthor] = useState<string>(
     parsedBook?.volumeInfo?.authors?.join(", ") || ""
   );
-  const [desc, setDesc] = useState(parsedBook?.volumeInfo?.description || "");
-  const photoUri =
-    parsedBook?.imageUrl ||
+  const [desc, setDesc] = useState<string>(
+    parsedBook?.volumeInfo?.description || ""
+  );
+  const photoUri: string | null =
+    parsedBook?.volumeInfo?.imageLinks?.smallThumbnail ||
     parsedBook?.volumeInfo?.imageLinks?.thumbnail ||
     null;
 
@@ -43,12 +46,12 @@ export default function EditBookScreen() {
     setDesc(parsedBook?.volumeInfo?.description || "");
   }, [parsedBook]);
 
-  const handleUpdate = async () => {
+  const handleUpdate: () => Promise<void> = async () => {
     let bookObj: any = book;
     if (typeof book === "string") {
       try {
         bookObj = JSON.parse(book);
-      } catch (e) {
+      } catch (e: any) {
         Alert.alert("Error", "Invalid book data");
         return;
       }

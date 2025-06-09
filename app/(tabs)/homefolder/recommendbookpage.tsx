@@ -29,14 +29,15 @@ const RecommendedScreen = () => {
     useLibrary();
 
   // Filter books based on search query
-  const filteredBooks = recommendedBooks.filter((book) => {
-    const title = book.volumeInfo?.title?.toLowerCase() || "";
-    const authors = book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
-    const query = searchQuery.toLowerCase();
+  const filteredBooks: GoogleBooksItem[] = recommendedBooks.filter((book) => {
+    const title: string = book.volumeInfo?.title?.toLowerCase() || "";
+    const authors: string =
+      book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
+    const query: string = searchQuery.toLowerCase();
     return title.includes(query) || authors.includes(query);
   });
 
-  const handleAddBook = async (book: any) => {
+  const handleAddBook: (book: any) => Promise<void> = async (book: any) => {
     if (!user) return;
     Alert.alert(
       "Add to Library",
@@ -68,7 +69,7 @@ const RecommendedScreen = () => {
     );
   };
 
-  const handleLoadMore = async () => {
+  const handleLoadMore: () => Promise<void> = async () => {
     if (isLoadingMore || !user || searchQuery.trim() !== "") return;
     setIsLoadingMore(true);
     setError(null);
@@ -137,17 +138,18 @@ const RecommendedScreen = () => {
       if (recommendedBooks.length >= 40) {
         try {
           // Get ChatGPT recommendations
-          const queries = await recommendationService.getChatGPTRecommendations(
-            favoriteGenres,
-            favoriteBooks,
-            libraryBooks,
-            favoriteAuthors,
-            unforgettableBook,
-            userGoal
-          );
+          const queries: string[] =
+            await recommendationService.getChatGPTRecommendations(
+              favoriteGenres,
+              favoriteBooks,
+              libraryBooks,
+              favoriteAuthors,
+              unforgettableBook,
+              userGoal
+            );
 
           // Try all generated queries and combine results
-          const queryResults = await Promise.all(
+          const queryResults: GoogleBooksItem[][] = await Promise.all(
             queries.map(async (query: string) => {
               try {
                 return await recommendationService.searchBooksWithQuery(query);
@@ -161,14 +163,14 @@ const RecommendedScreen = () => {
             })
           );
 
-          newBooks = queryResults.flat();
+          newBooks = queryResults.flat() as GoogleBooksItem[];
 
           // If we got no results, try genre-based search
           if (newBooks.length === 0 && favoriteGenres.length > 0) {
             console.log(
               "🔄 No results from ChatGPT queries, falling back to genre search"
             );
-            const randomGenre =
+            const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
               `subject:${randomGenre}`
@@ -178,7 +180,7 @@ const RecommendedScreen = () => {
           console.error("❌ Error in recommendation process:", error);
           // Fallback to genre-based search if ChatGPT fails
           if (favoriteGenres.length > 0) {
-            const randomGenre =
+            const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
               `subject:${randomGenre}`
@@ -188,7 +190,7 @@ const RecommendedScreen = () => {
       } else {
         // Initial genre-based search
         if (newBooks.length < 20 && favoriteGenres.length > 0) {
-          const randomGenre =
+          const randomGenre: string =
             favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
           try {
             newBooks = await recommendationService.searchBooksWithQuery(
@@ -202,7 +204,7 @@ const RecommendedScreen = () => {
 
       // Filter out books that are already in the list, library, or previously recommended
       const uniqueNewBooks: GoogleBooksItem[] = newBooks.filter(
-        (book: any) =>
+        (book: GoogleBooksItem) =>
           !existingBookIds.has(book.id) &&
           !libraryBookIds.has(book.id) &&
           !previouslyRecommendedIds.has(book.id)
@@ -226,7 +228,10 @@ const RecommendedScreen = () => {
       );
 
       // Update the recommended books list by appending new books
-      setRecommendedBooks((prev) => [...prev, ...limitedNewBooks]);
+      setRecommendedBooks((prev: GoogleBooksItem[]) => [
+        ...prev,
+        ...limitedNewBooks,
+      ]);
     } catch (error) {
       console.error(
         "[RecommendedScreen] Error loading more recommendations:",

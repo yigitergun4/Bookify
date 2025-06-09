@@ -15,20 +15,14 @@ export default function LibraryScreen() {
   const user = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook } = useLibrary();
 
-  console.log(
-    "libraryBooks",
-    libraryBooks.map((book) => book.volumeInfo.title)
-  );
-  console.log(
-    "filteredBooks",
-    filteredBooks.map((book) => book.volumeInfo.title)
-  );
-  const fetchUserData = async () => {
+  const fetchUserData: () => Promise<void> = async () => {
     if (user) {
       try {
         // Fetch user data including books
         const userRef = doc(FIREBASE_DB, "Users", user.uid);
         const userSnap = await getDoc(userRef);
+        console.log("userSnap", userSnap.data());
+
         if (userSnap.exists()) {
           const data = userSnap.data();
           const fullName = data.name || "";
@@ -50,27 +44,18 @@ export default function LibraryScreen() {
   }, [user]);
 
   useEffect(() => {
-    console.log(
-      "Updated libraryBooks:",
-      libraryBooks.map((book) => book.volumeInfo.title)
-    );
     setFilteredBooks([...libraryBooks]);
   }, [libraryBooks]);
 
-  console.log(
-    "Filtered books:",
-    filteredBooks.map((book) => book.volumeInfo.title)
-  );
-
-  const handleSearchChange = (text: string) => {
-    const searchText = text.toLowerCase().trim();
+  const handleSearchChange: (text: string) => void = (text: string) => {
+    const searchText: string = text.toLowerCase().trim();
 
     if (!searchText) {
       setFilteredBooks([...libraryBooks]);
       return;
     }
 
-    const filtered = [...libraryBooks].filter((book: any) => {
+    const filtered: any[] = [...libraryBooks].filter((book: any) => {
       if (!book || !book.volumeInfo) return false;
 
       const title = String(book.volumeInfo.title || "").toLowerCase();
@@ -86,7 +71,9 @@ export default function LibraryScreen() {
     setFilteredBooks(filtered);
   };
 
-  const handleLongPressBook = async (book: any) => {
+  const handleLongPressBook: (book: any) => Promise<void> = async (
+    book: any
+  ) => {
     Alert.alert(
       "Remove Book",
       "Do you want to remove this book from your library?",
@@ -103,7 +90,7 @@ export default function LibraryScreen() {
     );
   };
 
-  const onRefresh = async () => {
+  const onRefresh: () => Promise<void> = async () => {
     setRefreshing(true);
     await fetchUserData();
     setFilteredBooks([...libraryBooks]);
@@ -111,9 +98,9 @@ export default function LibraryScreen() {
   };
 
   // Kitapları id'ye göre tekilleştir
-  function uniqueById(arr: any[]) {
-    const seen = new Set();
-    return arr.filter((item) => {
+  function uniqueById(arr: any[]): any[] {
+    const seen: Set<any> = new Set();
+    return arr.filter((item: any) => {
       if (!item?.id) return false;
       if (seen.has(item.id)) return false;
       seen.add(item.id);

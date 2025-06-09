@@ -21,11 +21,13 @@ import { collection, getDocs } from "firebase/firestore";
 const cacheService = CacheService.getInstance();
 
 export default function TabOneScreen() {
-  const [recentClicks, setRecentClicks] = useState<any[]>([]);
-  const [selectedBook, setSelectedBook] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [inputKey, setInputKey] = useState(Date.now());
+  const [recentClicks, setRecentClicks] = useState<GoogleBooksItem[]>([]);
+  const [selectedBook, setSelectedBook] = useState<GoogleBooksItem | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [inputKey, setInputKey] = useState<number>(Date.now());
   const {
     recommendedBooks,
     addBook,
@@ -48,14 +50,14 @@ export default function TabOneScreen() {
     if (!user) return;
 
     // Initial fetch
-    cacheService.getRecentClicks(user.uid).then((clicks) => {
+    cacheService.getRecentClicks(user.uid).then((clicks: any) => {
       setRecentClicks(clicks.map((click: any) => click.bookInfo));
     });
 
     // Subscribe to updates
-    const unsubscribe = cacheService.subscribeToRecentClicks(
+    const unsubscribe: () => void = cacheService.subscribeToRecentClicks(
       user.uid,
-      (clicks: any) => {
+      (clicks: any[]) => {
         console.log("Updated recent clicks:", clicks.length);
         setRecentClicks(clicks.map((click: any) => click.bookInfo));
       }
@@ -67,7 +69,7 @@ export default function TabOneScreen() {
   }, [user]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
+    const unsubscribe: () => void = navigation.addListener("focus", () => {
       setInputKey(Date.now());
     });
 
@@ -75,7 +77,7 @@ export default function TabOneScreen() {
   }, [navigation]);
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
+    const fetchRecommendations: () => Promise<void> = async () => {
       if (user) {
         try {
           setIsLoading(true);
@@ -89,15 +91,15 @@ export default function TabOneScreen() {
           const recommendationsSnap = await getDocs(recommendationsRef);
 
           if (!recommendationsSnap.empty) {
-            const firebaseBooks = recommendationsSnap.docs
-              .map((doc) => {
+            const firebaseBooks: GoogleBooksItem[] = recommendationsSnap.docs
+              .map((doc: any) => {
                 const data = doc.data();
                 return data.books;
               })
               .flat();
             if (firebaseBooks.length > 0) {
               // Shuffle the books
-              const shuffledBooks = [...firebaseBooks].sort(
+              const shuffledBooks: GoogleBooksItem[] = [...firebaseBooks].sort(
                 () => Math.random() - 0.5
               );
               setRecommendedBooks(shuffledBooks);
@@ -114,7 +116,9 @@ export default function TabOneScreen() {
     fetchRecommendations();
   }, [user]);
 
-  const openModal = async (book: GoogleBooksItem) => {
+  const openModal: (book: GoogleBooksItem) => Promise<void> = async (
+    book: GoogleBooksItem
+  ) => {
     setSelectedBook(book);
     setModalVisible(true);
     // Add to recently viewed
@@ -135,14 +139,15 @@ export default function TabOneScreen() {
     }
   };
 
-  const closeModal = () => {
+  const closeModal: () => void = () => {
     setModalVisible(false);
     setSelectedBook(null);
   };
 
-  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
-  if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
-    modalImageUrl = modalImageUrl?.replace("http:", "https:");
+  let modalImageUrl: string | undefined =
+    selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  if (modalImageUrl && modalImageUrl.startsWith("http:")) {
+    modalImageUrl = modalImageUrl.replace("http:", "https:");
   }
 
   return (

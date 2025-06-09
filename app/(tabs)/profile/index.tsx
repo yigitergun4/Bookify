@@ -18,41 +18,35 @@ const recommendationService = RecommendationService.getInstance();
 
 export default function MyProfileScreen() {
   const user = FIREBASE_AUTH.currentUser;
-  const [userName, setUserName] = useState("");
+  const [userName, setUserName] = useState<string>("");
   const [userGenres, setUserGenres] = useState<string[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserName: () => Promise<void> = async () => {
       if (user) {
         const userRef = doc(FIREBASE_DB, "Users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          const data = userSnap.data();
-          const fullName = data.name || "";
-          const firstName = fullName.split(" ")[0];
+          const data: any = userSnap.data();
+          const fullName: string = data.name || "";
+          const firstName: string = fullName.split(" ")[0];
           setUserName(firstName);
           setUserGenres(data.favoriteGenres || []);
         }
       }
     };
 
-    const fetchRecommendedBooks = async () => {
+    const fetchRecommendedBooks: () => Promise<void> = async () => {
       if (!user) return;
       try {
-        const cachedBooks = await cacheService.getRecommendedBooks(user.uid);
+        const cachedBooks: any[] = await cacheService.getRecommendedBooks(
+          user.uid
+        );
         if (cachedBooks && cachedBooks.length > 0) {
           setRecommendedBooks(cachedBooks.slice(0, 3));
         } else {
-          const newBooks =
-            await recommendationService.getChatGPTRecommendations(
-              userGenres,
-              [],
-              [],
-              undefined
-            );
-          setRecommendedBooks(newBooks.slice(0, 3));
-          await cacheService.saveRecommendedBooks(user.uid, newBooks);
+          // TODO: get recommended books from chatgpt
         }
       } catch (error) {
         console.error("Error loading recommended books:", error);
@@ -63,9 +57,9 @@ export default function MyProfileScreen() {
     fetchRecommendedBooks();
   }, [user]);
 
-  const getImageSource = (book: any) => {
+  const getImageSource: (book: any) => any = (book: any) => {
     if (book?.volumeInfo?.imageLinks?.thumbnail) {
-      const imageUrl = book.volumeInfo.imageLinks.thumbnail;
+      const imageUrl: string = book.volumeInfo.imageLinks.thumbnail;
       return { uri: imageUrl.replace("http://", "https://") };
     }
     return require("@/assets/images/not-avaliable-book-photo.png");
@@ -83,7 +77,7 @@ export default function MyProfileScreen() {
           </View>
           <Text style={styles.sectionTitle}>Favorite Genres</Text>
           <View style={styles.genresContainer}>
-            {userGenres.map((genre) => (
+            {userGenres.map((genre: string) => (
               <View key={genre} style={styles.genreBadge}>
                 <Text style={styles.genreText}>{genre}</Text>
               </View>
@@ -91,7 +85,7 @@ export default function MyProfileScreen() {
           </View>
           <Text style={styles.sectionTitle}>AI Recommended Books</Text>
           <View>
-            {recommendedBooks.map((book) => (
+            {recommendedBooks.map((book: any) => (
               <View key={book.id} style={styles.bookRow}>
                 <Image source={getImageSource(book)} style={styles.bookImage} />
                 <View style={{ marginLeft: 10, flex: 1 }}>

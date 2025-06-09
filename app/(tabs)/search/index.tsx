@@ -20,38 +20,44 @@ import { useFocusEffect } from "expo-router";
 import React from "react";
 
 // make unique by id
-function uniqueById(arr: any[]) {
-  const seen = new Set();
-  return arr.filter((item) => {
+const uniqueById = (arr: any[]): any[] => {
+  const seen: Set<any> = new Set();
+  return arr.filter((item: any) => {
     if (!item?.id) return false;
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
   });
-}
+};
 
 export default function TabTwoScreen() {
   const [books, setBooks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [startIndex, setStartIndex] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const fetchBooks = async (query: string, append = false) => {
+  const fetchBooks: (query: string, append: boolean) => Promise<void> = async (
+    query: string,
+    append: boolean
+  ) => {
     if (!query) return;
     if (append) setLoadingMore(true);
     else setLoading(true);
     try {
-      const data = await searchBooksPaginated(query, append ? startIndex : 0);
-      const items = data.items || [];
+      const data: any = await searchBooksPaginated(
+        query,
+        append ? startIndex : 0
+      );
+      const items: any[] = data.items || [];
       setTotalItems(data.totalItems || 0);
       if (append) {
-        setBooks((prev) => uniqueById([...prev, ...items]));
+        setBooks((prev: any[]) => uniqueById([...prev, ...items]));
       } else {
         setBooks(uniqueById(items));
       }
-    } catch (err) {
+    } catch (err: any) {
       Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);
@@ -59,7 +65,7 @@ export default function TabTwoScreen() {
     }
   };
 
-  const handleSearch = (text: string) => {
+  const handleSearch: (text: string) => void = (text: string) => {
     setSearchQuery(text);
     if (text.trim() === "") {
       setBooks([]);
@@ -68,21 +74,23 @@ export default function TabTwoScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit: () => void = () => {
     if (searchQuery.trim()) {
       setStartIndex(0);
       fetchBooks(searchQuery, false);
     }
   };
 
-  const handleLoadMore = () => {
+  const handleLoadMore: () => void = () => {
     if (books.length < totalItems) {
-      setStartIndex((prev) => prev + 10);
+      setStartIndex((prev: number) => prev + 10);
       fetchBooks(searchQuery, true);
     }
   };
 
-  const filteredBooks = uniqueById(books.filter((item) => !!item.id));
+  const filteredBooks: any[] = uniqueById(
+    books.filter((item: any) => !!item.id)
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -139,12 +147,12 @@ export default function TabTwoScreen() {
           ) : (
             <FlatList
               data={filteredBooks}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item: any) => item.id}
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
-              renderItem={({ item }) => {
-                const volume = item.volumeInfo;
-                let imageUrl = volume.imageLinks?.thumbnail;
+              renderItem={({ item }: { item: any }) => {
+                const volume: any = item.volumeInfo;
+                let imageUrl: string | undefined = volume.imageLinks?.thumbnail;
                 if (imageUrl && imageUrl.startsWith("http:")) {
                   imageUrl = imageUrl.replace("http:", "https:");
                 }

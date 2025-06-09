@@ -8,10 +8,13 @@ import {
   Image,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const NotExactBookFound = () => {
   const { results } = useLocalSearchParams();
-  const listOfBooks = results ? JSON.parse(results as string) : [];
+  const listOfBooks: GoogleBooksItem[] = results
+    ? JSON.parse(results as string)
+    : [];
 
   return (
     <SafeAreaView style={styles.safeArea}>

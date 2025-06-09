@@ -11,17 +11,20 @@ import BookSearchList from "@/components/BookSearchList";
 import { CacheService } from "@/services/cacheService";
 import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const cacheService = CacheService.getInstance();
 const auth = getAuth();
 
 function recentlyview() {
   const { addBook } = useLibrary();
-  const [books, setBooks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [books, setBooks] = useState<GoogleBooksItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const user = auth.currentUser;
 
-  const handleAddBook = async (book: any) => {
+  const handleAddBook: (book: GoogleBooksItem) => Promise<void> = async (
+    book: GoogleBooksItem
+  ) => {
     try {
       await addBook(book);
       Alert.alert(
@@ -62,12 +65,14 @@ function recentlyview() {
   };
 
   useEffect(() => {
-    const loadBooks = async () => {
+    const loadBooks: () => Promise<void> = async () => {
       try {
         setIsLoading(true);
         if (!user) return;
-        const clicks = await cacheService.getRecentClicks(user.uid);
-        setBooks(clicks.map((click) => click.bookInfo));
+        const clicks: any[] = await cacheService.getRecentClicks(user.uid);
+        setBooks(
+          clicks.map((click: any) => click.bookInfo) as GoogleBooksItem[]
+        );
       } catch (error) {
         console.error("Error loading books:", error);
       } finally {

@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { useColorScheme } from "@/components/useColorScheme";
 import { LibraryProvider } from "@/contexts/LibraryContext";
+import { StatusBar } from "expo-status-bar";
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -51,6 +52,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   return (
     <LibraryProvider>
+      <StatusBar style="dark" />
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack
           screenOptions={{

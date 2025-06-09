@@ -13,13 +13,10 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useRouter } from "expo-router";
-import { detectText } from "../services/visionService";
-import { searchBook, searchBookList } from "../services/booksService";
+import { detectText, VisionError } from "../services/visionService";
+import { searchBook, BooksError } from "../services/booksService";
 import { getBase64FromUri } from "../utils/imageUtils";
-import { VisionError } from "../services/visionService";
-import { BooksError } from "../services/booksService";
-import { extractBookInfoWithGPT } from "../services/gptExtractor";
-import { GPTError } from "../services/gptExtractor";
+import { extractBookInfoWithGPT, GPTError } from "../services/gptExtractor";
 import { getAuth } from "firebase/auth";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -73,10 +70,10 @@ export default function CameraButton() {
 
       let bookData: any = null;
 
-      // 1. İlk deneme: Orijinal başlık ve yazar
+      // 1. First try: Original title and author
       try {
         console.log(
-          "[CameraButton] Orijinal başlık/yazar/dil ile arama:",
+          "[CameraButton] Original title/author/language search:",
           bookInfo.title,
           bookInfo.authors[0],
           bookInfo.language
@@ -87,23 +84,23 @@ export default function CameraButton() {
           bookInfo.language || ""
         );
       } catch (err) {
-        console.log("[CameraButton] Orijinal başlıkla kitap bulunamadı.");
+        console.log("[CameraButton] Original title not found.");
       }
 
-      // 2. Başlık parçalama ve alternatif aramalar
+      // 2. Title splitting and alternative searches
       if (!bookData) {
-        console.log("[CameraButton] Alternatif aramalar yapılıyor...");
+        console.log("[CameraButton] Alternative searches...");
 
-        // Başlığı parçalara ayır
+        // Split title into parts
         const titleParts = bookInfo.title.split(/[:\-]/);
         const mainTitle = titleParts[0].trim();
         const subtitle = titleParts[1]?.trim();
 
-        // Yazar adını parçalara ayır
+        // Split author name into parts
         const authorParts = (bookInfo.authors[0] || "").split(" ");
         const lastName = authorParts[authorParts.length - 1] || "";
 
-        // 2.1 Ana başlık + tam yazar
+        // 2.1 Main title + full author
         if (!bookData) {
           try {
             bookData = await searchBook(
@@ -112,13 +109,13 @@ export default function CameraButton() {
               bookInfo.language || ""
             );
             if (bookData)
-              console.log("[CameraButton] Ana başlık + tam yazar ile bulundu");
+              console.log("[CameraButton] Main title + full author found");
           } catch (err) {
-            console.log("[CameraButton] Ana başlık + tam yazar ile bulunamadı");
+            console.log("[CameraButton] Main title + full author not found");
           }
         }
 
-        // 2.2 Ana başlık + soyad
+        // 2.2 Main title + last name
         if (!bookData) {
           try {
             bookData = await searchBook(
@@ -127,13 +124,13 @@ export default function CameraButton() {
               bookInfo.language || ""
             );
             if (bookData)
-              console.log("[CameraButton] Ana başlık + soyad ile bulundu");
+              console.log("[CameraButton] Main title + last name found");
           } catch (err) {
-            console.log("[CameraButton] Ana başlık + soyad ile bulunamadı");
+            console.log("[CameraButton] Main title + last name not found");
           }
         }
 
-        // 2.3 Tam başlık + soyad
+        // 2.3 Full title + last name
         if (!bookData) {
           try {
             bookData = await searchBook(
@@ -142,13 +139,13 @@ export default function CameraButton() {
               bookInfo.language || ""
             );
             if (bookData)
-              console.log("[CameraButton] Tam başlık + soyad ile bulundu");
+              console.log("[CameraButton] Full title + last name found");
           } catch (err) {
-            console.log("[CameraButton] Tam başlık + soyad ile bulunamadı");
+            console.log("[CameraButton] Full title + last name not found");
           }
         }
 
-        // 2.4 Alt başlık + tam yazar (eğer varsa)
+        // 2.4 Subtitle + full author (if exists)
         if (!bookData && subtitle) {
           try {
             bookData = await searchBook(
@@ -157,13 +154,13 @@ export default function CameraButton() {
               bookInfo.language || ""
             );
             if (bookData)
-              console.log("[CameraButton] Alt başlık + tam yazar ile bulundu");
+              console.log("[CameraButton] Subtitle + full author found");
           } catch (err) {
-            console.log("[CameraButton] Alt başlık + tam yazar ile bulunamadı");
+            console.log("[CameraButton] Subtitle + full author not found");
           }
         }
 
-        // 2.5 Alt başlık + soyad (eğer varsa)
+        // 2.5 Subtitle + last name (if exists)
         if (!bookData && subtitle) {
           try {
             bookData = await searchBook(
@@ -172,9 +169,9 @@ export default function CameraButton() {
               bookInfo.language || ""
             );
             if (bookData)
-              console.log("[CameraButton] Alt başlık + soyad ile bulundu");
+              console.log("[CameraButton] Subtitle + last name found");
           } catch (err) {
-            console.log("[CameraButton] Alt başlık + soyad ile bulunamadı");
+            console.log("[CameraButton] Subtitle + last name not found");
           }
         }
       }
@@ -184,7 +181,7 @@ export default function CameraButton() {
         throw new BooksError("No book found after extended search");
       }
 
-      // Kitap bulunduysa yönlendir
+      // If book is found, redirect
       router.push({
         pathname: "/(tabs)/homefolder/photoeditpage" as any,
         params: {
@@ -209,6 +206,7 @@ export default function CameraButton() {
   };
 
   const takePhoto = async () => {
+    console.log("takePhoto");
     if (cameraRef.current) {
       try {
         setIsLoading(true);
@@ -285,12 +283,10 @@ export default function CameraButton() {
               style={{ width: 30, height: 30, tintColor: "#fff" }}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
-            <Image
-              source={require("@/assets/images/camera-icon.png")}
-              style={{ width: 30, height: 30 }}
-            />
-          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.captureButton}
+            onPress={takePhoto}
+          ></TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -319,16 +315,15 @@ const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
     borderWidth: 2,
-    borderColor: "#00FF00",
-    backgroundColor: "rgba(0,255,0,0.1)",
+    borderColor: "#FFF",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     zIndex: 10,
   },
   captureButton: {
     position: "absolute",
     bottom: 40,
     alignSelf: "center",
-    backgroundColor: "#000",
-    borderRadius: 30,
+    borderRadius: "50%",
     width: 70,
     height: 70,
     justifyContent: "center",
@@ -343,11 +338,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: "absolute",
-    top: 40,
+    top: 60,
     right: 20,
     zIndex: 10,
     padding: 8,
-    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 20,
   },
 });

@@ -570,10 +570,11 @@ export default function OnboardingFlow() {
         favoriteAuthors: authorsArray,
         favoriteBooks: booksArray,
         unforgettableBook: unforgettableBookArray,
-        goal: goal,
         userGoal: goal,
         library: [],
         createdAt: new Date().toISOString(),
+        country: selectedCountry,
+        firstLaunchCompleted: true,
       });
 
       // Show preparing screen
@@ -598,6 +599,13 @@ export default function OnboardingFlow() {
             recommendationService.searchBooksWithQuery(query)
           )
         ).then((results: GoogleBooksItem[][]) => results.flat());
+
+        const uniqueBooks = new Set(newBooks.map((book) => book.id));
+        const filteredBooks = popularBooks
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 50)
+          .filter((book) => !uniqueBooks.has(book.id));
+        newBooks.push(...filteredBooks);
 
         // Save recommendations to Firebase
         await recommendationService.saveRecommendations(user.uid, newBooks);
@@ -646,7 +654,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    padding: 24,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 26,

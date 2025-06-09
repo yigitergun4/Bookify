@@ -177,7 +177,6 @@ export default function TabOneScreen() {
               <HomepageCardList
                 books={recentClicks.slice(0, 10).map((book) => ({
                   ...book,
-                  id: `${book.id}_recent_${Date.now()}`,
                 }))}
                 onBookPress={openModal}
                 closeModal={closeModal}
@@ -207,7 +206,6 @@ export default function TabOneScreen() {
                 <HomepageCardList
                   books={recommendedBooks.slice(0, 10).map((book) => ({
                     ...book,
-                    id: `${book.id}_recommended_${Date.now()}`,
                   }))}
                   onBookPress={openModal}
                   closeModal={closeModal}

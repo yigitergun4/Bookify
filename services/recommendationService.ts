@@ -14,6 +14,7 @@ import ENV from "@/config/env";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 import { UserGoal } from "@/types/usersdatatypes";
 import { OpenAI } from "openai";
+import { GENRES } from "@/contexts/LibraryContext";
 
 const cacheService = CacheService.getInstance();
 
@@ -78,17 +79,9 @@ export class RecommendationService {
         query
       )}&printType=books&maxResults=${maxResultsPerPage}&orderBy=${orderBy}`;
 
-      console.log("🌐 API URL:", url);
-
       const response = await fetch(url);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ API Error Response:", {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText,
-        });
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
@@ -162,7 +155,7 @@ Instructions:
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+              Authorization: `Bearer ${this.openai}`,
             },
             body: JSON.stringify({
               model: "gpt-3.5-turbo",
@@ -234,7 +227,7 @@ Instructions:
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+            Authorization: `Bearer ${this.openai}`,
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
@@ -292,17 +285,92 @@ Instructions:
       (book) => book.volumeInfo?.title || ""
     );
 
-    const prompt = `I need book search queries for the Google Books API based on the following preferences:
-  - Favorite genres: ${favoriteGenres.join(", ")}
-  - Favorite books: ${favoriteBooks.join(", ")}
-  - Favorite authors: ${favoriteAuthors}
-  - Unforgettable book: ${unforgettableBook}
-  - User goal: ${userGoal?.title || "None"}
-  
-  Generate exactly 5 concise and creative search queries (no explanations) that help discover new books aligned with these preferences.
-  Avoid mentioning books with these titles: ${libraryTitles.join(", ")}
-  
-  Format: One query per line, no numbering.`;
+    const prompt = (() => {
+      const genres = favoriteGenres.join(", ");
+      const books = favoriteBooks.join(", ");
+      const authors = favoriteAuthors || "None";
+      const unforgettable = unforgettableBook || "None";
+      const avoidTitles = libraryTitles.join(", ");
+      const goalDescription = userGoal?.description || "None";
+
+      switch (userGoal?.id) {
+        case "classics":
+          return `You are helping construct advanced search queries for a book discovery system.
+    
+    Generate 5 Google Books API queries that help the user discover **classic and timeless literature** from various cultures and eras.
+    
+    User Preferences:
+    - Favorite genres: ${genres}
+    - Favorite books: ${books}
+    - Favorite authors: ${authors}
+    - Unforgettable book: ${unforgettable}
+    
+    Ensure:
+    - Focus on classics and literary masterpieces
+    - Include some queries for 19th and early 20th century
+    - Avoid books already known: ${avoidTitles}
+    - No explanations or numbering, just the queries.`;
+
+        case "contemporary":
+          return `You're creating smart Google Books API queries for someone who wants **modern and trending books**.
+    
+    User Preferences:
+    - Favorite genres: ${genres}
+    - Favorite books: ${books}
+    - Favorite authors: ${authors}
+    - Unforgettable book: ${unforgettable}
+    
+    Requirements:
+    - Only books published in the last 10 years
+    - Mix of bestsellers, award winners, and recent favorites
+    - Avoid already known titles: ${avoidTitles}
+    - Return exactly 5 creative search queries, one per line, no numbering.`;
+
+        case "genres":
+          return `You are assisting in generating creative genre-diverse Google Books API queries.
+    
+    User Preferences:
+    - Favorite genres: ${genres}
+    - Favorite books: ${books}
+    - Favorite authors: ${authors}
+    - Unforgettable book: ${unforgettable}
+    
+    Goal:
+    - Explore books in favorite and **complementary genres**
+    - Some genre mashups or unexpected cross-genre queries
+    - Avoid these books: ${avoidTitles}
+    - Output: 5 distinct search queries only, one per line, no explanations.`;
+
+        case "authors":
+          return `You're designing Google Books API queries to help a reader discover **books by favorite or similar authors**.
+    
+    User Preferences:
+    - Favorite genres: ${genres}
+    - Favorite books: ${books}
+    - Favorite authors: ${authors}
+    - Unforgettable book: ${unforgettable}
+    
+    Instructions:
+    - Focus on author-based discovery (e.g. "books by", "similar to", "inspired by")
+    - Highlight similar writing style or themes
+    - Exclude these titles: ${avoidTitles}
+    - Return 5 concise, author-oriented queries. No explanations or numbering.`;
+
+        default:
+          return `I need book search queries for the Google Books API based on the following preferences:
+    - Favorite genres: ${genres}
+    - Favorite books: ${books}
+    - Favorite authors: ${authors}
+    - Unforgettable book: ${unforgettable}
+    - User goal: ${goalDescription}
+    
+    Generate exactly 5 concise and creative search queries (no explanations) that help discover new books aligned with these preferences.
+    Avoid mentioning books with these titles: ${avoidTitles}
+    
+    Format: One query per line, no numbering.`;
+      }
+    })();
+    console.log(prompt, "prompt:onboarding");
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -315,10 +383,10 @@ Instructions:
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.7,
+        temperature: 0.8,
         frequency_penalty: userGoal?.id === "authors" ? 0.1 : 0.25,
         presence_penalty: userGoal?.id === "genres" ? 0.8 : 0.25,
-        max_tokens: 300,
+        max_tokens: 600,
       });
 
       const queries = response.choices[0]?.message?.content
@@ -330,7 +398,7 @@ Instructions:
       if (!queries || queries.length === 0)
         throw new Error("No queries returned from ChatGPT.");
 
-      console.log("📌 GPT Search Queries:", queries);
+      console.log("📌 GPT Search Queries:", queries, "queries:onboarding");
       return queries;
     } catch (error) {
       console.error("Error generating ChatGPT search queries:", error);
@@ -456,89 +524,90 @@ Instructions:
     const genreCount: number = favoriteGenres.length;
     const genreList: string = favoriteGenres.join(", ");
     let prompt: string;
+
     switch (userGoal.id) {
       case "classics":
         prompt = `You are a literary recommendation engine preparing data for Google Books API.
-
-List 10 culturally significant and timeless classic literary works in ${selectedCountry} that fit these genres: ${genreList}.
-
-Consider:
-- The user's unforgettable book: "${unforgettableBook}" (include similar styles/themes).
-- The user's favorite authors: ${favoriteAuthors || "None"}.
-- Include works from both older and 20th-century periods.
-- Avoid duplicates or books likely to already exist in the user's collection.
-
-IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
-Example:
-"The Great Gatsby" - F. Scott Fitzgerald
-"1984" - George Orwell`;
+  
+  List 10 culturally significant and timeless classic literary works in ${selectedCountry} that fit these genres: ${genreList}.
+  
+  Consider:
+  - The user's unforgettable book: "${unforgettableBook}" (include similar styles/themes).
+  - The user's favorite authors: ${favoriteAuthors || "None"}.
+  - Include works from both older and 20th-century periods.
+  - Avoid duplicates or books likely to already exist in the user's collection.
+  
+  IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Example:
+  "The Great Gatsby" - F. Scott Fitzgerald
+  "1984" - George Orwell`;
         break;
 
       case "contemporary":
         prompt = `You are a book data specialist helping with API search queries.
-
-List 10 popular and critically acclaimed books published in the last 10 years from ${selectedCountry} in the genres: ${genreList}.
-
-Include:
-- Similar style or theme to the book: "${unforgettableBook}".
-- Books by or similar to authors: ${favoriteAuthors || "None"}.
-- A mix of bestsellers, award winners, and reader favorites.
-
-IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
-Example:
-"The Midnight Library" - Matt Haig
-"Project Hail Mary" - Andy Weir`;
+  
+  List 10 popular and critically acclaimed books published in the last 10 years from ${selectedCountry} in the genres: ${genreList}.
+  
+  Include:
+  - Similar style or theme to the book: "${unforgettableBook}".
+  - Books by or similar to authors: ${favoriteAuthors || "None"}.
+  - A mix of bestsellers, award winners, and reader favorites.
+  
+  IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Example:
+  "The Midnight Library" - Matt Haig
+  "Project Hail Mary" - Andy Weir`;
         break;
 
       case "genres":
         prompt = `You are helping create tailored search queries for a personalized book recommendation system.
-
-Recommend 10 highly engaging books from ${selectedCountry}.
-
-Include:
-- Mostly from the user's favorite genres: ${genreList}.
-- Some variety from complementary genres.
-- Books stylistically or thematically like "${unforgettableBook}".
-- Authors similar to or inspired by: ${favoriteAuthors || "None"}.
-
-IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
-Example:
-"The Seven Husbands of Evelyn Hugo" - Taylor Jenkins Reid
-"Klara and the Sun" - Kazuo Ishiguro`;
+  
+  Recommend 10 highly engaging books from ${selectedCountry}.
+  
+  Include:
+  - Mostly from the user's favorite genres: ${genreList}.
+  - Some variety from complementary genres.
+  - Books stylistically or thematically like "${unforgettableBook}".
+  - Authors similar to or inspired by: ${favoriteAuthors || "None"}.
+  
+  IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Example:
+  "The Seven Husbands of Evelyn Hugo" - Taylor Jenkins Reid
+  "Klara and the Sun" - Kazuo Ishiguro`;
         break;
 
       case "authors":
         prompt = `You are helping match authors and books for Google Books API queries.
-
-List 10 highly influential authors from ${selectedCountry} in these genres: ${genreList}.
-
-For each author:
-- Provide 2–3 bestselling or critically recognized books.
-- Relate the authors to: ${favoriteAuthors || "None"} or "${unforgettableBook}" when possible.
-
-IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
-Example:
-"Norwegian Wood" - Haruki Murakami
-"Kafka on the Shore" - Haruki Murakami`;
+  
+  List 10 highly influential authors from ${selectedCountry} in these genres: ${genreList}.
+  
+  For each author:
+  - Provide 2–3 bestselling or critically recognized books.
+  - Relate the authors to: ${favoriteAuthors || "None"} or "${unforgettableBook}" when possible.
+  
+  IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Example:
+  "Norwegian Wood" - Haruki Murakami
+  "Kafka on the Shore" - Haruki Murakami`;
         break;
 
       default:
         prompt = `You are an AI assistant helping generate search queries for Google Books API.
-
-List 10 great recommendations from ${selectedCountry} across these genres: ${genreList}.
-
-Ensure:
-- A mix of genre-based and author-inspired selections.
-- Similarity to "${unforgettableBook}" in tone or story.
-- Authors connected to: ${favoriteAuthors || "None"}.
-
-IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
-Example:
-"The Song of Achilles" - Madeline Miller
-"Piranesi" - Susanna Clarke`;
+  
+  List 10 great recommendations from ${selectedCountry} across these genres: ${genreList}.
+  
+  Ensure:
+  - A mix of genre-based and author-inspired selections.
+  - Similarity to "${unforgettableBook}" in tone or story.
+  - Authors connected to: ${favoriteAuthors || "None"}.
+  
+  IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Example:
+  "The Song of Achilles" - Madeline Miller
+  "Piranesi" - Susanna Clarke`;
     }
 
-    console.log("Generated prompt:", prompt);
+    console.log("🧠 Generated prompt for ChatGPT:\n", prompt);
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -565,17 +634,11 @@ Example:
       const gptBookItems: { title: string; author: string }[] = [];
 
       lines?.forEach((line) => {
-        console.log("\n🔍 Processing line:", line);
-
-        // 1. Baştaki numara ve fancy tırnak/dash karakterlerini temizle
         const normalizedLine = line
-          .replace(/^\d+[\.\)\-–—\s]*/, "") // 1. 2) 3- gibi başları sil
-          .replace(/[""„"]/g, '"') // fancy tırnakları düzelt
-          .replace(/[–—]/g, "-"); // tüm tireleri "-" yap
+          .replace(/^\d+[\.\)\-–—\s]*/, "")
+          .replace(/[""„"]/g, '"')
+          .replace(/[–—]/g, "-");
 
-        console.log("📝 Normalized line:", normalizedLine);
-
-        // 2. İlk görülen " - " ile parçala (kitap adı – yazar)
         const separatorIndex = normalizedLine.indexOf(" - ");
         if (separatorIndex !== -1) {
           const rawTitle = normalizedLine
@@ -584,200 +647,266 @@ Example:
             .replace(/^"|"$/g, "");
           const rawAuthor = normalizedLine.slice(separatorIndex + 3).trim();
 
-          console.log("📚 Title:", rawTitle);
-          console.log("✍️ Author:", rawAuthor);
-
           if (rawTitle && rawAuthor) {
             gptBookItems.push({ title: rawTitle, author: rawAuthor });
-            console.log("✅ Successfully added book");
-          } else {
-            console.warn("⚠️ Missing title or author");
           }
-        } else {
-          console.warn("❌ Cannot parse line - no separator found");
         }
       });
 
-      console.log("\n📚 Final gptBookItems:", gptBookItems);
-
-      const booksByGenre: Map<string, GoogleBooksItem[]> = new Map();
       const uniqueBooksMap: Map<string, GoogleBooksItem> = new Map();
       const finalBooks: GoogleBooksItem[] = [];
 
-      // Prioritize books by favorite authors
-      if (favoriteAuthors) {
-        console.log("Starting API call for author books");
-        const authorBooks: GoogleBooksItem[] = (
-          await Promise.all(
-            favoriteAuthors.split(",").map(async (author: string) => {
-              console.log("Fetching books for author:", author);
-              const maxPerPage: number = 40;
-              const orderBy: string = "relevance";
-              const res: any = await fetch(
-                `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(author.trim())}&printType=books&maxResults=${maxPerPage}&orderBy=${orderBy}`
-              );
-              const json: any = await res.json();
-              return json.items || [];
-            })
-          )
-        ).flat();
+      // First, parse author names using ChatGPT
+      const authorPrompt = `Parse the following author names into a comma-separated list. If there are multiple authors, separate them with commas. Return only the comma-separated list, no explanations:
 
-        console.log("authorBooks", authorBooks.length);
-        authorBooks.forEach((book: GoogleBooksItem) => {
-          const id: string = book.id;
-          const title: string = book.volumeInfo?.title;
-          if (
-            id &&
-            !uniqueBooksMap.has(id) &&
-            title &&
-            title !== uniqueBooksMap.get(id)?.volumeInfo?.title
-          ) {
-            uniqueBooksMap.set(id, book);
-            finalBooks.push(book);
-          }
-        });
-        console.log("API call completed for author books");
-      }
+Authors: ${favoriteAuthors}`;
 
-      for (const genre of favoriteGenres) {
-        console.log("Processing genre:", genre);
-        const authors: string[] = gptBookItems
-          .filter(({ author }) => author && author.length > 0)
-          .map(({ author }) => author);
-
-        if (authors.length === 0) {
-          console.log("No authors found for genre:", genre);
-          continue;
-        }
-        const orderBy: string = "relevance";
-        const authorBooks: GoogleBooksItem[] = (
-          await Promise.all(
-            authors.map(async (author: string) => {
-              try {
-                const maxPerPage: number = 20; // Fixed number of books per author
-                const res: any = await fetch(
-                  `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(author)}&printType=books&maxResults=${maxPerPage}&orderBy=${orderBy}`
-                );
-                const json: any = await res.json();
-                return json.items || [];
-              } catch (error) {
-                console.error(
-                  "Error fetching books for author:",
-                  author,
-                  error
-                );
-                return [];
-              }
-            })
-          )
-        ).flat();
-
-        // If not enough books from authors, get from genre keywords
-        let genreBooks: GoogleBooksItem[] = authorBooks;
-        const minBooks: number = genreCount === 1 ? 50 : genreCount * 50;
-        console.log(minBooks, "minBooks");
-        console.log(authorBooks.length, "authorBooks.length");
-        console.log(genreCount, "genreCount");
-        if (authorBooks.length < minBooks / genreCount) {
-          const keywordQuery: string = `bestseller ${genre} books in ${selectedCountry} `;
-          const maxResultsPerPage: number = 40; // Results per page
-
-          const orderBy: string = "relevance";
-          console.log(
-            "Fetching books for genre keyword:",
-            keywordQuery,
-            "page:"
-          );
-          const res: any = await fetch(
-            `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(keywordQuery)}&printType=books&maxResults=${maxResultsPerPage}&orderBy=${orderBy}`
-          );
-          const json: any = await res.json();
-          genreBooks = [...genreBooks, ...(json.items || [])];
-          console.log("genreBooks", genreBooks);
-        }
-        const filtered: GoogleBooksItem[] = genreBooks.filter(
-          (book: GoogleBooksItem) => {
-            const id: string = book.id;
-            const title: string = book.volumeInfo?.title;
-
-            if (!id || !title || uniqueBooksMap.has(id)) return false;
-
-            uniqueBooksMap.set(id, book);
-            return true;
-          }
-        );
-        booksByGenre.set(genre, filtered);
-      }
-
-      booksByGenre.forEach((books: GoogleBooksItem[]) => {
-        finalBooks.push(...books);
-      });
-      finalBooks.filter((book: GoogleBooksItem) => {
-        const id: string = book.id;
-        const title: string = book.volumeInfo?.title;
-        if (!id || uniqueBooksMap.has(id)) return false;
-        if (title && title !== uniqueBooksMap.get(id)?.volumeInfo?.title) {
-          uniqueBooksMap.set(id, book);
-        }
-        return true;
-      });
-      console.log("Final books count:", finalBooks.length);
-
-      // Process lines to extract book titles and authors
-
-      lines?.forEach((line: string) => {
-        const match: string[] | null = line.match(
-          /^(?:\d+\.\s*)?(.*?)\s*[-]\s*(.*)$/
-        );
-        if (match) {
-          const title: string = match[1].trim();
-          const author: string = match[2].trim();
-          if (title && author) {
-            gptBookItems.push({ title, author });
-          }
-        }
+      const authorCompletion = await this.openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: authorPrompt }],
+        temperature: 0.3,
       });
 
-      // Search Google Books API with extracted titles and authors
-      const gptBooks: GoogleBooksItem[] = (
+      const parsedAuthors =
+        authorCompletion.choices[0]?.message?.content?.trim() || "";
+      console.log("Parsed authors:", parsedAuthors);
+
+      // Parse unforgettable book using ChatGPT
+      const bookPrompt = `Analyze this book title and generate 3 different search queries to find similar books. Return only the queries, one per line, no explanations:
+
+Book: ${unforgettableBook}`;
+
+      const bookCompletion = await this.openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: bookPrompt }],
+        temperature: 0.3,
+      });
+
+      const parsedBookQueries =
+        bookCompletion.choices[0]?.message?.content?.trim().split("\n") || [];
+      console.log("Parsed book queries:", parsedBookQueries);
+
+      const gptAuthors = [
+        ...new Set([
+          ...gptBookItems.map((item) => item.author),
+          ...parsedAuthors
+            .split(",")
+            .map((a) => a.trim())
+            .filter(Boolean),
+        ]),
+      ];
+
+      const authorBooks: GoogleBooksItem[] = (
         await Promise.all(
-          gptBookItems.map(async ({ title, author }) => {
-            const maxPerPage: number = 5;
-            const orderBy: string = "relevance";
-            const query: string = `intitle:${encodeURIComponent(title)}+inauthor:${encodeURIComponent(author)}`;
-            const res: any = await fetch(
-              `https://www.googleapis.com/books/v1/volumes?q=${query}&printType=books&maxResults=${maxPerPage}&orderBy=${orderBy}`
-            );
-            const json: any = await res.json();
-            return json.items || [];
+          gptAuthors.map(async (author) => {
+            try {
+              const query = `inauthor:"${author}"`;
+              const maxResults: number = 10;
+              console.log(`📥 Fetching books for author: ${author}`);
+              const res = await fetch(
+                `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+                  query
+                )}&printType=books&maxResults=${maxResults}&orderBy=relevance`
+              );
+              const json = await res.json();
+              console.log(
+                `📤 Found ${json.items?.length || 0} books for author: ${author}`
+              );
+              console.log(
+                json.items.map((item: any) => item.volumeInfo.title),
+                `sonuc:${author}`
+              );
+              return json.items || [];
+            } catch (err) {
+              console.log("❌ Error fetching author books:", err);
+              return [];
+            }
           })
         )
       ).flat();
 
-      // Add results to finalBooks
-      console.log("gptBooks", gptBooks.length);
-      gptBooks.forEach((book: GoogleBooksItem) => {
-        const id: string = book.id;
-        const title: string = book.volumeInfo?.title;
-        if (
-          id &&
-          !uniqueBooksMap.has(id) &&
-          title &&
-          title !== uniqueBooksMap.get(id)?.volumeInfo?.title
-        ) {
+      authorBooks.forEach((book) => {
+        const id = book.id;
+        const title = book.volumeInfo?.title;
+        if (id && title && !uniqueBooksMap.has(id)) {
           uniqueBooksMap.set(id, book);
           finalBooks.push(book);
         }
       });
 
-      console.log("Final books count after GPT additions:", finalBooks.length);
+      // Process user's favorite genres first
+      for (const genre of favoriteGenres) {
+        const base = 40;
+        const extra = 25;
+        const total = base + (genreCount - 1) * extra;
+        const currentYear = new Date().getFullYear();
+        const fromYear = currentYear - 5;
 
-      const shuffledBooks: GoogleBooksItem[] = this.shuffleArray(finalBooks);
-      console.log("Shuffled books count:", shuffledBooks.length);
+        let searchQueries: string[];
+        switch (userGoal.id) {
+          case "classics":
+            searchQueries = [
+              `classic ${genre} books from ${selectedCountry}`,
+              `timeless ${genre} literature in ${selectedCountry}`,
+              `historical ${genre} books from ${selectedCountry}`,
+              `old ${genre} bestsellers in ${selectedCountry}`,
+            ];
+            break;
+          case "contemporary":
+            searchQueries = [
+              `recent ${genre} books in ${selectedCountry}`,
+              `critically acclaimed ${genre} books from ${selectedCountry}`,
+              `bestselling modern ${genre} books in ${selectedCountry}`,
+              `best ${genre} books published after ${fromYear} in ${selectedCountry}`,
+            ];
+            break;
+          case "authors":
+            searchQueries = [
+              `${genre} books by famous authors`,
+              `notable ${genre} authors`,
+              `${genre} books by influential writers`,
+              `bestseller ${genre} books by top authors`,
+            ];
+            break;
+          case "genres":
+            searchQueries = [
+              `popular ${genre} books in ${selectedCountry}`,
+              `reader favorite ${genre} books from ${selectedCountry}`,
+              `highly rated ${genre} novels in ${selectedCountry}`,
+              `bestselling ${genre} books and some other genres from ${selectedCountry}`,
+            ];
+            break;
+          default:
+            searchQueries = [
+              `best seller ${genre} books in ${selectedCountry}`,
+              `popular ${genre} books in ${selectedCountry}`,
+              `${genre} books in ${selectedCountry}`,
+              `new ${genre} books in ${selectedCountry}`,
+            ];
+        }
 
-      return shuffledBooks;
-    } catch (error) {
-      console.error("Error getting popular books:", error);
+        for (const query of searchQueries) {
+          try {
+            console.log(`📥 Fetching books with query: "${query}"`);
+            const res = await fetch(
+              `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+                query
+              )}&printType=books&maxResults=${Math.ceil(total / searchQueries.length)}&orderBy=relevance`
+            );
+            const json = await res.json();
+            const items = json.items || [];
+
+            console.log(`📤 Found ${items.length} books for query: "${query}"`);
+
+            items.forEach((book: GoogleBooksItem) => {
+              const id = book.id;
+              const title = book.volumeInfo?.title;
+              if (id && title && !uniqueBooksMap.has(id)) {
+                uniqueBooksMap.set(id, book);
+                finalBooks.push(book);
+              }
+            });
+          } catch (err) {
+            console.error("❌ Error in Google Books fetch:", err);
+          }
+        }
+      }
+
+      // Now process unselected genres
+      if (userGoal.id === "genres") {
+        // First, get additional genres that user hasn't selected
+        const unselectedGenres = GENRES.filter(
+          (genre: string) => !favoriteGenres.includes(genre)
+        );
+        // Randomly select 4 different genres from the remaining ones
+        const randomUnselectedGenres = unselectedGenres
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 4);
+
+        for (const genre of randomUnselectedGenres) {
+          const searchQueries = [
+            `popular ${genre} books in ${selectedCountry}`,
+            `best ${genre} books from ${selectedCountry}`,
+            `highly rated ${genre} books in ${selectedCountry}`,
+            `bestselling ${genre} books from ${selectedCountry}`,
+          ];
+
+          for (const query of searchQueries) {
+            const maxResults: number = 2;
+            const orderBy: string = "relevance";
+            try {
+              console.log(
+                `📥 Fetching unselected genre books with query: "${query}"`
+              );
+              const res = await fetch(
+                `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+                  query
+                )}&printType=books&maxResults=${maxResults}&orderBy=${orderBy}`
+              );
+              const json = await res.json();
+              const items = json.items || [];
+
+              console.log(
+                `📤 Found ${items.length} unselected genre books for query: "${query}"`
+              );
+
+              items.forEach((book: GoogleBooksItem) => {
+                const id = book.id;
+                const title = book.volumeInfo?.title;
+                if (id && title && !uniqueBooksMap.has(id)) {
+                  uniqueBooksMap.set(id, book);
+                  finalBooks.push(book);
+                }
+              });
+            } catch (err) {
+              console.error("❌ Error fetching unselected genre books:", err);
+            }
+          }
+        }
+      }
+
+      // Now process unforgettable book queries
+      for (const query of parsedBookQueries) {
+        try {
+          console.log(
+            `📥 Fetching books related to unforgettable book: "${query}"`
+          );
+          const res = await fetch(
+            `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+              query
+            )}&printType=books&maxResults=4&orderBy=relevance`
+          );
+          const json = await res.json();
+          const items = json.items || [];
+
+          console.log(`📤 Found ${items.length} books for unforgettable query`);
+
+          items.forEach((book: GoogleBooksItem) => {
+            const id = book.id;
+            const title = book.volumeInfo?.title;
+            if (id && title && !uniqueBooksMap.has(id)) {
+              uniqueBooksMap.set(id, book);
+              finalBooks.push(book);
+            }
+          });
+        } catch (err) {
+          console.error(
+            "❌ Error fetching unforgettable book related books:",
+            err
+          );
+        }
+      }
+
+      const uniqueFinalBooks = finalBooks.filter(
+        (b, i, arr) => arr.findIndex((x) => x.id === b.id) === i
+      );
+
+      console.log(
+        `✅ Total unique books after all filtering: ${uniqueFinalBooks.length}`
+      );
+      return this.shuffleArray(uniqueFinalBooks);
+    } catch (err) {
+      console.error("❌ Error in getPopularBooks:", err);
       return [];
     }
   }

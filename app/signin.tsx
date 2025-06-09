@@ -10,6 +10,8 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import SignInButtonWithGoogle from "../components/SignInButtonWithGoogle";
 import { router } from "expo-router";
@@ -107,66 +109,68 @@ const SignInScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View>
-        <View style={styles.card}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/images/iconbook.png")}
-              style={styles.iconBook}
-            ></Image>
-            <Text style={styles.logo}> Bookify</Text>
-          </View>
-          <View style={styles.input}>
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="gray"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.inputText}
-            />
-          </View>
-          <View style={styles.input}>
-            <TextInput
-              key={showPassword ? "text" : "password"}
-              style={styles.passwordInput}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              placeholderTextColor="gray"
-              autoCapitalize="none"
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              {showPassword ? (
-                <Image
-                  source={require("@/assets/images/visibility_off_password.png")}
-                  style={styles.iconVisibility}
-                />
-              ) : (
-                <Image
-                  source={require("@/assets/images/visibility_on_password.png")}
-                  style={styles.iconVisibility}
-                />
-              )}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View>
+          <View style={styles.card}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/images/iconbook.png")}
+                style={styles.iconBook}
+              ></Image>
+              <Text style={styles.logo}> Bookify</Text>
+            </View>
+            <View style={styles.input}>
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="gray"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.inputText}
+              />
+            </View>
+            <View style={styles.input}>
+              <TextInput
+                key={showPassword ? "text" : "password"}
+                style={styles.passwordInput}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor="gray"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? (
+                  <Image
+                    source={require("@/assets/images/visibility_off_password.png")}
+                    style={styles.iconVisibility}
+                  />
+                ) : (
+                  <Image
+                    source={require("@/assets/images/visibility_on_password.png")}
+                    style={styles.iconVisibility}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.signInButton} onPress={signIn}>
+              <Text style={styles.signInButtonText}>Sign In</Text>
             </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.signInButton} onPress={signIn}>
-            <Text style={styles.signInButtonText}>Sign In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleForgotPassword}>
-            <Text style={styles.linkText}>Forgot Password?</Text>
-          </TouchableOpacity>
-          <View style={styles.bottomTextView}>
-            <Text style={styles.bottomText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => router.replace("/signup")}>
-              <Text style={styles.linkBold}>Create one</Text>
+            <TouchableOpacity onPress={handleForgotPassword}>
+              <Text style={styles.linkText}>Forgot Password?</Text>
             </TouchableOpacity>
+            <View style={styles.bottomTextView}>
+              <Text style={styles.bottomText}>Don't have an account?</Text>
+              <TouchableOpacity onPress={() => router.replace("/signup")}>
+                <Text style={styles.linkBold}>Create one</Text>
+              </TouchableOpacity>
+            </View>
+            <SignInButtonWithGoogle />
           </View>
-          <SignInButtonWithGoogle />
         </View>
-      </View>
+      </TouchableWithoutFeedback>
 
       <Modal
         animationType="fade"

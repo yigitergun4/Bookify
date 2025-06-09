@@ -14,13 +14,22 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useRouter } from "expo-router";
 import { detectText, VisionError } from "../services/visionService";
-import { searchBook, BooksError } from "../services/booksService";
+import {
+  searchBook,
+  BooksError,
+  searchBookList,
+} from "../services/booksService";
 import { getBase64FromUri } from "../utils/imageUtils";
-import { extractBookInfoWithGPT, GPTError } from "../services/gptExtractor";
+import {
+  extractBookInfoWithGPT,
+  GPTError,
+  isSimilarTitle,
+} from "../services/gptExtractor";
 import { getAuth } from "firebase/auth";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
-const overlayWidth = screenWidth * 0.65;
+const overlayWidth = screenWidth * 0.7;
 const overlayHeight = screenHeight * 0.5;
 const overlayLeft = (screenWidth - overlayWidth) / 2;
 const overlayTop = (screenHeight - overlayHeight) / 2;
@@ -70,124 +79,80 @@ export default function CameraButton() {
 
       let bookData: any = null;
 
-      // 1. First try: Original title and author
-      try {
-        console.log(
-          "[CameraButton] Original title/author/language search:",
-          bookInfo.title,
-          bookInfo.authors[0],
-          bookInfo.language
-        );
-        bookData = await searchBook(
-          bookInfo.title,
-          bookInfo.authors[0] || "",
-          bookInfo.language || ""
-        );
-      } catch (err) {
-        console.log("[CameraButton] Original title not found.");
-      }
-
-      // 2. Title splitting and alternative searches
-      if (!bookData) {
-        console.log("[CameraButton] Alternative searches...");
-
-        // Split title into parts
-        const titleParts = bookInfo.title.split(/[:\-]/);
-        const mainTitle = titleParts[0].trim();
-        const subtitle = titleParts[1]?.trim();
-
-        // Split author name into parts
-        const authorParts = (bookInfo.authors[0] || "").split(" ");
-        const lastName = authorParts[authorParts.length - 1] || "";
-
-        // 2.1 Main title + full author
-        if (!bookData) {
-          try {
-            bookData = await searchBook(
-              mainTitle,
-              bookInfo.authors[0] || "",
-              bookInfo.language || ""
-            );
-            if (bookData)
-              console.log("[CameraButton] Main title + full author found");
-          } catch (err) {
-            console.log("[CameraButton] Main title + full author not found");
-          }
+      const trySearch = async (
+        title: string,
+        author: string,
+        language: string
+      ) => {
+        try {
+          const result = await searchBook(title, author, language);
+          console.log(
+            "✅ Found:",
+            result.volumeInfo.title,
+            result.volumeInfo.authors
+          );
+          return result;
+        } catch (err) {
+          console.log(`❌ Not found: "${title}" - ${author}`);
+          return null;
         }
+      };
 
-        // 2.2 Main title + last name
-        if (!bookData) {
-          try {
-            bookData = await searchBook(
-              mainTitle,
-              lastName,
-              bookInfo.language || ""
-            );
-            if (bookData)
-              console.log("[CameraButton] Main title + last name found");
-          } catch (err) {
-            console.log("[CameraButton] Main title + last name not found");
-          }
-        }
+      const mainTitle = bookInfo.title.split(/[:\-]/)[0].trim();
+      const fullAuthor = bookInfo.authors?.[0] || "";
+      const lastName = fullAuthor.split(" ").pop() || "";
+      const language = bookInfo.language || "";
 
-        // 2.3 Full title + last name
-        if (!bookData) {
-          try {
-            bookData = await searchBook(
+      const searchAttempts = [
+        { title: bookInfo.title, author: fullAuthor },
+        { title: mainTitle, author: fullAuthor },
+        { title: mainTitle, author: lastName },
+        { title: bookInfo.title, author: lastName },
+        { title: bookInfo.title, author: "" },
+        { title: "", author: fullAuthor },
+      ].filter(Boolean);
+
+      for (const attempt of searchAttempts) {
+        if (attempt && (attempt.title || attempt.author)) {
+          bookData = await trySearch(attempt.title, attempt.author, "");
+
+          if (bookData) {
+            const isTitleSimilar = await isSimilarTitle(
               bookInfo.title,
-              lastName,
-              bookInfo.language || ""
+              bookData.volumeInfo.title
             );
-            if (bookData)
-              console.log("[CameraButton] Full title + last name found");
-          } catch (err) {
-            console.log("[CameraButton] Full title + last name not found");
-          }
-        }
 
-        // 2.4 Subtitle + full author (if exists)
-        if (!bookData && subtitle) {
-          try {
-            bookData = await searchBook(
-              subtitle,
-              bookInfo.authors[0] || "",
-              bookInfo.language || ""
-            );
-            if (bookData)
-              console.log("[CameraButton] Subtitle + full author found");
-          } catch (err) {
-            console.log("[CameraButton] Subtitle + full author not found");
-          }
-        }
+            console.log("🔍 isTitleSimilar:", isTitleSimilar);
 
-        // 2.5 Subtitle + last name (if exists)
-        if (!bookData && subtitle) {
-          try {
-            bookData = await searchBook(
-              subtitle,
-              lastName,
-              bookInfo.language || ""
-            );
-            if (bookData)
-              console.log("[CameraButton] Subtitle + last name found");
-          } catch (err) {
-            console.log("[CameraButton] Subtitle + last name not found");
+            if (isTitleSimilar) {
+              // Benzerse direkt düzenleme sayfasına git
+              router.push({
+                pathname: "/(tabs)/homefolder/photoeditpage" as any,
+                params: {
+                  book: JSON.stringify(bookData),
+                },
+              });
+              return; // işlem burada biter
+            } else {
+              // Farklıysa alternatif kitap listesi al ve yönlendir
+              const books = await searchBookList(
+                bookInfo.title,
+                "",
+                language !== "Unknown" ? language : ""
+              );
+              router.push({
+                pathname: "/(tabs)/homefolder/notexactbookfound" as any,
+                params: {
+                  books: JSON.stringify(books),
+                },
+              });
+              return;
+            }
           }
         }
       }
 
-      if (!bookData) {
-        console.log("[CameraButton] Hiçbir kombinasyonla kitap bulunamadı.");
-        throw new BooksError("No book found after extended search");
-      }
-
-      // If book is found, redirect
-      router.push({
-        pathname: "/(tabs)/homefolder/photoeditpage" as any,
-        params: {
-          book: JSON.stringify(bookData),
-        },
-      });
+      console.log("🚫 No matching book found.");
     } catch (error) {
       console.error("[CameraButton] Error:", error);
       if (error instanceof VisionError) {

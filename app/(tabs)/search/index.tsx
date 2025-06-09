@@ -132,7 +132,6 @@ export default function TabTwoScreen() {
             </View>
             <CameraButton />
           </View>
-          {/* loading spinner while books are loading */}
           {loading ? (
             <View
               style={{

@@ -158,7 +158,7 @@ Instructions:
               Authorization: `Bearer ${this.openai}`,
             },
             body: JSON.stringify({
-              model: "gpt-3.5-turbo",
+              model: "gpt-4o-mini",
               messages: [{ role: "user", content: prompt }],
               temperature: 0.8,
               max_tokens: 1000,
@@ -230,7 +230,7 @@ Instructions:
             Authorization: `Bearer ${this.openai}`,
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.8,
             max_tokens: 1000,
@@ -374,7 +374,7 @@ Instructions:
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -611,7 +611,7 @@ Instructions:
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -662,7 +662,7 @@ Instructions:
 Authors: ${favoriteAuthors}`;
 
       const authorCompletion = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: authorPrompt }],
         temperature: 0.3,
       });
@@ -677,7 +677,7 @@ Authors: ${favoriteAuthors}`;
 Book: ${unforgettableBook}`;
 
       const bookCompletion = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: bookPrompt }],
         temperature: 0.3,
       });

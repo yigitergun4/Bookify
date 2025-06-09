@@ -2,6 +2,11 @@ import { CacheService } from "./cacheService";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import ENV from "../config/env";
 import SHA256 from "crypto-js/sha256";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: ENV.OPENAI_API_KEY,
+});
 
 const cacheService = CacheService.getInstance();
 
@@ -27,8 +32,6 @@ interface GPTCacheData {
 export async function extractBookInfoWithGPT(
   ocrText: string
 ): Promise<BookInfo> {
-  const OPENAI_API_KEY = ENV.OPENAI_API_KEY;
-
   try {
     if (typeof ocrText !== "string") {
       throw new GPTError("OCR text is not a string");
@@ -74,7 +77,7 @@ Instructions:
    - Do **not** include translators, editors, illustrators, or contributors.
    - Author names may appear above or below the title. Common known authors should be preferred.
 
-3. **"language"**: Return the original language in ISO 639-1 format (e.g., "tr", "en", "fr"). If unknown, return "und".
+3. **"language"**: Return the original language in ISO 639-1 format (e.g., "tr", "en", "fr"). If unknown, return "Unknown".
 
 4. **"english_title"**: 
    - If the original title is in English, repeat it here.
@@ -97,15 +100,14 @@ If you are not 100% certain of a value, use:
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },
             ],
-            temperature: 0.2,
           }),
         }
       );
@@ -164,5 +166,33 @@ If you are not 100% certain of a value, use:
       throw error;
     }
     throw new GPTError("Failed to extract book information", undefined, error);
+  }
+}
+
+export async function isSimilarTitle(
+  title1: string,
+  title2: string
+): Promise<boolean> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // gpt-4o kullanmamın sebebi çok dilli analiz edecek olması
+      messages: [
+        {
+          role: "system",
+          content: `You are a strict assistant that determines if two book titles refer to the same work, even if the titles are in different languages. You must only reply with "Yes" or "No" — no other text, no punctuation, no explanations.`,
+        },
+        {
+          role: "user",
+          content: `Do the following two book titles refer to the same book, even if they are in different languages?\n\n1. ${title1}\n2. ${title2}\n\nOnly reply with Yes or No.`,
+        },
+      ],
+      temperature: 0,
+    });
+
+    const reply = response.choices[0]?.message?.content?.trim();
+    return reply === "Yes";
+  } catch (error) {
+    console.error("[isSimilarTitle] GPT error:", error);
+    return false;
   }
 }

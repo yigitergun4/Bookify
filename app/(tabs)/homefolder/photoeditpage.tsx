@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export default function EditBookScreen() {
-  const { book = "", imageUri = "" } = useLocalSearchParams();
+  const { book = "" } = useLocalSearchParams();
   const { addBook } = useLibrary();
   const router = useRouter();
 

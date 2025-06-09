@@ -38,17 +38,11 @@ export const searchBook = async (
         query += `+inauthor:${encodeURIComponent(author)}`;
       }
 
-      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
-      url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)`;
-      url += `&maxResults=${MAX_RESULTS}`;
-      url += `&printType=books`;
-      url += `&orderBy=relevance`;
+      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
 
-      if (language && language !== "und") {
+      if (language && language !== "Unknown") {
         url += `&langRestrict=${encodeURIComponent(language)}`;
       }
-
-      url += `&key=${BOOKS_API_KEY}`;
 
       const response = await axios.get(url);
       const items = response.data.items || [];
@@ -93,17 +87,22 @@ export const searchBookList = async (
   language: string
 ): Promise<any[]> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+  console.log("Search parameters:", { title, author, language });
+
   let query = encodeURIComponent(title);
   if (author && author !== "Unknown") {
     query += "+inauthor:" + encodeURIComponent(author);
   }
   let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
-  if (language && language !== "und") {
+  if (language && language !== "Unknown") {
     url += `&langRestrict=${encodeURIComponent(language)}`;
   }
   url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)&key=${BOOKS_API_KEY}`;
 
+  console.log("Search URL:", url);
+
   const response = await axios.get(url);
   const items = response.data.items || [];
+  console.log("Search results count:", items.length);
   return items;
 };

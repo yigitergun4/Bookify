@@ -11,10 +11,16 @@ import BookSearchList from "@/components/BookSearchList";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const NotExactBookFound = () => {
-  const { results } = useLocalSearchParams();
-  const listOfBooks: GoogleBooksItem[] = results
-    ? JSON.parse(results as string)
-    : [];
+  const { books } = useLocalSearchParams();
+  let listOfBooks: GoogleBooksItem[] = [];
+
+  try {
+    if (typeof books === "string") {
+      listOfBooks = JSON.parse(books);
+    }
+  } catch (e) {
+    console.error("Error parsing books:", e);
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

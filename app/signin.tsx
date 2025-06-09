@@ -32,13 +32,12 @@ const SignInScreen = () => {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState<number>(0);
-  const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
-  const MAX_ATTEMPTS = 5;
+  const RATE_LIMIT_WINDOW = 60000; // 1 minute
+  const MAX_ATTEMPTS = 3;
 
   const signIn = async () => {
     const now = Date.now();
 
-    // Rate limiting kontrolü
     if (
       now - lastAttemptTime < RATE_LIMIT_WINDOW &&
       loginAttempts >= MAX_ATTEMPTS
@@ -53,39 +52,25 @@ const SignInScreen = () => {
 
     setLoading(true);
     try {
-      console.log("Attempting to sign in with:", email);
       const response = await signInWithEmailAndPassword(
         FIREBASE_AUTH,
         email,
         password
       );
-      console.log("Sign in successful, checking user data...");
 
-      // Başarılı girişte sayaçları sıfırla
       setLoginAttempts(0);
       setLastAttemptTime(0);
 
-      // Firestore'dan firstLaunchCompleted kontrolü
       const user = response.user;
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      console.log(
-        "User data retrieved:",
-        userSnap.exists() ? "User exists" : "User not found"
-      );
-
       if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
-        console.log("First launch completed, redirecting to home...");
         router.replace("/(tabs)/homefolder/home");
       } else {
-        console.log("First launch not completed, redirecting to onboarding...");
         router.replace("/onboarding");
       }
     } catch (error: any) {
-      console.error("Sign in error:", error.code, error.message);
-
-      // Giriş denemesi sayacını güncelle
       setLoginAttempts((prev) => prev + 1);
       setLastAttemptTime(now);
 

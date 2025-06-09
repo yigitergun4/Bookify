@@ -34,7 +34,6 @@ export default function HomePageFlatlistRecentClicks({
 
   const handleAddToLibrary = async (book: any) => {
     try {
-      await addBook(book);
       Alert.alert(
         "Add to Library",
         `Would you like to add "${book.volumeInfo.title}" to your library?`,

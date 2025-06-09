@@ -13,7 +13,11 @@ export default function LibraryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const user = FIREBASE_AUTH.currentUser;
-  const { libraryBooks, removeBook } = useLibrary();
+  const { libraryBooks, removeBook, updateLibraryBooks } = useLibrary();
+  console.log(
+    "libraryBooks",
+    libraryBooks.map((book) => book.volumeInfo.title)
+  );
 
   const fetchUserData: () => Promise<void> = async () => {
     if (user) {
@@ -44,7 +48,7 @@ export default function LibraryScreen() {
   }, [user]);
 
   useEffect(() => {
-    setFilteredBooks([...libraryBooks]);
+    setFilteredBooks(libraryBooks);
   }, [libraryBooks]);
 
   const handleSearchChange: (text: string) => void = (text: string) => {
@@ -92,9 +96,25 @@ export default function LibraryScreen() {
 
   const onRefresh: () => Promise<void> = async () => {
     setRefreshing(true);
-    await fetchUserData();
-    setFilteredBooks([...libraryBooks]);
-    setRefreshing(false);
+    try {
+      // Firebase'den kitapları çek
+      if (user) {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const books = userData.library || [];
+          updateLibraryBooks(books);
+          setFilteredBooks(books);
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing books:", error);
+      Alert.alert("Error", "Failed to refresh books. Please try again.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Kitapları id'ye göre tekilleştir

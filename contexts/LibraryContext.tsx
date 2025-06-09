@@ -76,6 +76,7 @@ interface LibraryContextType {
   error: string | null;
   setRecommendedBooks: React.Dispatch<React.SetStateAction<any[]>>;
   clearRecommendedBooks: () => void;
+  updateLibraryBooks: (books: any[]) => void;
 }
 
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -88,6 +89,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const auth = getAuth();
+
+  const updateLibraryBooks = (books: any[]) => {
+    setLibraryBooks(books);
+  };
 
   const clearRecommendedBooks = () => {
     setRecommendedBooks([]);
@@ -169,6 +174,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       // Check if book is already in library
       if (isBookInLibrary(book.id)) {
         throw new Error("This book is already in your library.");
+        return;
       }
 
       // Add to library
@@ -252,6 +258,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         error,
         setRecommendedBooks,
         clearRecommendedBooks,
+        updateLibraryBooks,
       }}
     >
       {children}

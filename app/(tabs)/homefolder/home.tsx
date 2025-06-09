@@ -14,7 +14,9 @@ import { useEffect, useState } from "react";
 import { CacheService } from "@/services/cacheService";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { GoogleBooksItem } from "@/types/booksapitypes";
+import { collection, getDocs } from "firebase/firestore";
 
 const cacheService = CacheService.getInstance();
 
@@ -24,18 +26,37 @@ export default function TabOneScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [inputKey, setInputKey] = useState(Date.now());
-  const { recommendedBooks, addBook, loadRecommendedBooks } = useLibrary();
+  const {
+    recommendedBooks,
+    addBook,
+    clearRecommendedBooks,
+    setRecommendedBooks,
+  } = useLibrary();
   const navigation = useNavigation();
   const router = useRouter();
   const user = FIREBASE_AUTH.currentUser;
 
+  // Clear recommended books when user changes
+  useEffect(() => {
+    if (!user) {
+      clearRecommendedBooks();
+      return;
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
+    // Initial fetch
+    cacheService.getRecentClicks(user.uid).then((clicks) => {
+      setRecentClicks(clicks.map((click: any) => click.bookInfo));
+    });
+
+    // Subscribe to updates
     const unsubscribe = cacheService.subscribeToRecentClicks(
       user.uid,
       (clicks: any) => {
-        console.log("Recent clicks updated:", clicks);
+        console.log("Updated recent clicks:", clicks.length);
         setRecentClicks(clicks.map((click: any) => click.bookInfo));
       }
     );
@@ -46,25 +67,42 @@ export default function TabOneScreen() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      cacheService.getRecentClicks(user.uid).then((clicks) => {
-        setRecentClicks(clicks.map((click: any) => click.bookInfo));
-      });
-    }
-
     const unsubscribe = navigation.addListener("focus", () => {
       setInputKey(Date.now());
     });
 
     return unsubscribe;
-  }, [user, navigation]);
+  }, [navigation]);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (user) {
         try {
           setIsLoading(true);
-          await loadRecommendedBooks();
+          // Load recommendations from Firebase
+          const recommendationsRef = collection(
+            FIREBASE_DB,
+            "Users",
+            user.uid,
+            "Recommendations"
+          );
+          const recommendationsSnap = await getDocs(recommendationsRef);
+
+          if (!recommendationsSnap.empty) {
+            const firebaseBooks = recommendationsSnap.docs
+              .map((doc) => {
+                const data = doc.data();
+                return data.books;
+              })
+              .flat();
+            if (firebaseBooks.length > 0) {
+              // Shuffle the books
+              const shuffledBooks = [...firebaseBooks].sort(
+                () => Math.random() - 0.5
+              );
+              setRecommendedBooks(shuffledBooks);
+            }
+          }
         } catch (error) {
           console.error("Error loading recommended books:", error);
         } finally {
@@ -76,21 +114,20 @@ export default function TabOneScreen() {
     fetchRecommendations();
   }, [user]);
 
-  const openModal = async (book: any) => {
+  const openModal = async (book: GoogleBooksItem) => {
     setSelectedBook(book);
     setModalVisible(true);
-
     // Add to recently viewed
     if (user) {
       try {
         await cacheService.addBookClick(book, user.uid);
-        setRecentClicks((prev) => {
+        setRecentClicks((prev: GoogleBooksItem[]) => {
           const isAlreadyAdded = prev.some(
-            (b) =>
+            (b: GoogleBooksItem) =>
               b.id === book.id || b.volumeInfo?.title === book.volumeInfo?.title
           );
           if (isAlreadyAdded) return prev;
-          return [book, ...prev].slice(0, 10); // sadece ilk 10 göster
+          return [book, ...prev].slice(0, 10);
         });
       } catch (error) {
         console.error("Error adding to recently viewed:", error);
@@ -133,7 +170,10 @@ export default function TabOneScreen() {
                 </TouchableOpacity>
               </View>
               <HomepageCardList
-                books={recentClicks.slice(0, 10)}
+                books={recentClicks.slice(0, 10).map((book) => ({
+                  ...book,
+                  id: `${book.id}_recent_${Date.now()}`,
+                }))}
                 onBookPress={openModal}
                 closeModal={closeModal}
                 modalVisible={modalVisible}
@@ -160,7 +200,10 @@ export default function TabOneScreen() {
             ) : (
               <View style={{ marginBottom: 10 }}>
                 <HomepageCardList
-                  books={recommendedBooks.slice(0, 10)}
+                  books={recommendedBooks.slice(0, 10).map((book) => ({
+                    ...book,
+                    id: `${book.id}_recommended_${Date.now()}`,
+                  }))}
                   onBookPress={openModal}
                   closeModal={closeModal}
                   modalVisible={modalVisible}

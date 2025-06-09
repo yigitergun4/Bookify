@@ -14,7 +14,7 @@ import {
   Keyboard,
 } from "react-native";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { router } from "expo-router";
 import { RecommendationService } from "@/services/recommendationService";
 import { GoogleBooksItem } from "@/types/booksapitypes";
@@ -525,7 +525,7 @@ export default function OnboardingFlow() {
               backgroundColor: selectedBooks.length > 0 ? "#000" : "#ccc",
             },
           ]}
-          onPress={handleDone}
+          onPress={handleSubmit}
           disabled={selectedBooks.length === 0}
         >
           <Text style={styles.buttonText}>
@@ -538,49 +538,86 @@ export default function OnboardingFlow() {
     );
   };
 
-  const handleDone = async () => {
+  const handleSubmit = async () => {
     if (!user) {
-      Alert.alert("Error", "You must be logged in to continue.");
+      Alert.alert("Error", "Please sign in to continue");
       return;
     }
-    setIsAppPrepared(true);
+
     try {
       setIsLoading(true);
-      // Save all user data to Firebase
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      await setDoc(
-        userRef,
-        {
-          name: name,
-          email: user.email,
-          favoriteGenres: selectedGenres,
-          country: selectedCountry,
-          goal: goal
-            ? {
-                id: goal.id,
-                title: goal.title,
-                searchStrategy: goal.searchStrategy,
-                categories: goal.categories,
-              }
-            : null,
-          favoriteBooks: selectedBooks,
-          firstLaunchCompleted: true,
-          createdAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      // Convert favorite authors and books to arrays
+      const authorsArray = favoriteAuthors
+        .split(",")
+        .map((author) => author.trim())
+        .filter(Boolean);
+      const booksArray = selectedBooks.map((book) => book).filter(Boolean);
+      const unforgettableBookArray = unforgettableBook
+        .split(",")
+        .map((book) => book)
+        .filter(Boolean);
+
+      // Save user preferences to Firebase
+      await setDoc(doc(FIREBASE_DB, "Users", user.uid), {
+        name: name,
+        email: user.email,
+        favoriteGenres: selectedGenres,
+        favoriteAuthors: authorsArray,
+        favoriteBooks: booksArray,
+        unforgettableBook: unforgettableBookArray,
+        goal: goal,
+        userGoal: goal,
+        library: [],
+        createdAt: new Date().toISOString(),
+      });
+
+      // Show preparing screen
+      setIsAppPrepared(true);
+
+      // Load recommendations while showing preparing screen
+      try {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+
+        const queries = await recommendationService.getChatGPTRecommendations(
+          userData?.favoriteGenres || [],
+          userData?.favoriteBooks || [],
+          userData?.library || [],
+          userData?.goal || undefined,
+          userData?.favoriteAuthors || []
+        );
+
+        const newBooks = await Promise.all(
+          queries.map((query) =>
+            recommendationService.searchBooksWithQuery(query)
+          )
+        ).then((results) => results.flat());
+
+        // Save recommendations to Firebase
+        await recommendationService.saveRecommendations(user.uid, newBooks);
+      } catch (error) {
+        console.error("Error loading initial recommendations:", error);
+      }
+      // Navigate to home
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       router.replace("/(tabs)/homefolder/home");
-      setIsAppPrepared(false);
     } catch (error) {
-      console.log("[Onboarding] Error in handleDone:", error);
-      Alert.alert(
-        "Error",
-        "Failed to save your preferences. Please try again."
-      );
+      console.error("Error saving user data:", error);
+      Alert.alert("Error", "Failed to save your preferences");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isAppPrepared) {
+    return (
+      <View style={styles.containerPreparing}>
+        <Text style={styles.titlePreparing}>Preparing your Bookify...</Text>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -590,7 +627,6 @@ export default function OnboardingFlow() {
       {step === 3 && renderGoalScreen()}
       {step === 4 && renderFavoriteAuthorsBooksScreen()}
       {step === 5 && renderFavoriteBooksScreen()}
-      {isAppPrepared && <ActivityIndicator size="large" color="#000" />}
     </SafeAreaView>
   );
 }
@@ -694,11 +730,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    padding: 20,
   },
   goalButtonSelected: {
     backgroundColor: "#f4f4f4",
@@ -826,36 +864,15 @@ const styles = StyleSheet.create({
   progressDotCompleted: {
     backgroundColor: "#666",
   },
-  genreFilterContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  containerPreparing: {
+    flex: 1,
     justifyContent: "center",
-    gap: 10,
-    paddingHorizontal: 10,
+    alignItems: "center",
+    backgroundColor: "#fdfedb",
+  },
+  titlePreparing: {
+    fontSize: 24,
+    fontWeight: "bold",
     marginBottom: 20,
-  },
-  genreFilterButton: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#eee",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  genreFilterButtonSelected: {
-    backgroundColor: "#f4f4f4",
-    borderColor: "#000",
-  },
-  genreFilterText: {
-    fontSize: 15,
-    color: "#222",
-  },
-  genreFilterTextSelected: {
-    color: "#000",
   },
 });

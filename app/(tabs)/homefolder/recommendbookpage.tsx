@@ -15,6 +15,7 @@ import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
 import SearchInput from "@/components/HomePageSearchInput";
 import { GoogleBooksItem } from "@/types/booksapitypes";
+import { UserGoal } from "@/types/usersdatatypes";
 
 const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
@@ -101,10 +102,31 @@ const RecommendedScreen = () => {
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
       const userData: any = userSnap.data();
+
       const favoriteGenres: string[] = userData?.favoriteGenres || [];
-      const favoriteBooks: GoogleBooksItem[] = userData?.favoriteBooks || [];
+      const favoriteBooks: string[] = userData?.favoriteBooks || [];
       const libraryBooks: GoogleBooksItem[] = userData?.library || [];
-      let newBooks: any[] = [];
+      const favoriteAuthors: string =
+        userData?.favoriteAuthors?.join(", ") || "";
+      const unforgettableBook: string = userData?.unforgettableBook || "";
+      const userGoal: UserGoal = {
+        id: userData?.goal?.id || "",
+        title: userData?.goal?.title || "",
+        searchStrategy: userData?.goal?.searchStrategy || "",
+        categories: userData?.goal?.categories || [],
+        description: userData?.userGoal?.description || "",
+      };
+
+      console.log("Processed data:", {
+        favoriteGenres,
+        favoriteBooks,
+        libraryBooksCount: libraryBooks.length,
+        favoriteAuthors,
+        unforgettableBook,
+        userGoal,
+      });
+
+      let newBooks: GoogleBooksItem[] = [];
 
       // Get library book IDs
       const libraryBookIds: Set<string> = new Set(
@@ -118,45 +140,45 @@ const RecommendedScreen = () => {
           const queries = await recommendationService.getChatGPTRecommendations(
             favoriteGenres,
             favoriteBooks,
-            libraryBooks
+            libraryBooks,
+            favoriteAuthors,
+            unforgettableBook,
+            userGoal
           );
-          console.log(queries, "queries recommendbookpage.tsx:118");
+
           // Try all generated queries and combine results
-          let allNewBooks: any[] = [];
-          for (const query of queries) {
-            const books =
-              await recommendationService.searchBooksWithQuery(query);
-            if (books.length > 0) {
-              allNewBooks = [...allNewBooks, ...books];
-            }
-          }
-
-          // Remove duplicates and filter out existing books
-          const uniqueNewBooks: GoogleBooksItem[] = Array.from(
-            new Map(
-              allNewBooks
-                .filter(
-                  (book) =>
-                    !existingBookIds.has(book.id) &&
-                    !libraryBookIds.has(book.id) &&
-                    !previouslyRecommendedIds.has(book.id)
-                )
-                .map((book) => [book.id, book])
-            ).values()
+          const queryResults = await Promise.all(
+            queries.map(async (query: string) => {
+              try {
+                return await recommendationService.searchBooksWithQuery(query);
+              } catch (error) {
+                console.warn(
+                  `⚠️ Failed to fetch books for query: ${query}`,
+                  error
+                );
+                return [];
+              }
+            })
           );
 
-          if (uniqueNewBooks.length > 0) {
-            newBooks = uniqueNewBooks;
+          newBooks = queryResults.flat();
+
+          // If we got no results, try genre-based search
+          if (newBooks.length === 0 && favoriteGenres.length > 0) {
             console.log(
-              "Found new books from all queries:",
-              uniqueNewBooks.length
+              "🔄 No results from ChatGPT queries, falling back to genre search"
+            );
+            const randomGenre =
+              favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
+            newBooks = await recommendationService.searchBooksWithQuery(
+              `subject:${randomGenre}`
             );
           }
         } catch (error) {
-          console.error("Error getting recommendations from ChatGPT:", error);
-          // Fallback to random genre if ChatGPT fails
+          console.error("❌ Error in recommendation process:", error);
+          // Fallback to genre-based search if ChatGPT fails
           if (favoriteGenres.length > 0) {
-            const randomGenre: string =
+            const randomGenre =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
               `subject:${randomGenre}`
@@ -164,13 +186,18 @@ const RecommendedScreen = () => {
           }
         }
       } else {
-        console.log(
-          "[RecommendedScreen] Using regular recommendations (<40 books)"
-        );
-        // Normal search with all preferences
-        newBooks = await recommendationService.searchBooksWithQuery(
-          [...favoriteGenres, ...favoriteBooks, ...libraryBooks].join(" ")
-        );
+        // Initial genre-based search
+        if (newBooks.length < 20 && favoriteGenres.length > 0) {
+          const randomGenre =
+            favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
+          try {
+            newBooks = await recommendationService.searchBooksWithQuery(
+              `subject:${randomGenre}`
+            );
+          } catch (error) {
+            console.error("❌ Error in genre-based search:", error);
+          }
+        }
       }
 
       // Filter out books that are already in the list, library, or previously recommended
@@ -179,10 +206,6 @@ const RecommendedScreen = () => {
           !existingBookIds.has(book.id) &&
           !libraryBookIds.has(book.id) &&
           !previouslyRecommendedIds.has(book.id)
-      );
-      console.log(
-        "[RecommendedScreen] Unique new books:",
-        uniqueNewBooks.length
       );
 
       if (uniqueNewBooks.length === 0) {

@@ -75,6 +75,7 @@ interface LibraryContextType {
   isLoading: boolean;
   error: string | null;
   setRecommendedBooks: React.Dispatch<React.SetStateAction<any[]>>;
+  clearRecommendedBooks: () => void;
 }
 
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -87,6 +88,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const auth = getAuth();
+
+  const clearRecommendedBooks = () => {
+    setRecommendedBooks([]);
+  };
 
   const loadRecommendedBooks = async () => {
     const user = auth.currentUser;
@@ -117,44 +122,33 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
             () => Math.random() - 0.5
           );
           setRecommendedBooks(shuffledBooks);
-
           // Also update cache with shuffled books
           await cacheService.saveRecommendedBooks(user.uid, shuffledBooks);
           return;
         }
       }
 
-      // If no Firebase recommendations, check cache
-      const cachedBooks: GoogleBooksItem[] =
-        await cacheService.getRecommendedBooks(user.uid);
+      const userRef = doc(FIREBASE_DB, "Users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
 
-      if (cachedBooks && cachedBooks.length > 0) {
-        setRecommendedBooks(cachedBooks);
-      } else {
-        // if cache is empty, fetch new recommendations
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
+      const queries = await recommendationService.getChatGPTRecommendations(
+        userData?.favoriteGenres || [],
+        userData?.favoriteBooks || [],
+        userData?.libraryBooks || [],
+        userData?.goal || undefined,
+        userData?.favoriteAuthors || []
+      );
+      const newBooks: GoogleBooksItem[] = await Promise.all(
+        queries.map((query) =>
+          recommendationService.searchBooksWithQuery(query)
+        )
+      ).then((results) => results.flat());
 
-        const queries = await recommendationService.getChatGPTRecommendations(
-          userData?.favoriteGenres || [],
-          [],
-          userData?.library || [],
-          userData?.goal || undefined
-        );
-
-        const newBooks: GoogleBooksItem[] = await Promise.all(
-          queries.map((query) =>
-            recommendationService.searchBooksWithQuery(query)
-          )
-        ).then((results) => results.flat());
-
-        setRecommendedBooks(newBooks);
-
-        // save to both cache and firebase
-        await cacheService.saveRecommendedBooks(user.uid, newBooks);
-        await recommendationService.saveRecommendations(user.uid, newBooks);
-      }
+      setRecommendedBooks(newBooks);
+      // save to both cache and firebase
+      await cacheService.saveRecommendedBooks(user.uid, newBooks);
+      await recommendationService.saveRecommendations(user.uid, newBooks);
     } catch (error) {
       console.error("[LibraryContext] Error loading recommended books:", error);
       if (error instanceof Error) {
@@ -257,6 +251,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         error,
         setRecommendedBooks,
+        clearRecommendedBooks,
       }}
     >
       {children}

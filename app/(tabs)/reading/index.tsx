@@ -15,6 +15,14 @@ export default function LibraryScreen() {
   const user = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook } = useLibrary();
 
+  console.log(
+    "libraryBooks",
+    libraryBooks.map((book) => book.volumeInfo.title)
+  );
+  console.log(
+    "filteredBooks",
+    filteredBooks.map((book) => book.volumeInfo.title)
+  );
   const fetchUserData = async () => {
     if (user) {
       try {
@@ -42,8 +50,17 @@ export default function LibraryScreen() {
   }, [user]);
 
   useEffect(() => {
+    console.log(
+      "Updated libraryBooks:",
+      libraryBooks.map((book) => book.volumeInfo.title)
+    );
     setFilteredBooks([...libraryBooks]);
   }, [libraryBooks]);
+
+  console.log(
+    "Filtered books:",
+    filteredBooks.map((book) => book.volumeInfo.title)
+  );
 
   const handleSearchChange = (text: string) => {
     const searchText = text.toLowerCase().trim();

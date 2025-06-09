@@ -21,67 +21,67 @@ interface GoogleButtonProps {
   style?: ViewStyle;
 }
 
-// WebBrowser.maybeCompleteAuthSession();
-// GoogleSignin.configure({
-//   webClientId: ENV.WEB_CLIENT_ID,
-// });
+WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId: ENV.WEB_CLIENT_ID,
+});
 
 const GoogleButton: React.FC<GoogleButtonProps> = ({ style }) => {
-  // const signInWithGoogle = async () => {
-  //   try {
-  //     await GoogleSignin.hasPlayServices();
+  const signInWithGoogle = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
 
-  //     const userInfo = await GoogleSignin.signIn();
+      const userInfo = await GoogleSignin.signIn();
 
-  //     if (!userInfo || !userInfo?.data?.idToken) {
-  //       return;
-  //     }
+      if (!userInfo || !userInfo?.data?.idToken) {
+        return;
+      }
 
-  //     const googleCredential = GoogleAuthProvider.credential(
-  //       userInfo?.data?.idToken
-  //     );
-  //     const userCredential = await signInWithCredential(
-  //       FIREBASE_AUTH,
-  //       googleCredential
-  //     );
+      const googleCredential = GoogleAuthProvider.credential(
+        userInfo?.data?.idToken
+      );
+      const userCredential = await signInWithCredential(
+        FIREBASE_AUTH,
+        googleCredential
+      );
 
-  //     const user = userCredential.user;
-  //     if (user) {
-  //       const userRef = doc(FIREBASE_DB, "Users", user.uid);
-  //       const userSnap = await getDoc(userRef);
+      const user = userCredential.user;
+      if (user) {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
 
-  //       if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
-  //         router.replace("/(tabs)/homefolder/home");
-  //       } else {
-  //         if (!userSnap.exists()) {
-  //           await setDoc(userRef, {
-  //             email: user.email,
-  //             displayName: user.displayName,
-  //             photoURL: user.photoURL,
-  //             firstLaunchCompleted: false,
-  //             favoriteGenres: [],
-  //             favoriteBooks: [],
-  //             libraryBooks: [],
-  //             createdAt: new Date().toISOString(),
-  //           });
-  //         }
-  //         router.replace("/onboarding");
-  //       }
-  //     }
-  //   } catch (error: any) {
-  //     if (
-  //       error.code === statusCodes.SIGN_IN_CANCELLED ||
-  //       error.message?.includes("cancel")
-  //     ) {
-  //       console.log("User cancelled the sign-in process");
-  //       return;
-  //     }
-  //     console.error("Google Sign-In Error:", error);
-  //   }
-  // };
+        if (userSnap.exists() && userSnap.data().firstLaunchCompleted) {
+          router.replace("/(tabs)/homefolder/home");
+        } else {
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              firstLaunchCompleted: false,
+              favoriteGenres: [],
+              favoriteBooks: [],
+              libraryBooks: [],
+              createdAt: new Date().toISOString(),
+            });
+          }
+          router.replace("/onboarding");
+        }
+      }
+    } catch (error: any) {
+      if (
+        error.code === statusCodes.SIGN_IN_CANCELLED ||
+        error.message?.includes("cancel")
+      ) {
+        console.log("User cancelled the sign-in process");
+        return;
+      }
+      console.error("Google Sign-In Error:", error);
+    }
+  };
 
   return (
-    <TouchableOpacity style={[styles.button, style]} onPress={() => {}}>
+    <TouchableOpacity style={[styles.button, style]} onPress={signInWithGoogle}>
       <Image
         source={require("@/assets/images/google.png")}
         style={styles.icon}

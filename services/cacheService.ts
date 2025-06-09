@@ -207,7 +207,17 @@ export class CacheService {
   }
 
   private notifyRecentClicksSubscribers(clicks: BookClick[]) {
+    // Notify general subscribers
     this.recentClicksSubscribers.forEach((callback) => callback(clicks));
+
+    // Notify user-specific subscribers
+    const userId = clicks[0]?.userId;
+    if (userId) {
+      const userSubscribers = this.userRecentClicksSubscribers.get(userId);
+      if (userSubscribers) {
+        userSubscribers.forEach((callback) => callback(clicks));
+      }
+    }
   }
 
   async clearRecentClicks(userId: string): Promise<void> {

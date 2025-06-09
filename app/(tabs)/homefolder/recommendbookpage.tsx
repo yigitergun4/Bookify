@@ -27,7 +27,6 @@ const RecommendedScreen = () => {
   const user = auth.currentUser;
   const { addBook, recommendedBooks, isLoading, setRecommendedBooks } =
     useLibrary();
-
   // Filter books based on search query
   const filteredBooks: GoogleBooksItem[] = recommendedBooks.filter((book) => {
     const title: string = book.volumeInfo?.title?.toLowerCase() || "";
@@ -216,7 +215,7 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // Limit to 20 books per load
+      // Limit to 50 books per load
       const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
       // randomize the books
       limitedNewBooks.sort(() => Math.random() - 0.5);

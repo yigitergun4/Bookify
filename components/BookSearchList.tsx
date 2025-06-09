@@ -98,7 +98,7 @@ const BookSearchList = ({
     <>
       <FlatList
         ref={listRef}
-        data={books.reverse()}
+        data={books}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) => `${item.id}_${index}`}
         onContentSizeChange={(w, h) => setContentHeight(h)}

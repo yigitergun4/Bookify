@@ -147,7 +147,7 @@ If you are not 100% certain of a value, use:
           english_title: parsed.english_title || undefined,
         };
       } catch (e) {
-        console.error("Failed to parse GPT response:", content);
+        console.log("Failed to parse GPT response:", content);
         throw new GPTError("Failed to parse GPT response", undefined, e);
       }
     });

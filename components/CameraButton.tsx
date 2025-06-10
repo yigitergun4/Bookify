@@ -173,7 +173,8 @@ export default function CameraButton({
         onBookDetected(false);
       }
     } catch (error) {
-      console.error("[CameraButton] Error:", error);
+      console.log("[CameraButton] Error:", error);
+      onBookDetected(false);
       if (error instanceof VisionError) {
         Alert.alert("Error", error.message);
       } else if (error instanceof GPTError) {

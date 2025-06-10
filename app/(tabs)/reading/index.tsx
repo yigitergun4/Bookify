@@ -14,10 +14,6 @@ export default function LibraryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const user = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook, updateLibraryBooks } = useLibrary();
-  console.log(
-    "libraryBooks",
-    libraryBooks.map((book) => book.volumeInfo.title)
-  );
 
   const fetchUserData: () => Promise<void> = async () => {
     if (user) {
@@ -25,7 +21,6 @@ export default function LibraryScreen() {
         // Fetch user data including books
         const userRef = doc(FIREBASE_DB, "Users", user.uid);
         const userSnap = await getDoc(userRef);
-        console.log("userSnap", userSnap.data());
 
         if (userSnap.exists()) {
           const data = userSnap.data();

@@ -71,7 +71,7 @@ export class RecommendationService {
 
   async searchBooksWithQuery(query: string): Promise<GoogleBooksItem[]> {
     try {
-      console.log("🔍 Searching books with query:", query);
+      console.log("Searching books with query:", query);
       const maxResultsPerPage: number = 20;
       const orderBy: string = "relevance";
 
@@ -398,7 +398,7 @@ Instructions:
       if (!queries || queries.length === 0)
         throw new Error("No queries returned from ChatGPT.");
 
-      console.log("📌 GPT Search Queries:", queries, "queries:onboarding");
+      console.log("GPT Search Queries:", queries, "queries:onboarding");
       return queries;
     } catch (error) {
       console.error("Error generating ChatGPT search queries:", error);

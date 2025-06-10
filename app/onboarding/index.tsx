@@ -458,9 +458,7 @@ export default function OnboardingFlow() {
     return (
       <View style={styles.centered}>
         {renderHeader()}
-        <Text style={styles.title}>
-          {filteredBooks.length} Choose Your Favorite Books
-        </Text>
+        <Text style={styles.title}>Choose Your Favorite Books</Text>
         <Text style={styles.subtitleSmall}>
           Select up to {maxSelectedBooks} books from your favorite genres to get
           personalized recommendations.

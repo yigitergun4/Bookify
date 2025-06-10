@@ -29,10 +29,10 @@ import { getAuth } from "firebase/auth";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
-const overlayWidth = screenWidth * 0.7;
-const overlayHeight = screenHeight * 0.5;
-const overlayLeft = (screenWidth - overlayWidth) / 2;
-const overlayTop = (screenHeight - overlayHeight) / 2;
+const overlayWidth: number = screenWidth * 0.7;
+const overlayHeight: number = screenHeight * 0.5;
+const overlayLeft: number = (screenWidth - overlayWidth) / 2;
+const overlayTop: number = (screenHeight - overlayHeight) / 2;
 
 export default function CameraButton({
   onBookDetected,
@@ -42,9 +42,9 @@ export default function CameraButton({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef: any = useRef<CameraView>(null);
   const router = useRouter();
-  const auth = getAuth();
+  const auth: any = getAuth();
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -86,7 +86,11 @@ export default function CameraButton({
       const bookInfo: any = await extractBookInfoWithGPT(detectedText);
       console.log("Extracted book info:", bookInfo);
 
-      const trySearch = async (
+      const trySearch: (
+        title: string,
+        author: string,
+        language: string
+      ) => Promise<any> = async (
         title: string,
         author: string,
         language: string
@@ -124,7 +128,11 @@ export default function CameraButton({
 
       for (const attempt of searchAttempts) {
         if (attempt && (attempt.title || attempt.author)) {
-          const result = await trySearch(attempt.title, attempt.author, "");
+          const result: any = await trySearch(
+            attempt.title,
+            attempt.author,
+            ""
+          );
 
           if (result) {
             const titleSim: boolean = await isSimilarTitle(
@@ -190,13 +198,13 @@ export default function CameraButton({
     }
   };
 
-  const takePhoto = async () => {
+  const takePhoto: () => Promise<void> = async () => {
     console.log("tookPhoto");
     onBookDetected(true);
     if (cameraRef.current) {
       try {
         setIsLoading(true);
-        const photo = await cameraRef.current.takePictureAsync({
+        const photo: any = await cameraRef.current.takePictureAsync({
           quality: 1,
         });
         setModalVisible(false);

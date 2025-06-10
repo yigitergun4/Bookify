@@ -49,7 +49,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const colorScheme: any = useColorScheme();
   return (
     <LibraryProvider>
       <StatusBar style="dark" />

@@ -6,26 +6,27 @@ import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import BookSearchList from "@/components/BookSearchList";
 import { useLibrary } from "@/contexts/LibraryContext";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
-export default function LibraryScreen() {
-  const [userName, setUserName] = useState("");
+function TabThreeScreen() {
+  const [userName, setUserName] = useState<string>("");
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const user = FIREBASE_AUTH.currentUser;
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const user: any = FIREBASE_AUTH.currentUser;
   const { libraryBooks, removeBook, updateLibraryBooks } = useLibrary();
 
   const fetchUserData: () => Promise<void> = async () => {
     if (user) {
       try {
         // Fetch user data including books
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
+        const userRef: any = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap: any = await getDoc(userRef);
 
         if (userSnap.exists()) {
-          const data = userSnap.data();
-          const fullName = data.name || "";
-          const firstName = fullName.split(" ")[0];
+          const data: any = userSnap.data();
+          const fullName: string = data.name || "";
+          const firstName: string = fullName.split(" ")[0];
           setUserName(firstName);
         }
       } catch (error) {
@@ -57,8 +58,8 @@ export default function LibraryScreen() {
     const filtered: any[] = [...libraryBooks].filter((book: any) => {
       if (!book || !book.volumeInfo) return false;
 
-      const title = String(book.volumeInfo.title || "").toLowerCase();
-      const authors = Array.isArray(book.volumeInfo.authors)
+      const title: string = String(book.volumeInfo.title || "").toLowerCase();
+      const authors: any = Array.isArray(book.volumeInfo.authors)
         ? book.volumeInfo.authors
             .map((a: any) => String(a).toLowerCase())
             .join(" ")
@@ -92,14 +93,14 @@ export default function LibraryScreen() {
   const onRefresh: () => Promise<void> = async () => {
     setRefreshing(true);
     try {
-      // Firebase'den kitapları çek
+      // fetch books from firebase
       if (user) {
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userDoc = await getDoc(userRef);
+        const userRef: any = doc(FIREBASE_DB, "Users", user.uid);
+        const userDoc: any = await getDoc(userRef);
 
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const books = userData.library || [];
+          const userData: any = userDoc.data();
+          const books: GoogleBooksItem[] = userData.library || [];
           updateLibraryBooks(books);
           setFilteredBooks(books);
         }
@@ -112,7 +113,7 @@ export default function LibraryScreen() {
     }
   };
 
-  // Kitapları id'ye göre tekilleştir
+  // unique books by id
   function uniqueById(arr: any[]): any[] {
     const seen: Set<any> = new Set();
     return arr.filter((item: any) => {
@@ -259,3 +260,5 @@ const styles = StyleSheet.create({
     right: 16,
   },
 });
+
+export default TabThreeScreen;

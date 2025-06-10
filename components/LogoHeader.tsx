@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { useSession } from "@/contexts/AuthContext";
 import { router } from "expo-router";
 
 interface LogoHeaderProps {
@@ -11,12 +10,10 @@ interface LogoHeaderProps {
 export default function LogoHeader({
   isProfileShown = false,
 }: LogoHeaderProps) {
-  const { signOut } = useSession();
   const [showPopup, setShowPopup] = React.useState(false);
 
   const handleLogout = async () => {
     try {
-      await signOut();
       router.replace("/signin");
     } catch (error) {
       console.error("Logout error:", error);

@@ -6,13 +6,6 @@ export default function HomeLayout() {
       screenOptions={{
         headerShown: false,
       }}
-    >
-      <Stack.Screen name="home" />
-      <Stack.Screen name="recommendbookpage" />
-      <Stack.Screen name="photoeditpage" />
-      <Stack.Screen name="SearchResults" />
-      <Stack.Screen name="recentlyview" />
-      <Stack.Screen name="notexactbookfound" />
-    </Stack>
+    ></Stack>
   );
 }

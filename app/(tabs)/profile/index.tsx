@@ -14,7 +14,7 @@ import HomepageCardList from "@/components/HomepageCardList";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export default function MyProfileScreen() {
-  const user = FIREBASE_AUTH.currentUser;
+  const user: any = FIREBASE_AUTH.currentUser;
   const [userName, setUserName] = useState<string>("");
   const [userGenres, setUserGenres] = useState<string[]>([]);
   const [favoriteBooks, setFavoriteBooks] = useState<GoogleBooksItem[]>([]);
@@ -24,13 +24,13 @@ export default function MyProfileScreen() {
   useEffect(() => {
     const fetchUserName: () => Promise<void> = async () => {
       if (user) {
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
+        const userRef: any = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap: any = await getDoc(userRef);
         if (userSnap.exists()) {
           const data: any = userSnap.data();
           const fullName: string = data.name || "";
           const firstName: string = fullName.split(" ")[0];
-          const books = data.favoriteBooks || [];
+          const books: GoogleBooksItem[] = data.favoriteBooks || [];
           setFavoriteBooks(books);
           setUserName(firstName);
           setUserGenres(data.favoriteGenres || []);
@@ -43,7 +43,7 @@ export default function MyProfileScreen() {
 
   const getImageSource: (book: any) => any = (book: any) => {
     if (book?.volumeInfo?.imageLinks?.thumbnail) {
-      const imageUrl: string = book.volumeInfo.imageLinks.thumbnail;
+      const imageUrl: string = book.volumeInfo.imageLinks.thumbnail || "";
       return { uri: imageUrl.replace("http://", "https://") };
     }
     return require("@/assets/images/not-avaliable-book-photo.png");

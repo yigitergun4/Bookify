@@ -359,6 +359,7 @@ export default function OnboardingFlow() {
               userGoal: goal!,
               favoriteAuthors: favoriteAuthors,
               unforgettableBook: unforgettableBook,
+              GENRES: GENRES,
             });
           setPopularBooks(genreBooks);
         } catch (error) {

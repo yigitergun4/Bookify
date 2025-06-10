@@ -58,7 +58,6 @@ export default function TabOneScreen() {
     const unsubscribe: () => void = cacheService.subscribeToRecentClicks(
       user.uid,
       (clicks: any[]) => {
-        console.log("Updated recent clicks:", clicks.length);
         setRecentClicks(clicks.map((click: any) => click.bookInfo));
       }
     );

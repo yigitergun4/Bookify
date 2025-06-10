@@ -35,9 +35,9 @@ const BookSearchList = ({
   refreshing = false,
   onRefresh,
 }: BookSearchListProps) => {
-  const cacheService = CacheService.getInstance();
-  const auth = getAuth();
-  const listRef = useRef<FlatList>(null);
+  const cacheService: any = CacheService.getInstance();
+  const auth: any = getAuth();
+  const listRef: any = useRef<FlatList>(null);
   const previousOffsetY = useRef<number>(0);
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -46,17 +46,17 @@ const BookSearchList = ({
   const [contentHeight, setContentHeight] = useState<number>(0);
   const [layoutHeight, setLayoutHeight] = useState<number>(0);
 
-  const scrollToTop = () => {
+  const scrollToTop: () => void = () => {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom: () => void = () => {
     if (contentHeight > layoutHeight) {
       listRef.current?.scrollToEnd({ animated: true });
     }
   };
 
-  const handleScroll = (event: any) => {
+  const handleScroll: (event: any) => void = (event: any) => {
     if (books.length > 40 && contentHeight > layoutHeight) {
       const offsetY = event.nativeEvent.contentOffset.y;
       const scrollDirection = offsetY > previousOffsetY.current ? "down" : "up";
@@ -75,8 +75,8 @@ const BookSearchList = ({
     }
   };
 
-  const openModal = async (book: any) => {
-    const user = auth.currentUser;
+  const openModal: (book: any) => Promise<void> = async (book: any) => {
+    const user: any = auth.currentUser;
     if (user) {
       await cacheService.addBookClick(book, user.uid);
     }
@@ -84,12 +84,12 @@ const BookSearchList = ({
     setModalVisible(true);
   };
 
-  const closeModal = () => {
+  const closeModal: () => void = () => {
     setModalVisible(false);
     setSelectedBook(null);
   };
 
-  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  let modalImageUrl: any = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
@@ -100,12 +100,14 @@ const BookSearchList = ({
         ref={listRef}
         data={books}
         contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) => `${item.id}_${index}`}
-        onContentSizeChange={(w, h) => setContentHeight(h)}
-        onLayout={(event) => setLayoutHeight(event.nativeEvent.layout.height)}
-        renderItem={({ item }) => {
-          const volume = item?.volumeInfo;
-          let imageUrl = volume?.imageLinks?.thumbnail;
+        keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
+        onContentSizeChange={(w: number, h: number) => setContentHeight(h)}
+        onLayout={(event: any) =>
+          setLayoutHeight(event.nativeEvent.layout.height)
+        }
+        renderItem={({ item }: any) => {
+          const volume: any = item?.volumeInfo;
+          let imageUrl: string = volume?.imageLinks?.thumbnail;
           if (imageUrl && imageUrl?.startsWith("http:")) {
             imageUrl = imageUrl?.replace("http:", "https:");
           }

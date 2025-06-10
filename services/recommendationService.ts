@@ -14,7 +14,6 @@ import ENV from "@/config/env";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 import { UserGoal } from "@/types/usersdatatypes";
 import { OpenAI } from "openai";
-import { GENRES } from "@/contexts/LibraryContext";
 
 const cacheService = CacheService.getInstance();
 
@@ -514,12 +513,14 @@ Instructions:
     userGoal,
     favoriteAuthors,
     unforgettableBook,
+    GENRES,
   }: {
     favoriteGenres: string[];
     selectedCountry: string;
     userGoal: UserGoal;
     favoriteAuthors: string;
     unforgettableBook: string;
+    GENRES: string[];
   }): Promise<GoogleBooksItem[]> {
     const genreCount: number = favoriteGenres.length;
     const genreList: string = favoriteGenres.join(", ");

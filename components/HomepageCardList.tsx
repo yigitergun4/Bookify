@@ -9,14 +9,15 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 interface HomePageFlatlistRecentClicksProps {
-  books: any[];
-  onBookPress: (book: any) => void;
+  books: GoogleBooksItem[];
+  onBookPress: (book: GoogleBooksItem) => void;
   closeModal: () => void;
   modalVisible: boolean;
-  selectedBook: any;
-  addBook?: (book: any) => Promise<void>;
+  selectedBook: GoogleBooksItem | null;
+  addBook?: (book: GoogleBooksItem) => Promise<void>;
 }
 
 export default function HomePageFlatlistRecentClicks({
@@ -27,12 +28,14 @@ export default function HomePageFlatlistRecentClicks({
   selectedBook,
   addBook,
 }: HomePageFlatlistRecentClicksProps) {
-  let modalImageUrl = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  let modalImageUrl: any = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
 
-  const handleAddToLibrary = async (book: any) => {
+  const handleAddToLibrary: (book: any) => Promise<void> = async (
+    book: any
+  ) => {
     try {
       Alert.alert(
         "Add to Library",
@@ -77,10 +80,10 @@ export default function HomePageFlatlistRecentClicks({
     <View style={styles.container}>
       <FlatList
         data={books}
-        keyExtractor={(item, index) => `${item.id}_${index}`}
+        keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
         horizontal
         showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
+        renderItem={({ item }: any) => (
           <TouchableOpacity
             style={styles.card}
             onPress={() => onBookPress(item)}

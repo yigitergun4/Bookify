@@ -171,7 +171,6 @@ export class CacheService {
   }
 
   async getRecentClicks(userId: string): Promise<BookClick[]> {
-    console.log("getRecentClicks: cacheService.ts:170");
     try {
       const clicks = await AsyncStorage.getItem(
         `${this.RECENT_CLICKS_KEY}_${userId}`
@@ -194,7 +193,6 @@ export class CacheService {
       this.userRecentClicksSubscribers.set(userId, []);
     }
     this.userRecentClicksSubscribers.get(userId)!.push(callback);
-    console.log("subscribeToRecentClicks for user:", userId);
     return () => {
       const userSubscribers = this.userRecentClicksSubscribers.get(userId);
       if (userSubscribers) {

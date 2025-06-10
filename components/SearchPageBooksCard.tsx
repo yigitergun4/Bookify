@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -34,18 +34,18 @@ const BookCard: React.FC<BookCardProps> = ({
   image,
   bookData,
 }) => {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const { addBook } = useLibrary();
 
-  const openModal = async () => {
-    const user = auth.currentUser;
+  const openModal: () => Promise<void> = async () => {
+    const user: any = auth.currentUser;
     if (user && bookData) {
       await cacheService.addBookClick(bookData, user.uid);
     }
     setModalVisible(true);
   };
 
-  const handleAddToLibrary = async () => {
+  const handleAddToLibrary: () => Promise<void> = async () => {
     if (bookData) {
       Alert.alert(
         "Add to Library",

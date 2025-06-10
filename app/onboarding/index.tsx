@@ -83,7 +83,6 @@ export default function OnboardingFlow() {
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
   const [isLoadingBooks, setIsLoadingBooks] = useState<boolean>(false);
   const user = FIREBASE_AUTH.currentUser;
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const recommendationService = RecommendationService.getInstance();
   const maxSelectedBooks: number = 5; // Maximum number of books user can select
   const [favoriteAuthors, setFavoriteAuthors] = useState<string>("");
@@ -345,11 +344,9 @@ export default function OnboardingFlow() {
     </View>
   );
 
-  // Load popular books when genres are selected
   useEffect(() => {
     const loadBooks: () => Promise<void> = async () => {
       if (step === 5 && !isLoadingBooks && popularBooks.length === 0) {
-        setIsLoadingBooks(true);
         try {
           // bring popular books from genres
           const genreBooks: GoogleBooksItem[] =
@@ -547,7 +544,6 @@ export default function OnboardingFlow() {
     }
 
     try {
-      setIsLoading(true);
       // Convert favorite authors and books to arrays
       const authorsArray: string[] = favoriteAuthors
         .split(",")
@@ -617,8 +613,6 @@ export default function OnboardingFlow() {
     } catch (error) {
       console.error("Error saving user data:", error);
       Alert.alert("Error", "Failed to save your preferences");
-    } finally {
-      setIsLoading(false);
     }
   };
 

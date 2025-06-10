@@ -144,7 +144,7 @@ const SignInScreen = () => {
           <View style={styles.card}>
             <View style={styles.logoContainer}>
               <Image
-                source={require("@/assets/images/iconbook.png")}
+                source={require("@/assets/images/headerbookicon.png")}
                 style={styles.iconBook}
               ></Image>
               <Text style={styles.logo}> Bookify</Text>

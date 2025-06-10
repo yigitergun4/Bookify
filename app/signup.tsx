@@ -16,13 +16,11 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { FIREBASE_AUTH } from "../FirebaseConfig";
 
 const SignUpScreen = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const signUp = async () => {
-    setLoading(true);
+  const signUp: () => Promise<void> = async () => {
     try {
       const response = await createUserWithEmailAndPassword(
         FIREBASE_AUTH,
@@ -45,88 +43,84 @@ const SignUpScreen = () => {
       } else {
         Alert.alert("An error occurred");
       }
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 31 }}>
-        <View style={styles.header}>
-          <View style={styles.titleHeader}>
-            <Image
-              source={require("@/assets/images/iconbook.png")}
-              style={{ height: 20, width: 20 }}
-            />
-            <Text style={styles.logo}>Bookify</Text>
-          </View>
+      <View style={styles.header}>
+        <View style={styles.titleHeader}>
           <Image
-            style={styles.image}
-            source={require("@/assets/images/signupimage.png")}
+            source={require("@/assets/images/headerbookicon.png")}
+            style={{ height: 30, width: 30 }}
           />
-          <Text style={styles.welcome}>Welcome to Bookify!</Text>
-          <Text style={styles.subtext}>
-            Discover a world of AI knowledge and resources.{"\n"}Sign up to
-            explore more.
-          </Text>
+          <Text style={styles.logo}>Bookify</Text>
         </View>
-        <View style={styles.form}>
-          <View style={styles.input}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Email"
-              placeholderTextColor="gray"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </View>
-          <View style={styles.input}>
-            <TextInput
-              key={showPassword ? "text" : "password"}
-              style={styles.textInput}
-              placeholder="Password"
-              placeholderTextColor="gray"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              {showPassword ? (
-                <Image
-                  source={require("@/assets/images/visibility_off_password.png")}
-                  style={{ height: 20, width: 20 }}
-                />
-              ) : (
-                <Image
-                  source={require("@/assets/images/visibility_on_password.png")}
-                  style={{ height: 20, width: 20 }}
-                />
-              )}
-            </TouchableOpacity>
-          </View>
-          <View style={styles.signInTextView}>
-            <Text style={styles.signInText}>Already have an account?</Text>
-            <TouchableOpacity
-              style={{}}
-              onPress={() => router.replace("/signin")}
-            >
-              <Text style={{ fontWeight: "bold" }}>Sign in</Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.signUpButton} onPress={signUp}>
-            <Text style={styles.signUpButtonText}>Sign up</Text>
+        <Image
+          style={styles.image}
+          source={require("@/assets/images/signupimage.png")}
+        />
+        <Text style={styles.welcome}>Welcome to Bookify!</Text>
+        <Text style={styles.subtext}>
+          Discover a world of AI knowledge and resources.{"\n"}Sign up to
+          explore more.
+        </Text>
+      </View>
+      <View style={styles.form}>
+        <View style={styles.input}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Email"
+            placeholderTextColor="gray"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </View>
+        <View style={styles.input}>
+          <TextInput
+            key={showPassword ? "text" : "password"}
+            style={styles.textInput}
+            placeholder="Password"
+            placeholderTextColor="gray"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            {showPassword ? (
+              <Image
+                source={require("@/assets/images/visibility_off_password.png")}
+                style={{ height: 20, width: 20 }}
+              />
+            ) : (
+              <Image
+                source={require("@/assets/images/visibility_on_password.png")}
+                style={{ height: 20, width: 20 }}
+              />
+            )}
           </TouchableOpacity>
-          <View style={styles.orLine}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>or</Text>
-            <View style={styles.line} />
-          </View>
-          <SignInButtonWithGoogleButton />
         </View>
-      </ScrollView>
+        <View style={styles.signInTextView}>
+          <Text style={styles.signInText}>Already have an account?</Text>
+          <TouchableOpacity
+            style={{}}
+            onPress={() => router.replace("/signin")}
+          >
+            <Text style={{ fontWeight: "bold" }}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={styles.signUpButton} onPress={signUp}>
+          <Text style={styles.signUpButtonText}>Sign up</Text>
+        </TouchableOpacity>
+        <View style={styles.orLine}>
+          <View style={styles.line} />
+          <Text style={styles.orText}>or</Text>
+          <View style={styles.line} />
+        </View>
+        <SignInButtonWithGoogleButton />
+      </View>
     </SafeAreaView>
   );
 };
@@ -150,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logo: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: "bold",
   },
   image: {

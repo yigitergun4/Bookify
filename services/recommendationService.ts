@@ -608,7 +608,7 @@ Instructions:
   "Piranesi" - Susanna Clarke`;
     }
 
-    console.log("🧠 Generated prompt for ChatGPT:\n", prompt);
+    console.log("Generated prompt for ChatGPT:\n", prompt);
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -703,7 +703,7 @@ Book: ${unforgettableBook}`;
             try {
               const query = `inauthor:"${author}"`;
               const maxResults: number = 10;
-              console.log(`📥 Fetching books for author: ${author}`);
+              console.log(`Fetching books for author: ${author}`);
               const res = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
@@ -719,7 +719,7 @@ Book: ${unforgettableBook}`;
               );
               return json.items || [];
             } catch (err) {
-              console.log("❌ Error fetching author books:", err);
+              console.log("Error fetching author books:", err);
               return [];
             }
           })
@@ -788,7 +788,7 @@ Book: ${unforgettableBook}`;
 
         for (const query of searchQueries) {
           try {
-            console.log(`📥 Fetching books with query: "${query}"`);
+            console.log(`Fetching books with query: "${query}"`);
             const res = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
@@ -808,7 +808,7 @@ Book: ${unforgettableBook}`;
               }
             });
           } catch (err) {
-            console.error("❌ Error in Google Books fetch:", err);
+            console.error("Error in Google Books fetch:", err);
           }
         }
       }
@@ -835,7 +835,7 @@ Book: ${unforgettableBook}`;
             const orderBy: string = "relevance";
             try {
               console.log(
-                `📥 Fetching unselected genre books with query: "${query}"`
+                `Fetching unselected genre books with query: "${query}"`
               );
               const res = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
@@ -846,7 +846,7 @@ Book: ${unforgettableBook}`;
               const items = json.items || [];
 
               console.log(
-                `📤 Found ${items.length} unselected genre books for query: "${query}"`
+                `Found ${items.length} unselected genre books for query: "${query}"`
               );
 
               items.forEach((book: GoogleBooksItem) => {
@@ -901,7 +901,7 @@ Book: ${unforgettableBook}`;
       );
 
       console.log(
-        `✅ Total unique books after all filtering: ${uniqueFinalBooks.length}`
+        `Total unique books after all filtering: ${uniqueFinalBooks.length}`
       );
       return this.shuffleArray(uniqueFinalBooks);
     } catch (err) {

@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { SafeAreaView, View, Text, StyleSheet, Alert } from "react-native";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
@@ -125,36 +133,47 @@ function TabThreeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LogoHeader title={"Bookify"} isProfileShown={false} />
-      <View>
-        <View style={styles.headerContainer}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>
-              {userName ? `${userName}'s Library` : "Your Library"}
-            </Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={styles.container}>
+        <LogoHeader title={"Bookify"} isProfileShown={false} />
+        <View>
+          <View style={styles.headerContainer}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>
+                {userName ? `${userName}'s Library` : "Your Library"}
+              </Text>
+            </View>
+            {libraryBooks.length > 0 && (
+              <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
+            )}
           </View>
-          <Text style={styles.bookCount}>{libraryBooks.length} books</Text>
+          <View style={styles.searchContainer}>
+            <HomePageSearchInput
+              isHomePage={false}
+              onSearchChange={handleSearchChange}
+              isSubmitButtonShown={false}
+            />
+          </View>
         </View>
-        <View style={styles.searchContainer}>
-          <HomePageSearchInput
-            isHomePage={false}
-            onSearchChange={handleSearchChange}
-            isSubmitButtonShown={false}
+        {libraryBooks.length > 0 && (
+          <BookSearchList
+            books={uniqueById(filteredBooks).reverse()}
+            loadingMore={loading}
+            addBook={() => {}}
+            handleLoadMore={() => {}}
+            isAddButtonShown={false}
+            onLongPressBook={handleLongPressBook}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
           />
-        </View>
-      </View>
-      <BookSearchList
-        books={uniqueById(filteredBooks).reverse()}
-        loadingMore={loading}
-        addBook={() => {}}
-        handleLoadMore={() => {}}
-        isAddButtonShown={false}
-        onLongPressBook={handleLongPressBook}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-      />
-    </SafeAreaView>
+        )}
+        {libraryBooks.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Your library is empty.</Text>
+          </View>
+        )}
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

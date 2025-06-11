@@ -237,14 +237,13 @@ const styles = StyleSheet.create({
     marginTop: 30,
     paddingBottom: 15,
     alignItems: "center",
-    justifyContent: "space-between",
     flexDirection: "row",
     backgroundColor: "#FFF",
   },
   searchbarInputView: {
     width: "85%",
     backgroundColor: "#fff",
-    paddingLeft: 13,
+    paddingLeft: 15,
   },
   searchInputBookIcon: {
     height: 30,

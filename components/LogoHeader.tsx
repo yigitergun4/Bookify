@@ -68,11 +68,11 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   iconBook: {
-    width: 24,
-    height: 24,
+    width: 30,
+    height: 30,
   },
   logo: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: "bold",
   },
   profileIcon: {

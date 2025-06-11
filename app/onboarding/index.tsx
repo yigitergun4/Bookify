@@ -348,6 +348,7 @@ export default function OnboardingFlow() {
     const loadBooks: () => Promise<void> = async () => {
       if (step === 5 && !isLoadingBooks && popularBooks.length === 0) {
         try {
+          setIsLoadingBooks(true);
           // bring popular books from genres
           const genreBooks: GoogleBooksItem[] =
             await recommendationService.getPopularBooks({
@@ -718,7 +719,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   genreButtonSelected: {
-    backgroundColor: "#f4f4f4",
     borderColor: "#000",
   },
   genreText: {

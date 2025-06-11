@@ -18,7 +18,9 @@ export default function MyProfileScreen() {
   const [userName, setUserName] = useState<string>("");
   const [userGenres, setUserGenres] = useState<string[]>([]);
   const [favoriteBooks, setFavoriteBooks] = useState<GoogleBooksItem[]>([]);
-  const [selectedBook, setSelectedBook] = useState<GoogleBooksItem[]>([]);
+  const [selectedBook, setSelectedBook] = useState<GoogleBooksItem | null>(
+    null
+  );
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function MyProfileScreen() {
           <View>
             <HomepageCardList
               books={favoriteBooks}
-              onBookPress={(book) => {
+              onBookPress={(book: GoogleBooksItem) => {
                 setSelectedBook(book);
                 setModalVisible(true);
               }}

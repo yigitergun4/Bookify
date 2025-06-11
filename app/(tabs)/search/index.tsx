@@ -116,7 +116,7 @@ export default function TabTwoScreen() {
               <Text style={styles.discoverText}>Discover</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
                 <Image
-                  source={require("@/assets/images/profileicon.png")}
+                  source={require("@/assets/images/profile-user.png")}
                   style={styles.myProfileImage}
                 />
               </TouchableOpacity>
@@ -127,7 +127,7 @@ export default function TabTwoScreen() {
                 onPress={() => router.replace("/(tabs)/reading")}
               >
                 <Image
-                  source={require("@/assets/images/searchpagebookicon.png")}
+                  source={require("@/assets/images/book.png")}
                   style={styles.searchInputBookIcon}
                 />
               </TouchableOpacity>
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
     paddingLeft: 13,
   },
   searchInputBookIcon: {
-    height: 20,
-    width: 20,
+    height: 30,
+    width: 30,
   },
   booksCardContainer: {
     backgroundColor: "#FFF",

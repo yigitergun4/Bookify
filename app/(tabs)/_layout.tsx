@@ -45,7 +45,7 @@ export default function TabLayout() {
               color="black"
               size={size}
               label="Home"
-              source={require("@/assets/images/homeicon.png")}
+              source={require("@/assets/images/homepage-icon.png")}
             />
           ),
         }}
@@ -59,7 +59,7 @@ export default function TabLayout() {
               color="black"
               size={size}
               label="Search"
-              source={require("@/assets/images/searchicon.png")}
+              source={require("@/assets/images/search-icon.png")}
             />
           ),
         }}
@@ -87,7 +87,7 @@ export default function TabLayout() {
               color="black"
               size={size}
               label="My Profile"
-              source={require("@/assets/images/profileicon.png")}
+              source={require("@/assets/images/profile-user.png")}
             />
           ),
         }}

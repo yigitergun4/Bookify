@@ -59,6 +59,7 @@ const SearchInput = ({
         onChangeText={handleTextChange}
         onSubmitEditing={handleSearch}
         returnKeyType="search"
+        autoCorrect={false}
       />
       {isSubmitButtonShown && (
         <TouchableOpacity onPress={handleSearch}>

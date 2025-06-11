@@ -25,7 +25,7 @@ export default function LogoHeader({
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image
-          source={require("@/assets/images/iconbook.png")}
+          source={require("@/assets/images/book.png")}
           style={styles.iconBook}
         />
         <Text style={styles.logo}>Bookify</Text>
@@ -34,7 +34,7 @@ export default function LogoHeader({
         <View>
           <TouchableOpacity onPress={() => setShowPopup(!showPopup)}>
             <Image
-              source={require("@/assets/images/profileicon.png")}
+              source={require("@/assets/images/profile-user.png")}
               style={styles.profileIcon}
             />
           </TouchableOpacity>

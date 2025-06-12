@@ -60,7 +60,7 @@ export default function EditBookScreen() {
       try {
         await addBook(bookObj);
         Alert.alert("Success", "Book added to your library!");
-        router.replace("/(tabs)/reading");
+        router.replace("/(tabs)/homefolder/home");
       } catch (error: any) {
         if (error?.message === "This book is already in your library.") {
           Alert.alert("Error", error.message);
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   button: {
-    backgroundColor: "#4f7cff",
+    backgroundColor: "#000",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 32,

@@ -138,8 +138,8 @@ const SignInScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
         <View>
           <View style={styles.card}>
             <View style={styles.logoContainer}>
@@ -200,57 +200,55 @@ const SignInScreen = () => {
             <SignInButtonWithGoogle />
           </View>
         </View>
-      </TouchableWithoutFeedback>
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={resetModalVisible}
+          onRequestClose={() => setResetModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Reset Password</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter your email address to receive password reset instructions.
+              </Text>
+              <View style={styles.modalInput}>
+                <TextInput
+                  placeholder="Email"
+                  placeholderTextColor="gray"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={styles.inputText}
+                />
+              </View>
 
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={resetModalVisible}
-        onRequestClose={() => setResetModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reset Password</Text>
-            <Text style={styles.modalSubtitle}>
-              Enter your email address to receive password reset instructions.
-            </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setResetModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
 
-            <View style={styles.modalInput}>
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor="gray"
-                value={resetEmail}
-                onChangeText={setResetEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.inputText}
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setResetModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, styles.resetButton]}
-                onPress={checkEmailAndSendReset}
-                disabled={isCheckingEmail}
-              >
-                {isCheckingEmail ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.resetButtonText}>Send Reset Link</Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.resetButton]}
+                  onPress={checkEmailAndSendReset}
+                  disabled={isCheckingEmail}
+                >
+                  {isCheckingEmail ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

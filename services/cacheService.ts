@@ -12,20 +12,14 @@ interface BookClick {
   userId: string;
 }
 
-interface RecentClick {
-  userId: string;
-  bookInfo: any;
-  timestamp: string;
-}
-
 export class CacheService {
   private static instance: CacheService;
   private cache: Map<string, CacheItem<any>> = new Map();
   private cleanupThreshold: number = 100;
-  private readonly RECENT_CLICKS_KEY = "recent_book_clicks";
-  private readonly MAX_RECENT_CLICKS = 20;
+  private readonly RECENT_CLICKS_KEY: string = "recent_book_clicks";
+  private readonly MAX_RECENT_CLICKS: number = 20;
   private recentClicksSubscribers: ((clicks: BookClick[]) => void)[] = [];
-  private RECOMMENDED_BOOKS_KEY = "recommended_books";
+  private RECOMMENDED_BOOKS_KEY: string = "recommended_books";
   private userRecentClicksSubscribers: Map<
     string,
     ((clicks: BookClick[]) => void)[]

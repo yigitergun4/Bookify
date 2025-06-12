@@ -18,8 +18,6 @@ export default function SearchResultsScreen() {
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [startIndex, setStartIndex] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
-  const [isBooksAddedLoading, setIsBooksAddedLoading] =
-    useState<boolean>(false);
   const PAGE_SIZE: number = 10;
 
   const { addBook } = useLibrary();
@@ -76,10 +74,8 @@ export default function SearchResultsScreen() {
         {
           text: "Yes",
           onPress: async () => {
-            setIsBooksAddedLoading(true);
             try {
               await addBook(book);
-              setIsBooksAddedLoading(false);
               Alert.alert("Success", "Book added to your library!");
             } catch (err: any) {
               if (err?.message === "This book is already in your library.") {
@@ -130,22 +126,11 @@ export default function SearchResultsScreen() {
             handleLoadMore={handleLoadMore}
             isAddButtonShown={true}
           />
-          {openModal(isBooksAddedLoading)}
         </>
       )}
     </SafeAreaView>
   );
 }
-
-const openModal = (isBooksAddedLoading: boolean) => {
-  if (isBooksAddedLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="black" />
-      </View>
-    );
-  }
-};
 
 const styles = StyleSheet.create({
   safeArea: {

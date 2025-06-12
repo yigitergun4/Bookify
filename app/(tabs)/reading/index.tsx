@@ -84,7 +84,7 @@ function TabThreeScreen() {
   ) => {
     Alert.alert(
       "Remove Book",
-      "Do you want to remove this book from your library?",
+      `Do you want to remove "${book.volumeInfo.title}" from your library?`,
       [
         { text: "Cancel", style: "cancel" },
         {

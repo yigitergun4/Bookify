@@ -90,13 +90,9 @@ export default function CameraButton({
         title: string,
         author: string,
         language: string
-      ) => Promise<any> = async (
-        title: string,
-        author: string,
-        language: string
-      ) => {
+      ) => Promise<any> = async (title: string, author: string) => {
         try {
-          const result: any = await searchBook(title, author, language);
+          const result: any = await searchBook(title, author);
           console.log(
             "Found:",
             result.volumeInfo.title,
@@ -150,7 +146,7 @@ export default function CameraButton({
             // Her iki benzerlik de varsa eşleşme başarılıdır
             if (titleSim && authorSim) {
               router.push({
-                pathname: "/(tabs)/homefolder/photoeditpage" as any,
+                pathname: "/(tabs)/homefolder/photoeditpage",
                 params: {
                   book: JSON.stringify(result),
                 },
@@ -173,7 +169,7 @@ export default function CameraButton({
         );
 
         router.push({
-          pathname: "/(tabs)/homefolder/notexactbookfound" as any,
+          pathname: "/(tabs)/homefolder/notexactbookfound",
           params: {
             books: JSON.stringify(books),
           },

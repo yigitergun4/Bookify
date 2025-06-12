@@ -78,48 +78,85 @@ export default function HomePageFlatlistRecentClicks({
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={books}
-        keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }: any) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => onBookPress(item)}
-          >
-            <Image
-              style={styles.bookImage}
-              source={
-                item.volumeInfo?.imageLinks?.thumbnail
-                  ? {
-                      uri: item.volumeInfo.imageLinks.thumbnail.startsWith(
-                        "http:"
-                      )
-                        ? item.volumeInfo.imageLinks.thumbnail.replace(
-                            "http:",
-                            "https:"
-                          )
-                        : item.volumeInfo.imageLinks.thumbnail,
-                    }
-                  : require("@/assets/images/not-avaliable-book-photo.png")
-              }
-              resizeMode="contain"
-            />
-            <View style={styles.bookTexts}>
-              <Text style={styles.titleText} numberOfLines={1}>
-                {item.volumeInfo?.title}
-              </Text>
-              <Text style={styles.authorText} numberOfLines={1}>
-                - {item.volumeInfo?.authors?.[0] || "Unknown"}
-              </Text>
-              <Text style={styles.languageText}>
-                Language: {item.volumeInfo?.language?.toUpperCase()}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+      {books.length === 1 ? (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => onBookPress(books[0])}
+        >
+          <Image
+            style={styles.bookImage}
+            source={
+              books[0].volumeInfo?.imageLinks?.thumbnail
+                ? {
+                    uri: books[0].volumeInfo.imageLinks.thumbnail.startsWith(
+                      "http:"
+                    )
+                      ? books[0].volumeInfo.imageLinks.thumbnail.replace(
+                          "http:",
+                          "https:"
+                        )
+                      : books[0].volumeInfo.imageLinks.thumbnail,
+                  }
+                : require("@/assets/images/not-avaliable-book-photo.png")
+            }
+            resizeMode="contain"
+          />
+          <View style={styles.bookTexts}>
+            <Text style={styles.titleText} numberOfLines={1}>
+              {books[0].volumeInfo?.title}
+            </Text>
+            <Text style={styles.authorText} numberOfLines={1}>
+              - {books[0].volumeInfo?.authors?.[0] || "Unknown"}
+            </Text>
+            <Text style={styles.languageText}>
+              Language: {books[0].volumeInfo?.language?.toUpperCase()}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <FlatList
+          data={books}
+          keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }: any) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => onBookPress(item)}
+            >
+              <Image
+                style={styles.bookImage}
+                source={
+                  item.volumeInfo?.imageLinks?.thumbnail
+                    ? {
+                        uri: item.volumeInfo.imageLinks.thumbnail.startsWith(
+                          "http:"
+                        )
+                          ? item.volumeInfo.imageLinks.thumbnail.replace(
+                              "http:",
+                              "https:"
+                            )
+                          : item.volumeInfo.imageLinks.thumbnail,
+                      }
+                    : require("@/assets/images/not-avaliable-book-photo.png")
+                }
+                resizeMode="contain"
+              />
+              <View style={styles.bookTexts}>
+                <Text style={styles.titleText} numberOfLines={1}>
+                  {item.volumeInfo?.title}
+                </Text>
+                <Text style={styles.authorText} numberOfLines={1}>
+                  - {item.volumeInfo?.authors?.[0] || "Unknown"}
+                </Text>
+                <Text style={styles.languageText}>
+                  Language: {item.volumeInfo?.language?.toUpperCase()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
       <Modal
         visible={modalVisible}
         transparent

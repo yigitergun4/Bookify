@@ -7,8 +7,9 @@ import {
   StyleSheet,
   Image,
   SafeAreaView,
-  ScrollView,
   Alert,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { router } from "expo-router";
 import SignInButtonWithGoogleButton from "../components/SignInButtonWithGoogle";
@@ -47,81 +48,83 @@ const SignUpScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.titleHeader}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.titleHeader}>
+            <Image
+              source={require("@/assets/images/headerbookicon.png")}
+              style={{ height: 30, width: 30 }}
+            />
+            <Text style={styles.logo}>Bookify</Text>
+          </View>
           <Image
-            source={require("@/assets/images/headerbookicon.png")}
-            style={{ height: 30, width: 30 }}
+            style={styles.image}
+            source={require("@/assets/images/signupimage.png")}
           />
-          <Text style={styles.logo}>Bookify</Text>
+          <Text style={styles.welcome}>Welcome to Bookify!</Text>
+          <Text style={styles.subtext}>
+            Discover a world of AI knowledge and resources.{"\n"}Sign up to
+            explore more.
+          </Text>
         </View>
-        <Image
-          style={styles.image}
-          source={require("@/assets/images/signupimage.png")}
-        />
-        <Text style={styles.welcome}>Welcome to Bookify!</Text>
-        <Text style={styles.subtext}>
-          Discover a world of AI knowledge and resources.{"\n"}Sign up to
-          explore more.
-        </Text>
-      </View>
-      <View style={styles.form}>
-        <View style={styles.input}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Email"
-            placeholderTextColor="gray"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
-        <View style={styles.input}>
-          <TextInput
-            key={showPassword ? "text" : "password"}
-            style={styles.textInput}
-            placeholder="Password"
-            placeholderTextColor="gray"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            {showPassword ? (
-              <Image
-                source={require("@/assets/images/visibility_off_password.png")}
-                style={{ height: 20, width: 20 }}
-              />
-            ) : (
-              <Image
-                source={require("@/assets/images/visibility_on_password.png")}
-                style={{ height: 20, width: 20 }}
-              />
-            )}
+        <View style={styles.form}>
+          <View style={styles.input}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Email"
+              placeholderTextColor="gray"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+          <View style={styles.input}>
+            <TextInput
+              key={showPassword ? "text" : "password"}
+              style={styles.textInput}
+              placeholder="Password"
+              placeholderTextColor="gray"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              {showPassword ? (
+                <Image
+                  source={require("@/assets/images/visibility_off_password.png")}
+                  style={{ height: 20, width: 20 }}
+                />
+              ) : (
+                <Image
+                  source={require("@/assets/images/visibility_on_password.png")}
+                  style={{ height: 20, width: 20 }}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.signInTextView}>
+            <Text style={styles.signInText}>Already have an account?</Text>
+            <TouchableOpacity
+              style={{}}
+              onPress={() => router.replace("/signin")}
+            >
+              <Text style={{ fontWeight: "bold" }}>Sign in</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.signUpButton} onPress={signUp}>
+            <Text style={styles.signUpButtonText}>Sign up</Text>
           </TouchableOpacity>
+          <View style={styles.orLine}>
+            <View style={styles.line} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.line} />
+          </View>
+          <SignInButtonWithGoogleButton />
         </View>
-        <View style={styles.signInTextView}>
-          <Text style={styles.signInText}>Already have an account?</Text>
-          <TouchableOpacity
-            style={{}}
-            onPress={() => router.replace("/signin")}
-          >
-            <Text style={{ fontWeight: "bold" }}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={styles.signUpButton} onPress={signUp}>
-          <Text style={styles.signUpButtonText}>Sign up</Text>
-        </TouchableOpacity>
-        <View style={styles.orLine}>
-          <View style={styles.line} />
-          <Text style={styles.orText}>or</Text>
-          <View style={styles.line} />
-        </View>
-        <SignInButtonWithGoogleButton />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

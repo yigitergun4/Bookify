@@ -13,7 +13,7 @@ import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import BookCard from "@/components/SearchPageBooksCard";
 import CameraButton from "@/components/CameraButton";
-import { router, useNavigation } from "expo-router";
+import { router } from "expo-router";
 import { useState } from "react";
 import { searchBooksPaginated } from "@/services/booksService";
 import { useFocusEffect } from "expo-router";
@@ -39,7 +39,6 @@ export default function TabTwoScreen() {
   const [totalItems, setTotalItems] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isSearchingImage, setIsSearchingImage] = useState<boolean>(false);
-  const navigation = useNavigation();
   const fetchBooks: (query: string, append: boolean) => Promise<void> = async (
     query: string,
     append: boolean

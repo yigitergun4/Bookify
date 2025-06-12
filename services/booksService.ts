@@ -21,11 +21,9 @@ export class BooksError extends ApiError {
 
 export const searchBook = async (
   title: string,
-  author: string,
-  language: string
+  author: string
 ): Promise<any> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
-
   try {
     const result = await withRetry(async () => {
       let query: string = "";
@@ -40,10 +38,6 @@ export const searchBook = async (
       }
 
       let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
-
-      if (language && language !== "Unknown") {
-        url += `&langRestrict=${encodeURIComponent(language)}`;
-      }
 
       const response = await axios.get(url);
       const items = response.data.items || [];
@@ -98,7 +92,7 @@ export const searchBookList = async (
   if (language && language !== "Unknown") {
     url += `&langRestrict=${encodeURIComponent(language)}`;
   }
-  url += `&fields=items(id,volumeInfo,accessInfo,saleInfo)&key=${BOOKS_API_KEY}`;
+  url += `&key=${BOOKS_API_KEY}`;
 
   console.log("Search URL:", url);
 

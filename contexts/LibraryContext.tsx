@@ -155,7 +155,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       await cacheService.saveRecommendedBooks(user.uid, newBooks);
       await recommendationService.saveRecommendations(user.uid, newBooks);
     } catch (error) {
-      console.error("[LibraryContext] Error loading recommended books:", error);
+      console.log("[LibraryContext] Error loading recommended books:", error);
       if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -197,7 +197,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       // Update local state
       setLibraryBooks((prev) => [...prev, book]);
     } catch (error) {
-      console.error("[LibraryContext] Error adding book:", error);
+      console.log("[LibraryContext] Error adding book:", error);
       throw error;
     }
   };

@@ -80,7 +80,6 @@ const RecommendedScreen = () => {
         "[RecommendedScreen] Existing book count:",
         existingBookIds.size
       );
-
       // Get all previously recommended books from Firebase
       const recommendationsRef = collection(
         FIREBASE_DB,
@@ -97,18 +96,17 @@ const RecommendedScreen = () => {
           previouslyRecommendedIds.add(book.id)
         );
       });
-
       // Get user's favorite genres and books for better recommendations
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
       const userData: any = userSnap.data();
-
       const favoriteGenres: string[] = userData?.favoriteGenres || [];
       const favoriteBooks: string[] = userData?.favoriteBooks || [];
       const libraryBooks: GoogleBooksItem[] = userData?.library || [];
       const favoriteAuthors: string =
         userData?.favoriteAuthors?.join(", ") || "";
-      const unforgettableBook: string = userData?.unforgettableBook || "";
+      const unforgettableBook: GoogleBooksItem[] =
+        userData?.unforgettableBook || [];
       const userGoal: UserGoal = {
         id: userData?.goal?.id || "",
         title: userData?.goal?.title || "",
@@ -116,7 +114,6 @@ const RecommendedScreen = () => {
         categories: userData?.goal?.categories || [],
         description: userData?.userGoal?.description || "",
       };
-
       console.log("Processed data:", {
         favoriteGenres,
         favoriteBooks,
@@ -125,49 +122,38 @@ const RecommendedScreen = () => {
         unforgettableBook,
         userGoal,
       });
-
       let newBooks: GoogleBooksItem[] = [];
-
       // Get library book IDs
       const libraryBookIds: Set<string> = new Set(
         libraryBooks.map((book: GoogleBooksItem) => book.id)
       );
-
       // If we've loaded more than 40 books, try different search strategies
-      if (recommendedBooks.length >= 40) {
+      if (libraryBooks.length > 0) {
         try {
           // Get ChatGPT recommendations
           const queries: string[] =
-            await recommendationService.getChatGPTRecommendations(
-              favoriteGenres,
-              favoriteBooks,
+            await recommendationService.getChatGPTRecommendationsForLoadMore(
               libraryBooks,
-              favoriteAuthors,
-              unforgettableBook,
-              userGoal
+              userGoal,
+              favoriteGenres,
+              unforgettableBook
             );
-
           // Try all generated queries and combine results
           const queryResults: GoogleBooksItem[][] = await Promise.all(
             queries.map(async (query: string) => {
               try {
                 return await recommendationService.searchBooksWithQuery(query);
               } catch (error) {
-                console.warn(
-                  `⚠️ Failed to fetch books for query: ${query}`,
-                  error
-                );
+                console.log(`Failed to fetch books for query: ${query}`, error);
                 return [];
               }
             })
           );
-
           newBooks = queryResults.flat() as GoogleBooksItem[];
-
           // If we got no results, try genre-based search
           if (newBooks.length === 0 && favoriteGenres.length > 0) {
             console.log(
-              "🔄 No results from ChatGPT queries, falling back to genre search"
+              "No results from ChatGPT queries, falling back to genre search"
             );
             const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
@@ -176,7 +162,7 @@ const RecommendedScreen = () => {
             );
           }
         } catch (error) {
-          console.error("❌ Error in recommendation process:", error);
+          console.error("Error in recommendation process:", error);
           // Fallback to genre-based search if ChatGPT fails
           if (favoriteGenres.length > 0) {
             const randomGenre: string =
@@ -188,16 +174,15 @@ const RecommendedScreen = () => {
         }
       } else {
         // Initial genre-based search
-        if (newBooks.length < 20 && favoriteGenres.length > 0) {
-          const randomGenre: string =
-            favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
-          try {
-            newBooks = await recommendationService.searchBooksWithQuery(
-              `subject:${randomGenre}`
-            );
-          } catch (error) {
-            console.error("❌ Error in genre-based search:", error);
-          }
+        const randomGenre: string =
+          favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
+        console.log(randomGenre, "randomGenrefor elssee");
+        try {
+          newBooks = await recommendationService.searchBooksWithQuery(
+            `subject:${randomGenre}`
+          );
+        } catch (error) {
+          console.error("Error in genre-based search:", error);
         }
       }
 
@@ -216,20 +201,16 @@ const RecommendedScreen = () => {
       }
 
       // Limit to 50 books per load
-      const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
       // randomize the books
-      limitedNewBooks.sort(() => Math.random() - 0.5);
+      uniqueNewBooks.sort(() => Math.random() - 0.5);
 
       // Save new books to Firebase using subcollection structure
-      await recommendationService.saveRecommendations(
-        user.uid,
-        limitedNewBooks
-      );
+      await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);
 
       // Update the recommended books list by appending new books
       setRecommendedBooks((prev: GoogleBooksItem[]) => [
         ...prev,
-        ...limitedNewBooks,
+        ...uniqueNewBooks,
       ]);
     } catch (error) {
       console.error(

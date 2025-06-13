@@ -565,7 +565,7 @@ export default function OnboardingFlow() {
         favoriteGenres: selectedGenres,
         favoriteAuthors: authorsArray,
         favoriteBooks: booksArray,
-        unforgettableBook: unforgettableBookArray,
+        unforgettableBook: unforgettableBookArray.join(","),
         userGoal: goal,
         library: [],
         createdAt: new Date().toISOString(),

@@ -83,12 +83,12 @@ export const searchBookList = async (
 ): Promise<any[]> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
   console.log("Search parameters:", { title, author, language });
-
+  const MAX_RESULTS: number = 40;
   let query = encodeURIComponent(title);
   if (author && author !== "Unknown") {
     query += "+inauthor:" + encodeURIComponent(author);
   }
-  let url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
+  let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}`;
   if (language && language !== "Unknown") {
     url += `&langRestrict=${encodeURIComponent(language)}`;
   }

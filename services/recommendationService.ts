@@ -92,100 +92,87 @@ export class RecommendationService {
     unforgettableBook: string,
     userGoal?: UserGoal
   ): Promise<string[]> {
-    const libraryTitles = libraryBooks.map(
-      (book) => book.volumeInfo?.title || ""
-    );
+    const libraryTitles = libraryBooks
+      .map((book) => book.volumeInfo?.title || "")
+      .filter(Boolean)
+      .join(", ");
 
-    const prompt = (() => {
-      const genres = favoriteGenres.join(", ");
-      const books = favoriteBooks.join(", ");
-      const authors = favoriteAuthors || "None";
-      const unforgettable = unforgettableBook || "None";
-      const avoidTitles = libraryTitles.join(", ");
-      const goalDescription = userGoal?.description || "None";
+    const genres = favoriteGenres.join(", ");
+    const books = favoriteBooks.join(", ");
+    const authors = favoriteAuthors || "None";
+    const unforgettable = unforgettableBook || "None";
+    const goalDescription = userGoal?.description || "None";
+
+    const prompt: string = (() => {
+      const sharedHeader = `
+  You're a recommendation engine generating **exactly 4 personalized Google Books API queries**, based solely on the user's own preferences. Use only the data provided — no assumptions or similarity-based logic.
+  
+  User’s preferences:
+  - Favorite genres: ${genres}
+  - Favorite books: ${books}
+  - Favorite authors: ${authors}
+  - Unforgettable book: ${unforgettable}
+  - User goal: ${goalDescription}
+  - Already known book titles: ${libraryTitles}
+  `;
 
       switch (userGoal?.id) {
         case "classics":
-          return `You are helping construct advanced search queries for a book discovery system.
-    
-    Generate 5 Google Books API queries that help the user discover **classic and timeless literature** from various cultures and eras.
-    
-    User Preferences:
-    - Favorite genres: ${genres}
-    - Favorite books: ${books}
-    - Favorite authors: ${authors}
-    - Unforgettable book: ${unforgettable}
-    
-    Ensure:
-    - Focus on classics and literary masterpieces
-    - Include some queries for 19th and early 20th century
-    - Avoid books already known: ${avoidTitles}
-    - No explanations or numbering, just the queries.`;
+          return `${sharedHeader}
+  
+  Instructions:
+  - Generate 4 queries using only this user's input.
+  - Focus on timeless literature the user already likes:
+    - Use classic authors they've read
+    - Repeat book titles if re-reading is plausible
+    - Include classic genres
+  - Do NOT invent or assume new interests.
+  - Output: 4 plain queries, one per line.`;
 
         case "contemporary":
-          return `You're creating smart Google Books API queries for someone who wants **modern and trending books**.
-    
-    User Preferences:
-    - Favorite genres: ${genres}
-    - Favorite books: ${books}
-    - Favorite authors: ${authors}
-    - Unforgettable book: ${unforgettable}
-    
-    Requirements:
-    - Only books published in the last 10 years
-    - Mix of bestsellers, award winners, and recent favorites
-    - Avoid already known titles: ${avoidTitles}
-    - Return exactly 5 creative search queries, one per line, no numbering.`;
+          return `${sharedHeader}
+  
+  Instructions:
+  - Create 4 modern discovery queries:
+    - Use recent works by favorite authors or books the user enjoyed
+    - Repeat titles or genres if meaningful
+  - Avoid speculative or similarity-based ideas.
+  - Output: 4 search queries, no explanation.`;
 
         case "genres":
-          return `You are assisting in generating creative genre-diverse Google Books API queries.
-    
-    User Preferences:
-    - Favorite genres: ${genres}
-    - Favorite books: ${books}
-    - Favorite authors: ${authors}
-    - Unforgettable book: ${unforgettable}
-    
-    Goal:
-    - Explore books in favorite and **complementary genres**
-    - Some genre mashups or unexpected cross-genre queries
-    - Avoid these books: ${avoidTitles}
-    - Output: 5 distinct search queries only, one per line, no explanations.`;
+          return `${sharedHeader}
+  
+  Instructions:
+  - Build 4 genre-driven queries that reflect the user's known preferences.
+  - Combine genres with favorite books or authors.
+  - Stay entirely within the provided data.
+  - Return only 4 distinct queries.`;
 
         case "authors":
-          return `You're designing Google Books API queries to help a reader discover **books by favorite or similar authors**.
-    
-    User Preferences:
-    - Favorite genres: ${genres}
-    - Favorite books: ${books}
-    - Favorite authors: ${authors}
-    - Unforgettable book: ${unforgettable}
-    
-    Instructions:
-    - Focus on author-based discovery (e.g. "books by", "similar to", "inspired by")
-    - Highlight similar writing style or themes
-    - Exclude these titles: ${avoidTitles}
-    - Return 5 concise, author-oriented queries. No explanations or numbering.`;
+          return `${sharedHeader}
+  
+  Instructions:
+  - Focus only on the user's favorite authors and their works.
+  - Include exact matches if relevant.
+  - No similar author suggestions.
+  - Return exactly 4 queries — one per line, no extra text.`;
 
         default:
-          return `I need book search queries for the Google Books API based on the following preferences:
-    - Favorite genres: ${genres}
-    - Favorite books: ${books}
-    - Favorite authors: ${authors}
-    - Unforgettable book: ${unforgettable}
-    - User goal: ${goalDescription}
-    
-    Generate exactly 5 concise and creative search queries (no explanations) that help discover new books aligned with these preferences.
-    Avoid mentioning books with these titles: ${avoidTitles}
-    
-    Format: One query per line, no numbering.`;
+          return `${sharedHeader}
+  
+  Instructions:
+  - Based only on the user's preferences, generate 4 relevant queries.
+  - Use any combination of books, genres, or authors the user provided.
+  - You may repeat known content if it matches the user's goal.
+  - Return exactly 4 queries, no explanations.`;
       }
     })();
+
     console.log(prompt, "prompt:onboarding");
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan iş için yeterli
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -204,10 +191,11 @@ export class RecommendationService {
         ?.split("\n")
         .map((line) => line.trim())
         .filter(Boolean)
-        .slice(0, 5);
+        .slice(0, 4); // sadece 4 query dönecek
 
-      if (!queries || queries.length === 0)
+      if (!queries || queries.length === 0) {
         throw new Error("No queries returned from ChatGPT.");
+      }
 
       console.log("GPT Search Queries:", queries, "queries:onboarding");
       return queries;
@@ -216,99 +204,101 @@ export class RecommendationService {
       return [];
     }
   }
+
   async getChatGPTRecommendationsForLoadMore(
     libraryBooks: GoogleBooksItem[],
     userGoal: UserGoal,
     favoriteGenres: string[],
-    unforgettableBook: GoogleBooksItem[]
+    unforgettableBook: string
   ): Promise<string[]> {
-    const authorsFromLibrary: string[] = libraryBooks
+    const authorsFromLibrary = libraryBooks
       .map((book) => book.volumeInfo?.authors || [])
       .flat()
       .filter(Boolean);
 
+    const uniqueAuthors = Array.from(new Set(authorsFromLibrary));
+
+    // Rastgele 3 yazar seç
+    const shuffledAuthors = uniqueAuthors.sort(() => 0.5 - Math.random());
+    const selectedAuthors = shuffledAuthors.slice(0, 2); // veya Math.min(3, uniqueAuthors.length)
+    const authorList = selectedAuthors.join(", ");
+
+    const sampledAuthors: string = authorList;
+
     const unforgettableBookList: string[] = unforgettableBook
-      .map((book: GoogleBooksItem) => book.volumeInfo?.authors || "")
-      .flat()
+      .split(",")
+      .map((title) => title.trim())
       .filter(Boolean);
 
-    const authorList: string = Array.from(
-      new Set([...authorsFromLibrary, ...unforgettableBookList])
-    ).join(", ");
+    const sampledUnforgettableBooks: string = unforgettableBookList
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 2)
+      .join(", ");
 
     const genreList: string = favoriteGenres.join(", ");
     const libraryTitles: string = libraryBooks
       .map((book) => book.volumeInfo?.title || "")
+      .filter(Boolean)
       .join(", ");
     const goalDescription: string = userGoal?.description || "discover books";
 
     const prompt: string = (() => {
       const sharedHeader = `
-    You're a book recommendation engine generating personalized and creative Google Books API search queries.
-    
-    User’s preferences:
-    - Favorite genres: ${genreList}
-    - Favorite authors (from library and unforgettable books): ${authorList}
-    - User goal: ${goalDescription}
-    
-    Already known book titles (in library): ${libraryTitles}
-    `;
+  You're a book recommendation engine generating personalized and creative Google Books API search queries.
+  
+  User’s preferences:
+  - Favorite genres: ${genreList}
+  - Sampled favorite authors: ${sampledAuthors}
+  - Sampled unforgettable books: ${sampledUnforgettableBooks}
+  - User goal: ${goalDescription}
+  - Already known book titles to avoid: ${libraryTitles}
+  
+  RULES:
+  - Vary each query in terms of genre, style, or focus.
+  - No repeated authors in queries.
+  - Output exactly 5 queries. No explanations or numbering.
+  `;
 
       switch (userGoal.id) {
         case "classics":
           return `${sharedHeader}
-    
-    Instructions:
-    - Generate 5 search queries:
-      - 2 should be based on the user's actual favorite authors and their known works (e.g., “books by Dostoevsky” or “read '1984' again”).
-      - 3 should help explore other timeless classics from different cultures and historical eras.
-    - Include 19th–20th century authors if relevant.
-    - You may repeat a known author or book if it fits the user’s goal (e.g., re-reading or deepening).
-    - Avoid excessive duplication.
-    - Return only the 5 queries — no numbers, no explanation.`;
+  
+  Instructions:
+  - 2 queries based directly on sampled authors or unforgettable books (e.g., "books by Leo Tolstoy").
+  - 3 queries that explore other classic literature from diverse cultures (19th–20th century ideal).
+  `;
 
         case "contemporary":
           return `${sharedHeader}
-    
-    Instructions:
-    - Generate 5 modern search queries:
-      - 2 based on favorite authors or books the user already enjoyed (even repeating titles is okay if intentional).
-      - 3 exploring fresh books from the last 10 years: bestsellers, award-winners, or stylistically similar.
-    - Include genre or theme variety.
-    - Prioritize relevance over novelty.
-    - No extra formatting. Return only 5 queries.`;
+  
+  Instructions:
+  - 2 queries based on sampled authors or unforgettable books.
+  - 3 queries focused on modern, trending literature from the last 10 years (bestsellers, stylistic matches).
+  `;
 
         case "genres":
           return `${sharedHeader}
-    
-    Instructions:
-    - Build 5 genre-creative search queries:
-      - 2 directly referencing user's favorite books or authors (e.g., "more like 'The Road' by Cormac McCarthy").
-      - 3 exploring cross-genre, mashup, or contrasting genres the user may enjoy.
-    - Use combinations like “philosophical sci-fi” or “romantic horror”.
-    - Returning a known book is allowed if it fits a genre-mixing purpose.
-    - Return only 5 distinct queries, no explanation.`;
+  
+  Instructions:
+  - 2 queries using sampled authors or unforgettable books in unique genre blends.
+  - 3 queries mixing genres like “romantic sci-fi” or “psychological horror”.
+  `;
 
         case "authors":
           return `${sharedHeader}
-    
-    Instructions:
-    - Focus on author-based discovery.
-    - Generate 5 queries:
-      - 2 about books by the user’s favorite authors (same authors and books allowed).
-      - 3 suggesting authors or books with similar writing style, themes, or reputation.
-    - Mentioning a previously read book or author again is fine if highly relevant.
-    - No explanation, no numbering — return only 5 search queries.`;
+  
+  Instructions:
+  - 2 queries for books by sampled authors.
+  - 3 queries suggesting authors similar in tone, theme, or genre.
+  `;
 
         default:
           return `${sharedHeader}
-    
-    Instructions:
-    - Generate a mix of 5 creative queries:
-      - 2 directly based on user's own authors or favorite books (you may include repeated works if relevant).
-      - 3 based on genre or user goal, encouraging discovery and variety.
-    - Avoid repeating titles unnecessarily unless for re-reading or deepening experience.
-    - Output 5 queries. No extra text, no numbering.`;
+  
+  Instructions:
+  - 2 queries based on the sampled authors and unforgettable books.
+  - 3 additional genre-based creative queries, aligned with user goal.
+  `;
       }
     })();
 
@@ -323,8 +313,8 @@ export class RecommendationService {
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.85,
-        presence_penalty: 0.5,
+        temperature: 0.9, // Biraz daha rastlantısallık katmak için artırıldı
+        presence_penalty: 0.6,
         frequency_penalty: 0.3,
         max_tokens: 600,
       });
@@ -695,7 +685,7 @@ Book: ${unforgettableBook}`;
       // Process user's favorite genres first
       for (const genre of favoriteGenres) {
         const base = 40;
-        const extra = 25;
+        const extra = 10;
         const total = base + (genreCount - 1) * extra;
         const currentYear = new Date().getFullYear();
         const fromYear = currentYear - 5;

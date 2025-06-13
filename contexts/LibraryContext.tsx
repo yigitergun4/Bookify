@@ -174,7 +174,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       // Check if book is already in library
       if (isBookInLibrary(book.id)) {
         throw new Error("This book is already in your library.");
-        return;
       }
 
       // Add to library
@@ -187,12 +186,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         ...userData,
         library: [...library, book],
       });
-
-      // Remove from recommendations
-      await recommendationService.removeBookFromRecommendations(
-        user.uid,
-        book.id
-      );
 
       // Update local state
       setLibraryBooks((prev) => [...prev, book]);

@@ -161,7 +161,6 @@ export default function CameraButton({
 
       if (!matched) {
         console.log("No matching book found. Showing alternatives...");
-
         const books: GoogleBooksItem[] = await searchBookList(
           bookInfo.title,
           "",

@@ -105,8 +105,7 @@ const RecommendedScreen = () => {
       const libraryBooks: GoogleBooksItem[] = userData?.library || [];
       const favoriteAuthors: string =
         userData?.favoriteAuthors?.join(", ") || "";
-      const unforgettableBook: GoogleBooksItem[] =
-        userData?.unforgettableBook || [];
+      const unforgettableBook: string = userData?.unforgettableBook || "";
       const userGoal: UserGoal = {
         id: userData?.goal?.id || "",
         title: userData?.goal?.title || "",
@@ -174,9 +173,9 @@ const RecommendedScreen = () => {
         }
       } else {
         // Initial genre-based search
+        console.log("Initial genre-based search");
         const randomGenre: string =
           favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
-        console.log(randomGenre, "randomGenrefor elssee");
         try {
           newBooks = await recommendationService.searchBooksWithQuery(
             `subject:${randomGenre}`
@@ -195,14 +194,18 @@ const RecommendedScreen = () => {
       );
 
       if (uniqueNewBooks.length === 0) {
-        setError("No more books to recommend at this time.");
+        Alert.alert(
+          "No more books to recommend at this time.",
+          "Please add some books to your library to get more recommendations"
+        );
         setIsLoadingMore(false);
         return;
       }
 
       // Limit to 50 books per load
+      // const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
       // randomize the books
-      uniqueNewBooks.sort(() => Math.random() - 0.5);
+      // limitedNewBooks.sort(() => Math.random() - 0.5);
 
       // Save new books to Firebase using subcollection structure
       await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);

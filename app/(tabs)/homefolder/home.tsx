@@ -125,7 +125,7 @@ export default function TabOneScreen() {
       try {
         await cacheService.addBookClick(book, user.uid);
         setRecentClicks((prev: GoogleBooksItem[]) => {
-          const isAlreadyAdded = prev.some(
+          const isAlreadyAdded: boolean = prev.some(
             (b: GoogleBooksItem) =>
               b.id === book.id || b.volumeInfo?.title === book.volumeInfo?.title
           );
@@ -273,16 +273,5 @@ const styles = StyleSheet.create({
   seeAllText: {
     textDecorationLine: "underline",
     color: "black",
-  },
-  getRecommendationsButton: {
-    backgroundColor: "#fdfedb",
-    padding: 14,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  getRecommendationsText: {
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });

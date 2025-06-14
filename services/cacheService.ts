@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ENV from "../config/env";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 interface CacheItem<T> {
   data: T;
@@ -7,7 +8,7 @@ interface CacheItem<T> {
 }
 
 interface BookClick {
-  bookInfo: any; // all book information
+  bookInfo: GoogleBooksItem; // all book information
   clickDate: number;
   userId: string;
 }

@@ -16,18 +16,14 @@ import SignInButtonWithGoogleButton from "../components/SignInButtonWithGoogle";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { FIREBASE_AUTH } from "../FirebaseConfig";
 
-const SignUpScreen = () => {
+export default function SignUpScreen() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const signUp: () => Promise<void> = async () => {
     try {
-      const response = await createUserWithEmailAndPassword(
-        FIREBASE_AUTH,
-        email,
-        password
-      );
+      await createUserWithEmailAndPassword(FIREBASE_AUTH, email, password);
       Alert.alert("Success", "You have successfully created an account", [
         {
           text: "OK",
@@ -126,9 +122,7 @@ const SignUpScreen = () => {
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
-};
-
-export default SignUpScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -194,12 +188,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
     includeFontPadding: false,
     padding: 0,
-  },
-  toggleText: {
-    color: "#007bff",
-    textAlign: "right",
-    marginBottom: 8,
-    fontSize: 14,
   },
   signInTextView: {
     flexDirection: "row",

@@ -1,11 +1,4 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  SafeAreaView,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from "react-native";
 import LogoHeader from "@/components/LogoHeader";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { useEffect, useState } from "react";
@@ -43,7 +36,9 @@ export default function MyProfileScreen() {
     fetchUserName();
   }, [user]);
 
-  const getImageSource: (book: any) => any = (book: any) => {
+  const getImageSource: (book: GoogleBooksItem) => any = (
+    book: GoogleBooksItem
+  ) => {
     if (book?.volumeInfo?.imageLinks?.thumbnail) {
       const imageUrl: string = book.volumeInfo.imageLinks.thumbnail || "";
       return { uri: imageUrl.replace("http://", "https://") };
@@ -124,34 +119,5 @@ const styles = StyleSheet.create({
   genreText: {
     fontSize: 13,
     fontWeight: "500",
-  },
-  activityBox: {
-    backgroundColor: "#eee",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  bookRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    backgroundColor: "#f8f8f8",
-    padding: 10,
-    borderRadius: 8,
-  },
-  bookImage: {
-    width: 50,
-    height: 70,
-    borderRadius: 6,
-    resizeMode: "contain",
-  },
-  bookTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  bookGenre: {
-    fontSize: 13,
-    color: "#666",
   },
 });

@@ -6,6 +6,10 @@ import {
   addDoc,
   doc,
   updateDoc,
+  QuerySnapshot,
+  DocumentData,
+  CollectionReference,
+  QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { CacheService } from "./cacheService";
 import { ApiError } from "../utils/apiUtils";
@@ -14,7 +18,7 @@ import { GoogleBooksItem } from "@/types/booksapitypes";
 import { UserGoal } from "@/types/usersdatatypes";
 import { OpenAI } from "openai";
 
-const cacheService = CacheService.getInstance();
+const cacheService: CacheService = CacheService.getInstance();
 
 export class RecommendationError extends ApiError {
   constructor(message: string, statusCode?: number, originalError?: any) {
@@ -41,7 +45,7 @@ export class RecommendationService {
   }
 
   private shuffleArray<T>(array: T[]): T[] {
-    const shuffled = [...array];
+    const shuffled: T[] = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -55,17 +59,17 @@ export class RecommendationService {
       const maxResultsPerPage: number = 20;
       const orderBy: string = "relevance";
 
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
         query
       )}&printType=books&maxResults=${maxResultsPerPage}&orderBy=${orderBy}`;
 
-      const response = await fetch(url);
+      const response: any = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
 
       if (!data.items) {
         console.log("No books found for query:", query);
@@ -93,18 +97,18 @@ export class RecommendationService {
     userGoal?: UserGoal
   ): Promise<string[]> {
     const libraryTitles = libraryBooks
-      .map((book) => book.volumeInfo?.title || "")
+      .map((book: GoogleBooksItem) => book.volumeInfo?.title || "")
       .filter(Boolean)
       .join(", ");
 
-    const genres = favoriteGenres.join(", ");
-    const books = favoriteBooks.join(", ");
-    const authors = favoriteAuthors || "None";
-    const unforgettable = unforgettableBook || "None";
-    const goalDescription = userGoal?.description || "None";
+    const genres: string = favoriteGenres.join(", ");
+    const books: string = favoriteBooks.join(", ");
+    const authors: string = favoriteAuthors || "None";
+    const unforgettable: string = unforgettableBook || "None";
+    const goalDescription: string = userGoal?.description || "None";
 
     const prompt: string = (() => {
-      const sharedHeader = `
+      const sharedHeader: string = `
   You're a recommendation engine generating **exactly 4 personalized Google Books API queries**, based solely on the user's own preferences. Use only the data provided — no assumptions or similarity-based logic.
   
   User’s preferences:
@@ -171,7 +175,7 @@ export class RecommendationService {
     console.log(prompt, "prompt:onboarding");
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response: any = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -187,11 +191,11 @@ export class RecommendationService {
         max_tokens: 600,
       });
 
-      const queries = response.choices[0]?.message?.content
+      const queries: string[] = response.choices[0]?.message?.content
         ?.split("\n")
-        .map((line) => line.trim())
+        .map((line: string) => line.trim())
         .filter(Boolean)
-        .slice(0, 4); // sadece 4 query dönecek
+        .slice(0, 4); // only 4 queries will be returned
 
       if (!queries || queries.length === 0) {
         throw new Error("No queries returned from ChatGPT.");
@@ -211,23 +215,25 @@ export class RecommendationService {
     favoriteGenres: string[],
     unforgettableBook: string
   ): Promise<string[]> {
-    const authorsFromLibrary = libraryBooks
-      .map((book) => book.volumeInfo?.authors || [])
+    const authorsFromLibrary: string[] = libraryBooks
+      .map((book: GoogleBooksItem) => book.volumeInfo?.authors || [])
       .flat()
       .filter(Boolean);
 
-    const uniqueAuthors = Array.from(new Set(authorsFromLibrary));
+    const uniqueAuthors: string[] = Array.from(new Set(authorsFromLibrary));
 
     // Rastgele 3 yazar seç
-    const shuffledAuthors = uniqueAuthors.sort(() => 0.5 - Math.random());
-    const selectedAuthors = shuffledAuthors.slice(0, 2); // veya Math.min(3, uniqueAuthors.length)
-    const authorList = selectedAuthors.join(", ");
+    const shuffledAuthors: string[] = uniqueAuthors.sort(
+      () => 0.5 - Math.random()
+    );
+    const selectedAuthors: string[] = shuffledAuthors.slice(0, 2); // veya Math.min(3, uniqueAuthors.length)
+    const authorList: string = selectedAuthors.join(", ");
 
     const sampledAuthors: string = authorList;
 
     const unforgettableBookList: string[] = unforgettableBook
       .split(",")
-      .map((title) => title.trim())
+      .map((title: string) => title.trim())
       .filter(Boolean);
 
     const sampledUnforgettableBooks: string = unforgettableBookList
@@ -237,13 +243,13 @@ export class RecommendationService {
 
     const genreList: string = favoriteGenres.join(", ");
     const libraryTitles: string = libraryBooks
-      .map((book) => book.volumeInfo?.title || "")
+      .map((book: GoogleBooksItem) => book.volumeInfo?.title || "")
       .filter(Boolean)
       .join(", ");
     const goalDescription: string = userGoal?.description || "discover books";
 
     const prompt: string = (() => {
-      const sharedHeader = `
+      const sharedHeader: string = `
   You're a book recommendation engine generating personalized and creative Google Books API search queries.
   
   User’s preferences:
@@ -303,7 +309,7 @@ export class RecommendationService {
     })();
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response: any = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -319,9 +325,9 @@ export class RecommendationService {
         max_tokens: 600,
       });
 
-      const queries = response.choices[0]?.message?.content
+      const queries: string[] = response.choices[0]?.message?.content
         ?.split("\n")
-        .map((line) => line.trim())
+        .map((line: string) => line.trim())
         .filter(Boolean)
         .slice(0, 5);
 
@@ -343,16 +349,17 @@ export class RecommendationService {
   async deleteRecommendations(userId: string): Promise<void> {
     try {
       // Delete from Firebase subcollection
-      const recommendationsRef: any = collection(
+      const recommendationsRef: CollectionReference<DocumentData> = collection(
         FIREBASE_DB,
         "Users",
         userId,
         "Recommendations"
       );
-      const recommendationsSnap: any = await getDocs(recommendationsRef);
+      const recommendationsSnap: QuerySnapshot<DocumentData> =
+        await getDocs(recommendationsRef);
 
       const deletePromises: Promise<void>[] = recommendationsSnap.docs.map(
-        (doc: any) => deleteDoc(doc.ref)
+        (doc: QueryDocumentSnapshot<DocumentData>) => deleteDoc(doc.ref)
       );
       await Promise.all(deletePromises);
 
@@ -374,18 +381,18 @@ export class RecommendationService {
 
   async removeBookFromRecommendations(userId: string, bookId: string) {
     try {
-      const recRef = collection(
+      const recRef: CollectionReference<DocumentData> = collection(
         FIREBASE_DB,
         "Users",
         userId,
         "Recommendations"
       );
-      const snapshots: any = await getDocs(recRef);
+      const snapshots: QuerySnapshot<DocumentData> = await getDocs(recRef);
 
       for (const snap of snapshots.docs) {
         const data: any = snap.data();
         const filteredBooks: GoogleBooksItem[] = (data.books || []).filter(
-          (book: any) => book.id !== bookId
+          (book: GoogleBooksItem) => book.id !== bookId
         );
         await updateDoc(doc(recRef, snap.id), { books: filteredBooks });
       }
@@ -395,7 +402,7 @@ export class RecommendationService {
         await cacheService.getRecommendedBooks(userId);
       if (cachedBooks) {
         const filteredCachedBooks: GoogleBooksItem[] = cachedBooks.filter(
-          (b: any) => b.id !== bookId
+          (b: GoogleBooksItem) => b.id !== bookId
         );
         await cacheService.saveRecommendedBooks(userId, filteredCachedBooks);
       }
@@ -414,7 +421,7 @@ export class RecommendationService {
   ): Promise<void> {
     try {
       // Create a new document in the Recommendations subcollection
-      const recommendationsRef = collection(
+      const recommendationsRef: CollectionReference<DocumentData> = collection(
         FIREBASE_DB,
         "Users",
         userId,
@@ -570,26 +577,28 @@ export class RecommendationService {
         max_tokens: 500,
       });
 
-      const lines = response.choices[0]?.message?.content
+      const lines: any = response.choices[0]?.message?.content
         ?.split("\n")
-        .map((line) => line.trim())
+        .map((line: string) => line.trim())
         .filter(Boolean);
 
       const gptBookItems: { title: string; author: string }[] = [];
 
-      lines?.forEach((line) => {
-        const normalizedLine = line
+      lines?.forEach((line: string) => {
+        const normalizedLine: string = line
           .replace(/^\d+[\.\)\-–—\s]*/, "")
           .replace(/[""„"]/g, '"')
           .replace(/[–—]/g, "-");
 
-        const separatorIndex = normalizedLine.indexOf(" - ");
+        const separatorIndex: number = normalizedLine.indexOf(" - ");
         if (separatorIndex !== -1) {
-          const rawTitle = normalizedLine
+          const rawTitle: string = normalizedLine
             .slice(0, separatorIndex)
             .trim()
             .replace(/^"|"$/g, "");
-          const rawAuthor = normalizedLine.slice(separatorIndex + 3).trim();
+          const rawAuthor: string = normalizedLine
+            .slice(separatorIndex + 3)
+            .trim();
 
           if (rawTitle && rawAuthor) {
             gptBookItems.push({ title: rawTitle, author: rawAuthor });
@@ -611,7 +620,7 @@ Authors: ${favoriteAuthors}`;
         temperature: 0.3,
       });
 
-      const parsedAuthors =
+      const parsedAuthors: string =
         authorCompletion.choices[0]?.message?.content?.trim() || "";
       console.log("Parsed authors:", parsedAuthors);
 
@@ -634,29 +643,31 @@ Book: ${unforgettableBook}`;
         console.log("Parsed book queries:", parsedBookQueries);
       }
 
-      const gptAuthors = [
+      const gptAuthors: string[] = [
         ...new Set([
-          ...gptBookItems.map((item) => item.author),
+          ...gptBookItems.map(
+            (item: { title: string; author: string }) => item.author
+          ),
           ...parsedAuthors
             .split(",")
-            .map((a) => a.trim())
+            .map((a: string) => a.trim())
             .filter(Boolean),
         ]),
       ];
 
       const authorBooks: GoogleBooksItem[] = (
         await Promise.all(
-          gptAuthors.map(async (author) => {
+          gptAuthors.map(async (author: string) => {
             try {
-              const query = `inauthor:"${author}"`;
+              const query: string = `inauthor:"${author}"`;
               const maxResults: number = 10;
               console.log(`Fetching books for author: ${author}`);
-              const res = await fetch(
+              const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
                 )}&printType=books&maxResults=${maxResults}&orderBy=relevance`
               );
-              const json = await res.json();
+              const json: any = await res.json();
               console.log(
                 `Found ${json.items?.length || 0} books for author: ${author}`
               );
@@ -673,9 +684,9 @@ Book: ${unforgettableBook}`;
         )
       ).flat();
 
-      authorBooks.forEach((book) => {
-        const id = book.id;
-        const title = book.volumeInfo?.title;
+      authorBooks.forEach((book: GoogleBooksItem) => {
+        const id: string = book.id;
+        const title: string = book.volumeInfo?.title;
         if (id && title && !uniqueBooksMap.has(id)) {
           uniqueBooksMap.set(id, book);
           finalBooks.push(book);
@@ -684,13 +695,13 @@ Book: ${unforgettableBook}`;
 
       // Process user's favorite genres first
       for (const genre of favoriteGenres) {
-        const base = 40;
-        const extra = 10;
-        const total = base + (genreCount - 1) * extra;
-        const currentYear = new Date().getFullYear();
-        const fromYear = currentYear - 5;
+        const base: number = 40;
+        const extra: number = 10;
+        const total: number = base + (genreCount - 1) * extra;
+        const currentYear: number = new Date().getFullYear();
+        const fromYear: number = currentYear - 5;
 
-        let searchQueries: string[];
+        let searchQueries: string[] = [];
         switch (userGoal.id) {
           case "classics":
             searchQueries = [
@@ -736,19 +747,19 @@ Book: ${unforgettableBook}`;
         for (const query of searchQueries) {
           try {
             console.log(`Fetching books with query: "${query}"`);
-            const res = await fetch(
+            const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
               )}&printType=books&maxResults=${Math.ceil(total / searchQueries.length)}&orderBy=relevance`
             );
-            const json = await res.json();
-            const items = json.items || [];
+            const json: any = await res.json();
+            const items: GoogleBooksItem[] = json.items || [];
 
             console.log(`Found ${items.length} books for query: "${query}"`);
 
             items.forEach((book: GoogleBooksItem) => {
-              const id = book.id;
-              const title = book.volumeInfo?.title;
+              const id: string = book.id;
+              const title: string = book.volumeInfo?.title;
               if (id && title && !uniqueBooksMap.has(id)) {
                 uniqueBooksMap.set(id, book);
                 finalBooks.push(book);
@@ -763,16 +774,16 @@ Book: ${unforgettableBook}`;
       // Now process unselected genres
       if (userGoal.id === "genres") {
         // First, get additional genres that user hasn't selected
-        const unselectedGenres = GENRES.filter(
+        const unselectedGenres: string[] = GENRES.filter(
           (genre: string) => !favoriteGenres.includes(genre)
         );
         // Randomly select 4 different genres from the remaining ones
-        const randomUnselectedGenres = unselectedGenres
+        const randomUnselectedGenres: string[] = unselectedGenres
           .sort(() => Math.random() - 0.5)
           .slice(0, 4);
 
         for (const genre of randomUnselectedGenres) {
-          const searchQueries = [
+          const searchQueries: string[] = [
             `highly rated ${genre} books in ${selectedCountry}`,
             `bestselling ${genre} books from ${selectedCountry}`,
           ];
@@ -784,21 +795,21 @@ Book: ${unforgettableBook}`;
               console.log(
                 `Fetching unselected genre books with query: "${query}"`
               );
-              const res = await fetch(
+              const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
                 )}&printType=books&maxResults=${maxResults}&orderBy=${orderBy}`
               );
-              const json = await res.json();
-              const items = json.items || [];
+              const json: any = await res.json();
+              const items: GoogleBooksItem[] = json.items || [];
 
               console.log(
                 `Found ${items.length} unselected genre books for query: "${query}"`
               );
 
               items.forEach((book: GoogleBooksItem) => {
-                const id = book.id;
-                const title = book.volumeInfo?.title;
+                const id: string = book.id;
+                const title: string = book.volumeInfo?.title;
                 if (id && title && !uniqueBooksMap.has(id)) {
                   uniqueBooksMap.set(id, book);
                   finalBooks.push(book);
@@ -818,19 +829,19 @@ Book: ${unforgettableBook}`;
             console.log(
               `Fetching books related to unforgettable book: "${query}"`
             );
-            const res = await fetch(
+            const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
               )}&printType=books&maxResults=4&orderBy=relevance`
             );
-            const json = await res.json();
-            const items = json.items || [];
+            const json: any = await res.json();
+            const items: GoogleBooksItem[] = json.items || [];
 
             console.log(`Found ${items.length} books for unforgettable query`);
 
             items.forEach((book: GoogleBooksItem) => {
-              const id = book.id;
-              const title = book.volumeInfo?.title;
+              const id: string = book.id;
+              const title: string = book.volumeInfo?.title;
               if (id && title && !uniqueBooksMap.has(id)) {
                 uniqueBooksMap.set(id, book);
                 finalBooks.push(book);
@@ -845,8 +856,9 @@ Book: ${unforgettableBook}`;
         }
       }
 
-      const uniqueFinalBooks = finalBooks.filter(
-        (b, i, arr) => arr.findIndex((x) => x.id === b.id) === i
+      const uniqueFinalBooks: GoogleBooksItem[] = finalBooks.filter(
+        (b: GoogleBooksItem, i: number, arr: GoogleBooksItem[]) =>
+          arr.findIndex((x: GoogleBooksItem) => x.id === b.id) === i
       );
 
       console.log(

@@ -15,9 +15,10 @@ import { useRouter } from "expo-router";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 export default function EditBookScreen() {
-  const { book = "" } = useLocalSearchParams();
-  const { addBook } = useLibrary();
-  const router = useRouter();
+  const { book = "" }: { book: string } = useLocalSearchParams();
+  const { addBook }: { addBook: (book: GoogleBooksItem) => Promise<void> } =
+    useLibrary();
+  const router: any = useRouter();
 
   let parsedBook: GoogleBooksItem | null = null;
   try {
@@ -59,8 +60,14 @@ export default function EditBookScreen() {
     if (bookObj && typeof bookObj === "object" && !Array.isArray(bookObj)) {
       try {
         await addBook(bookObj);
-        Alert.alert("Success", "Book added to your library!");
-        router.replace("/(tabs)/homefolder/home");
+        Alert.alert("Success", "Book added to your library!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace("/(tabs)/homefolder/home");
+            },
+          },
+        ]);
       } catch (error: any) {
         if (error?.message === "This book is already in your library.") {
           Alert.alert("Error", error.message);
@@ -170,12 +177,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
-  },
-  backButton: {
-    position: "absolute",
-    top: 18,
-    left: 18,
-    zIndex: 10,
-    padding: 4,
   },
 });

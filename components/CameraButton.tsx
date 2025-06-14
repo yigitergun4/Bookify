@@ -43,7 +43,7 @@ export default function CameraButton({
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef: any = useRef<CameraView>(null);
-  const router = useRouter();
+  const router: any = useRouter();
   const auth: any = getAuth();
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function CameraButton({
             console.log("isTitleSimilar:", titleSim);
             console.log("isAuthorSimilar:", authorSim);
 
-            // Her iki benzerlik de varsa eşleşme başarılıdır
+            // if both are similar, then we have a match
             if (titleSim && authorSim) {
               router.push({
                 pathname: "/(tabs)/homefolder/photoeditpage",

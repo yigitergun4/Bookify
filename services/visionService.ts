@@ -4,9 +4,9 @@ import { CacheService } from "./cacheService";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import SHA256 from "crypto-js/sha256";
 
-const cacheService = CacheService.getInstance();
+const cacheService: CacheService = CacheService.getInstance();
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION: number = 24 * 60 * 60 * 1000; // 24 hours
 
 export class VisionError extends ApiError {
   constructor(message: string, statusCode?: number, originalError?: any) {
@@ -38,10 +38,10 @@ export const detectText = async (base64Image: string, userId: string) => {
       timestamp: Date.now(),
     };
 
-    const cacheKeyString = JSON.stringify(cacheKey);
+    const cacheKeyString: string = JSON.stringify(cacheKey);
 
     // check cache
-    const cachedResult = (await cacheService.get(
+    const cachedResult: VisionCacheData | null = (await cacheService.get(
       cacheKeyString
     )) as VisionCacheData | null;
     if (cachedResult) {
@@ -54,9 +54,9 @@ export const detectText = async (base64Image: string, userId: string) => {
     }
 
     // API call
-    const result = await withRetry(async () => {
+    const result: any = await withRetry(async () => {
       try {
-        const response = await axios.post(
+        const response: any = await axios.post(
           `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
           {
             requests: [
@@ -69,8 +69,9 @@ export const detectText = async (base64Image: string, userId: string) => {
         );
         if (!response.data.responses?.[0]) {
           throw new VisionError("No text detected in image");
+        } else {
+          return response.data.responses[0];
         }
-        return response.data.responses[0];
       } catch (error: any) {
         if (error.response) {
           console.error("Vision API error response:", error.response.data);
@@ -88,6 +89,7 @@ export const detectText = async (base64Image: string, userId: string) => {
 
     // save result to cache
     const cacheData: VisionCacheData = {
+      // @ts-ignore
       data: result,
       timestamp: Date.now(),
     };

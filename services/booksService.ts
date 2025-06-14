@@ -19,10 +19,10 @@ export class BooksError extends ApiError {
   }
 }
 
-export const searchBook = async (
+export const searchBook: (
   title: string,
   author: string
-): Promise<any> => {
+) => Promise<any> = async (title: string, author: string): Promise<any> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
   try {
     const result = await withRetry(async () => {
@@ -39,15 +39,15 @@ export const searchBook = async (
 
       let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
 
-      const response = await axios.get(url);
-      const items = response.data.items || [];
+      const response: any = await axios.get(url);
+      const items: GoogleBooksItem[] = response.data.items || [];
 
       if (items.length === 0) {
         throw new BooksError("No book found for the given query");
       }
 
       // the most relevant book
-      const bookData = items[0];
+      const bookData: GoogleBooksItem = items[0];
 
       if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
         throw new BooksError("Invalid book data received from API");
@@ -64,10 +64,13 @@ export const searchBook = async (
   }
 };
 
-export const searchBooksPaginated = async (
+export const searchBooksPaginated: (
+  query: string,
+  startIndex: number
+) => Promise<any> = async (
   query: string,
   startIndex: number = 0
-) => {
+): Promise<any> => {
   const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
     query
   )}&startIndex=${startIndex}`;
@@ -76,7 +79,11 @@ export const searchBooksPaginated = async (
   return data;
 };
 
-export const searchBookList = async (
+export const searchBookList: (
+  title: string,
+  author: string,
+  language: string
+) => Promise<any[]> = async (
   title: string,
   author: string,
   language: string
@@ -84,7 +91,7 @@ export const searchBookList = async (
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
   console.log("Search parameters:", { title, author, language });
   const MAX_RESULTS: number = 40;
-  let query = encodeURIComponent(title);
+  let query: string = encodeURIComponent(title);
   if (author && author !== "Unknown") {
     query += "+inauthor:" + encodeURIComponent(author);
   }
@@ -96,7 +103,7 @@ export const searchBookList = async (
 
   console.log("Search URL:", url);
 
-  const response = await axios.get(url);
+  const response: any = await axios.get(url);
   const items: GoogleBooksItem[] = response.data.items || [];
   console.log("Search results count:", items.length);
   return items;

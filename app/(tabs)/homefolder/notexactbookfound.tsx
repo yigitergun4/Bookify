@@ -63,10 +63,13 @@ const NotExactBookFound = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(tabs)/search")}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)/search")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Image
             source={require("@/assets/images/arrow-left.png")}
-            style={{ width: 26, height: 26 }}
+            style={{ width: 15, height: 15 }}
           />
         </TouchableOpacity>
         <View>
@@ -102,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
     paddingTop: 20,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     gap: 20,
     paddingBottom: 10,
     backgroundColor: "#fff",
@@ -115,7 +118,6 @@ const styles = StyleSheet.create({
     color: "#222",
     marginBottom: 4,
   },
-
   centered: {
     flex: 1,
     justifyContent: "center",

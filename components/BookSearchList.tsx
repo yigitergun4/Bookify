@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { CacheService } from "@/services/cacheService";
 import { getAuth } from "firebase/auth";
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 interface BookSearchListProps {
   books: any[];
@@ -58,10 +59,11 @@ const BookSearchList = ({
 
   const handleScroll: (event: any) => void = (event: any) => {
     if (books.length > 40 && contentHeight > layoutHeight) {
-      const offsetY = event.nativeEvent.contentOffset.y;
-      const scrollDirection = offsetY > previousOffsetY.current ? "down" : "up";
-      const atTop = offsetY <= 100;
-      const atBottom = offsetY >= contentHeight - layoutHeight - 100;
+      const offsetY: number = event.nativeEvent.contentOffset.y;
+      const scrollDirection: string =
+        offsetY > previousOffsetY.current ? "down" : "up";
+      const atTop: boolean = offsetY <= 100;
+      const atBottom: boolean = offsetY >= contentHeight - layoutHeight - 100;
 
       if (!atTop && !atBottom) {
         setShowScrollTop(scrollDirection === "up");
@@ -75,7 +77,9 @@ const BookSearchList = ({
     }
   };
 
-  const openModal: (book: any) => Promise<void> = async (book: any) => {
+  const openModal: (book: GoogleBooksItem) => Promise<void> = async (
+    book: GoogleBooksItem
+  ) => {
     const user: any = auth.currentUser;
     if (user) {
       await cacheService.addBookClick(book, user.uid);
@@ -89,7 +93,8 @@ const BookSearchList = ({
     setSelectedBook(null);
   };
 
-  let modalImageUrl: any = selectedBook?.volumeInfo?.imageLinks?.thumbnail;
+  let modalImageUrl: string | undefined =
+    selectedBook?.volumeInfo?.imageLinks?.thumbnail;
   if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
     modalImageUrl = modalImageUrl?.replace("http:", "https:");
   }
@@ -107,7 +112,7 @@ const BookSearchList = ({
         }
         renderItem={({ item }: any) => {
           const volume: any = item?.volumeInfo;
-          let imageUrl: string = volume?.imageLinks?.thumbnail;
+          let imageUrl: string | undefined = volume?.imageLinks?.thumbnail;
           if (imageUrl && imageUrl?.startsWith("http:")) {
             imageUrl = imageUrl?.replace("http:", "https:");
           }
@@ -216,7 +221,7 @@ const BookSearchList = ({
       )}
       {loadingMore && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#222" />
+          <ActivityIndicator color="#000" />
         </View>
       )}
       <Modal

@@ -10,7 +10,17 @@ import BookSearchList from "@/components/BookSearchList";
 import { useState } from "react";
 import { getAuth } from "firebase/auth";
 import { RecommendationService } from "@/services/recommendationService";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  CollectionReference,
+  DocumentData,
+  QuerySnapshot,
+  QueryDocumentSnapshot,
+  DocumentReference,
+} from "firebase/firestore";
 import { FIREBASE_DB } from "@/FirebaseConfig";
 import { useLibrary } from "@/contexts/LibraryContext";
 import SearchInput from "@/components/HomePageSearchInput";
@@ -21,22 +31,26 @@ const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
 
 const RecommendedScreen = () => {
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const user = auth.currentUser;
   const { addBook, recommendedBooks, isLoading, setRecommendedBooks } =
     useLibrary();
   // Filter books based on search query
-  const filteredBooks: GoogleBooksItem[] = recommendedBooks.filter((book) => {
-    const title: string = book.volumeInfo?.title?.toLowerCase() || "";
-    const authors: string =
-      book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
-    const query: string = searchQuery.toLowerCase();
-    return title.includes(query) || authors.includes(query);
-  });
+  const filteredBooks: GoogleBooksItem[] = recommendedBooks.filter(
+    (book: GoogleBooksItem) => {
+      const title: string = book.volumeInfo?.title?.toLowerCase() || "";
+      const authors: string =
+        book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
+      const query: string = searchQuery.toLowerCase();
+      return title.includes(query) || authors.includes(query);
+    }
+  );
 
-  const handleAddBook: (book: any) => Promise<void> = async (book: any) => {
+  const handleAddBook: (book: GoogleBooksItem) => Promise<void> = async (
+    book: GoogleBooksItem
+  ) => {
     if (!user) return;
     Alert.alert(
       "Add to Library",
@@ -75,30 +89,39 @@ const RecommendedScreen = () => {
     console.log("handleLoadMore: recommendbookpage.tsx:73");
     try {
       // Get existing book IDs to avoid duplicates
-      const existingBookIds = new Set(recommendedBooks.map((book) => book.id));
+      const existingBookIds: Set<string> = new Set(
+        recommendedBooks.map((book: GoogleBooksItem) => book.id)
+      );
       console.log(
         "[RecommendedScreen] Existing book count:",
         existingBookIds.size
       );
       // Get all previously recommended books from Firebase
-      const recommendationsRef = collection(
+      const recommendationsRef: CollectionReference<DocumentData> = collection(
         FIREBASE_DB,
         "Users",
         user.uid,
         "Recommendations"
       );
-      const recommendationsSnap = await getDocs(recommendationsRef);
-      const previouslyRecommendedIds = new Set<string>();
+      const recommendationsSnap: QuerySnapshot<DocumentData> =
+        await getDocs(recommendationsRef);
+      const previouslyRecommendedIds: Set<string> = new Set<string>();
 
-      recommendationsSnap.docs.forEach((doc) => {
-        const books: GoogleBooksItem[] = doc.data().books || [];
-        books.forEach((book: GoogleBooksItem) =>
-          previouslyRecommendedIds.add(book.id)
-        );
-      });
+      recommendationsSnap.docs.forEach(
+        (doc: QueryDocumentSnapshot<DocumentData>) => {
+          const books: GoogleBooksItem[] = doc.data().books || [];
+          books.forEach((book: GoogleBooksItem) =>
+            previouslyRecommendedIds.add(book.id)
+          );
+        }
+      );
       // Get user's favorite genres and books for better recommendations
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      const userSnap = await getDoc(userRef);
+      const userRef: DocumentReference<DocumentData> = doc(
+        FIREBASE_DB,
+        "Users",
+        user.uid
+      );
+      const userSnap: any = await getDoc(userRef);
       const userData: any = userSnap.data();
       const favoriteGenres: string[] = userData?.favoriteGenres || [];
       const favoriteBooks: string[] = userData?.favoriteBooks || [];
@@ -148,7 +171,7 @@ const RecommendedScreen = () => {
               }
             })
           );
-          newBooks = queryResults.flat() as GoogleBooksItem[];
+          newBooks = queryResults.flat();
           // If we got no results, try genre-based search
           if (newBooks.length === 0 && favoriteGenres.length > 0) {
             console.log(
@@ -202,7 +225,7 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // Limit to 50 books per load
+      // Limit to 50 books per load noooo if i do that i can't see all the books
       // const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
       // randomize the books
       // limitedNewBooks.sort(() => Math.random() - 0.5);

@@ -13,6 +13,7 @@ import { useLibrary } from "@/contexts/LibraryContext";
 import { CacheService } from "@/services/cacheService";
 import { getAuth } from "firebase/auth";
 import ScrollView = Animated.ScrollView;
+import { GoogleBooksItem } from "@/types/booksapitypes";
 
 const cacheService = CacheService.getInstance();
 const auth = getAuth();
@@ -22,7 +23,7 @@ type BookCardProps = {
   description: string;
   author: string;
   image: any;
-  bookData?: any; // all book data from google books api
+  bookData?: GoogleBooksItem; // all book data from google books api
   onPressFavorite?: () => void;
   isFavorite?: boolean;
 };

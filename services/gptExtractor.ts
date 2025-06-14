@@ -4,11 +4,11 @@ import ENV from "../config/env";
 import SHA256 from "crypto-js/sha256";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
+const openai: OpenAI = new OpenAI({
   apiKey: ENV.OPENAI_API_KEY,
 });
 
-const cacheService = CacheService.getInstance();
+const cacheService: CacheService = CacheService.getInstance();
 
 export class GPTError extends ApiError {
   constructor(message: string, statusCode?: number, originalError?: any) {
@@ -41,10 +41,11 @@ export async function extractBookInfoWithGPT(
     }
 
     // more secure cache key
-    const cacheKey = `gpt_${SHA256(ocrText).toString()}`;
+    const cacheKey: string = `gpt_${SHA256(ocrText).toString()}`;
 
     // check cache
-    const cachedResult = await cacheService.get<GPTCacheData>(cacheKey);
+    const cachedResult: GPTCacheData | null =
+      await cacheService.get<GPTCacheData>(cacheKey);
     if (cachedResult) {
       // if cache is not expired, return it
       if (Date.now() - cachedResult.timestamp < ENV.CACHE_DURATION) {
@@ -55,8 +56,8 @@ export async function extractBookInfoWithGPT(
     }
 
     // If not in cache, make API call with retry
-    const result = await withRetry(async () => {
-      const systemPrompt = `You are an expert bibliographic metadata extractor.
+    const result: BookInfo = await withRetry(async () => {
+      const systemPrompt: string = `You are an expert bibliographic metadata extractor.
 Given OCR-extracted text from a book cover, extract and return only the following fields in strict JSON format:
 
 {
@@ -94,7 +95,7 @@ If you are not 100% certain of a value, use:
         ocrText.substring(0, 100) + "..."
       );
 
-      const response = await fetch(
+      const response: any = await fetch(
         "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
@@ -113,7 +114,7 @@ If you are not 100% certain of a value, use:
       );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData: any = await response.json().catch(() => null);
         console.error("GPT API Error:", {
           status: response.status,
           statusText: response.statusText,
@@ -126,15 +127,15 @@ If you are not 100% certain of a value, use:
         );
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
 
-      const content = data.choices[0]?.message?.content;
+      const content: string = data.choices[0]?.message?.content;
       if (!content) {
         throw new GPTError("Empty response from GPT");
       }
 
       try {
-        const parsed = JSON.parse(content);
+        const parsed: BookInfo = JSON.parse(content);
         if (!parsed.title || !parsed.authors || !parsed.language) {
           throw new GPTError("Invalid response format from GPT");
         }
@@ -174,7 +175,7 @@ export async function isSimilarTitle(
   title2: string
 ): Promise<boolean> {
   try {
-    const response = await openai.chat.completions.create({
+    const response: any = await openai.chat.completions.create({
       model: "gpt-4o", // gpt-4o kullanmamın sebebi çok dilli analiz edecek olması
       messages: [
         {
@@ -198,9 +199,12 @@ export async function isSimilarTitle(
 }
 
 export async function isSimilarAuthor(author1: string, author2: string) {
-  const response = await openai.chat.completions.create({
+  if (author1 === "Unknown" || author2 === "Unknown") {
+    return true;
+  }
+
+  const response: any = await openai.chat.completions.create({
     model: "gpt-4o-mini", // yapılan işlem için yeterli
-    temperature: 0,
     messages: [
       {
         role: "system",
@@ -211,6 +215,7 @@ export async function isSimilarAuthor(author1: string, author2: string) {
         content: `Do these two author names refer to the same person?\n\n1. ${author1}\n2. ${author2}\n\nOnly reply with Yes or No.`,
       },
     ],
+    temperature: 0,
   });
 
   const answer = response.choices[0]?.message?.content?.trim();

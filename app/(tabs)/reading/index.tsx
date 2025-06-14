@@ -16,7 +16,7 @@ import BookSearchList from "@/components/BookSearchList";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
-function TabThreeScreen() {
+export default function TabThreeScreen() {
   const [userName, setUserName] = useState<string>("");
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -122,9 +122,9 @@ function TabThreeScreen() {
   };
 
   // unique books by id
-  function uniqueById(arr: any[]): any[] {
-    const seen: Set<any> = new Set();
-    return arr.filter((item: any) => {
+  function uniqueById(arr: GoogleBooksItem[]): GoogleBooksItem[] {
+    const seen: Set<string> = new Set();
+    return arr.filter((item: GoogleBooksItem) => {
       if (!item?.id) return false;
       if (seen.has(item.id)) return false;
       seen.add(item.id);
@@ -193,58 +193,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  card: {
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    borderRadius: 16,
-    marginBottom: 10,
-    padding: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  bookImage: {
-    width: 70,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 14,
-    backgroundColor: "#eee",
-  },
-  bookInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  image: {
-    width: 70,
-    height: 90,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  bookTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  author: {
-    fontSize: 13,
-    fontWeight: "500",
-    marginBottom: 6,
-    color: "#555",
-  },
-  description: {
-    fontSize: 13,
-    color: "#333",
-  },
-  language: {
-    fontSize: 13,
-    color: "#444",
-    lineHeight: 18,
-  },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -279,5 +227,3 @@ const styles = StyleSheet.create({
     right: 16,
   },
 });
-
-export default TabThreeScreen;

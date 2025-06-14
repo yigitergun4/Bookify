@@ -21,22 +21,23 @@ import {
 } from "firebase/auth";
 import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
+import { UserCredential } from "firebase/auth";
 
-const SignInScreen = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [resetModalVisible, setResetModalVisible] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [loginAttempts, setLoginAttempts] = useState(0);
+export default function SignInScreen() {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [resetModalVisible, setResetModalVisible] = useState<boolean>(false);
+  const [resetEmail, setResetEmail] = useState<string>("");
+  const [isCheckingEmail, setIsCheckingEmail] = useState<boolean>(false);
+  const [loginAttempts, setLoginAttempts] = useState<number>(0);
   const [lastAttemptTime, setLastAttemptTime] = useState<number>(0);
-  const RATE_LIMIT_WINDOW = 60000; // 1 minute
-  const MAX_ATTEMPTS = 3;
+  const RATE_LIMIT_WINDOW: number = 60000; // 1 minute
+  const MAX_ATTEMPTS: number = 3;
 
-  const signIn = async () => {
-    const now = Date.now();
+  const signIn: () => Promise<void> = async () => {
+    const now: number = Date.now();
 
     if (
       now - lastAttemptTime < RATE_LIMIT_WINDOW &&
@@ -52,7 +53,7 @@ const SignInScreen = () => {
 
     setLoading(true);
     try {
-      const response = await signInWithEmailAndPassword(
+      const response: UserCredential = await signInWithEmailAndPassword(
         FIREBASE_AUTH,
         email,
         password
@@ -104,12 +105,12 @@ const SignInScreen = () => {
     }
   };
 
-  const handleForgotPassword = () => {
-    setResetEmail(email); // Pre-fill with current email if any
+  const handleForgotPassword: () => void = () => {
+    setResetEmail(email);
     setResetModalVisible(true);
   };
 
-  const checkEmailAndSendReset = async () => {
+  const checkEmailAndSendReset: () => Promise<void> = async () => {
     if (!resetEmail) {
       Alert.alert("Error", "Please enter your email address");
       return;
@@ -125,7 +126,8 @@ const SignInScreen = () => {
       );
       setResetModalVisible(false);
     } catch (error: any) {
-      let errorMessage = "Failed to send reset email. Please try again.";
+      let errorMessage: string =
+        "Failed to send reset email. Please try again.";
       if (error.code === "auth/invalid-email") {
         errorMessage = "Invalid email address.";
       } else if (error.code === "auth/user-not-found") {
@@ -250,9 +252,7 @@ const SignInScreen = () => {
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
-};
-
-export default SignInScreen;
+}
 
 const styles = StyleSheet.create({
   container: {

@@ -609,7 +609,7 @@ export default function OnboardingFlow() {
         console.error("Error loading initial recommendations:", error);
       }
       // Navigate to home
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       router.replace("/(tabs)/homefolder/home");
     } catch (error) {
       console.error("Error saving user data:", error);

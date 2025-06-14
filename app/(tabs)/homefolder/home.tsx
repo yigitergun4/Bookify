@@ -105,7 +105,7 @@ export default function TabOneScreen() {
             }
           }
         } catch (error) {
-          console.error("Error loading recommended books:", error);
+          console.log("Error loading recommended books:", error);
         } finally {
           setIsLoading(false);
         }

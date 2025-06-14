@@ -62,7 +62,7 @@ export const detectText = async (base64Image: string, userId: string) => {
             requests: [
               {
                 image: { content: base64Image },
-                features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+                features: [{ type: "TEXT_DETECTION" }],
               },
             ],
           }

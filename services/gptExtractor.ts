@@ -103,7 +103,7 @@ If you are not 100% certain of a value, use:
             Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan işlem için yeterli
+            model: "gpt-4o-mini", // gpt-4o-mini kullanmamın sebebi anlama kabiliyeti daha iyi
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },

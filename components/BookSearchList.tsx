@@ -140,12 +140,7 @@ const BookSearchList = ({
                   <Text style={styles.description} numberOfLines={1}>
                     Publisher: {volume?.publisher || "No publisher available."}
                   </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                    }}
-                  >
+                  <View style={styles.bookInfoRow}>
                     <Text style={styles.language} numberOfLines={1}>
                       Language: {volume?.language?.toUpperCase()}
                     </Text>
@@ -165,10 +160,11 @@ const BookSearchList = ({
                             }
                           }
                         }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
                         <Image
                           source={require("@/assets/images/addtolibrary.png")}
-                          style={{ width: 20, height: 20 }}
+                          style={styles.addToLibraryIcon}
                         />
                       </TouchableOpacity>
                     )}
@@ -219,7 +215,7 @@ const BookSearchList = ({
         </TouchableOpacity>
       )}
       {loadingMore && (
-        <View style={{ padding: 16, alignItems: "center" }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator color="#222" />
         </View>
       )}
@@ -238,7 +234,7 @@ const BookSearchList = ({
             >
               <Image
                 source={require("@/assets/images/close.png")}
-                style={{ width: 20, height: 20 }}
+                style={styles.closeIconImage}
               />
             </TouchableOpacity>
             {selectedBook && (
@@ -253,23 +249,10 @@ const BookSearchList = ({
                         }
                       : require("@/assets/images/not-avaliable-book-photo.png")
                   }
-                  style={{
-                    width: 120,
-                    height: 170,
-                    borderRadius: 8,
-                    alignSelf: "center",
-                    marginBottom: 16,
-                  }}
+                  style={styles.modalImage}
                   resizeMode="contain"
                 />
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "bold",
-                    marginBottom: 8,
-                    textAlign: "center",
-                  }}
-                >
+                <Text style={styles.bookTitle}>
                   {selectedBook?.volumeInfo?.title}
                 </Text>
                 <Text style={{ fontSize: 15, marginBottom: 4 }}>
@@ -331,6 +314,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
   },
+  bookInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   bookTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -353,6 +340,10 @@ const styles = StyleSheet.create({
     color: "#444",
     lineHeight: 18,
   },
+  addToLibraryIcon: {
+    width: 20,
+    height: 20,
+  },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -362,12 +353,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#999",
   },
+  loadingContainer: {
+    padding: 16,
+    alignItems: "center",
+  },
   closeIcon: {
     position: "absolute",
     top: 12,
     right: 12,
     zIndex: 10,
     padding: 4,
+  },
+  closeIconImage: {
+    width: 20,
+    height: 20,
   },
   modalOverlay: {
     flex: 1,
@@ -408,15 +407,10 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  scrollTopIcon: {
-    width: 25,
-    height: 25,
-    tintColor: "#666",
-  },
   scrollBottomButton: {
     position: "absolute",
     right: 16,
-    top: 210,
+    top: 230,
     backgroundColor: "#fff",
     width: 40,
     height: 40,
@@ -431,6 +425,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  scrollTopIcon: {
+    width: 20,
+    height: 20,
+  },
+  modalImage: {
+    width: 120,
+    height: 170,
+    borderRadius: 8,
+    alignSelf: "center",
   },
 });
 

@@ -6,13 +6,51 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 import { GoogleBooksItem } from "@/types/booksapitypes";
+import { useLibrary } from "@/contexts/LibraryContext";
+import { getAuth } from "firebase/auth";
 
+const auth = getAuth();
 const NotExactBookFound = () => {
   const { books } = useLocalSearchParams();
+  const { addBook } = useLibrary();
+  const user = auth.currentUser;
   let listOfBooks: GoogleBooksItem[] = [];
+
+  const handleAddBook: (book: any) => Promise<void> = async (book: any) => {
+    if (!user) return;
+    Alert.alert(
+      "Add to Library",
+      `Would you like to add "${book.volumeInfo.title}" to your library?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Add",
+          onPress: async () => {
+            try {
+              await addBook(book);
+              Alert.alert("Success", "Book added to your library!");
+            } catch (error: any) {
+              if (error?.message === "This book is already in your library.") {
+                Alert.alert("Error", error.message);
+              } else {
+                Alert.alert(
+                  "Error",
+                  "Failed to add book to library. Please try again."
+                );
+              }
+            }
+          },
+        },
+      ]
+    );
+  };
 
   try {
     if (typeof books === "string") {
@@ -45,7 +83,7 @@ const NotExactBookFound = () => {
         <BookSearchList
           books={listOfBooks}
           loadingMore={false}
-          addBook={() => {}}
+          addBook={handleAddBook}
           handleLoadMore={() => {}}
           isAddButtonShown={true}
         />

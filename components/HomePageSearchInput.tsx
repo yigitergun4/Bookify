@@ -16,20 +16,20 @@ interface HomePageSearchInputProps {
   value?: string;
 }
 
-const SearchInput = ({
+export default function SearchInput({
   isHomePage,
   onSearchChange,
   isSubmitButtonShown = true,
   onSubmit,
   value = "",
-}: HomePageSearchInputProps) => {
-  const [search, setSearch] = useState(value);
+}: HomePageSearchInputProps) {
+  const [search, setSearch] = useState<string>(value);
 
   useEffect(() => {
     setSearch(value);
   }, [value]);
 
-  const handleSearch = () => {
+  const handleSearch: () => void = () => {
     if (search.trim()) {
       if (isHomePage) {
         router.push({
@@ -42,7 +42,7 @@ const SearchInput = ({
     }
   };
 
-  const handleTextChange = (text: string) => {
+  const handleTextChange: (text: string) => void = (text: string) => {
     setSearch(text);
     if (onSearchChange) {
       onSearchChange(text);
@@ -71,7 +71,7 @@ const SearchInput = ({
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   inputWrapper: {
@@ -97,5 +97,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-
-export default SearchInput;

@@ -37,7 +37,7 @@ export class RecommendationService {
     });
   }
 
-  static getInstance(): RecommendationService {
+  public static getInstance(): RecommendationService {
     if (!RecommendationService.instance) {
       RecommendationService.instance = new RecommendationService();
     }
@@ -90,122 +90,58 @@ export class RecommendationService {
 
   async getChatGPTRecommendations(
     favoriteGenres: string[],
-    favoriteBooks: string[],
-    libraryBooks: GoogleBooksItem[],
-    favoriteAuthors: string,
-    unforgettableBook: string,
-    userGoal?: UserGoal
+    favoriteBooks: GoogleBooksItem[],
+    library: GoogleBooksItem[],
+    userGoal: UserGoal | null,
+    favoriteAuthors: string[]
   ): Promise<string[]> {
-    const libraryTitles = libraryBooks
-      .map((book: GoogleBooksItem) => book.volumeInfo?.title || "")
-      .filter(Boolean)
-      .join(", ");
-
-    const genres: string = favoriteGenres.join(", ");
-    const books: string = favoriteBooks.join(", ");
-    const authors: string = favoriteAuthors || "None";
-    const unforgettable: string = unforgettableBook || "None";
-    const goalDescription: string = userGoal?.description || "None";
-
-    const prompt: string = (() => {
-      const sharedHeader: string = `
-  You're a recommendation engine generating **exactly 4 personalized Google Books API queries**, based solely on the user's own preferences. Use only the data provided — no assumptions or similarity-based logic.
+    try {
+      const prompt = `You're a recommendation engine generating **exactly 4 personalized Google Books API queries**, based solely on the user's own preferences. Use only the data provided — no assumptions or similarity-based logic.
   
-  User’s preferences:
-  - Favorite genres: ${genres}
-  - Favorite books: ${books}
-  - Favorite authors: ${authors}
-  - Unforgettable book: ${unforgettable}
-  - User goal: ${goalDescription}
-  - Already known book titles: ${libraryTitles}
-  `;
-
-      switch (userGoal?.id) {
-        case "classics":
-          return `${sharedHeader}
+  User's preferences:
+  - Favorite genres: ${favoriteGenres.join(", ")}
+  - Favorite books: ${favoriteBooks.map((book) => book.volumeInfo.title).join(", ")}
+  - Favorite authors: ${favoriteAuthors.join(", ") || "None"}
+  - Unforgettable book: ${userGoal?.title || "None"}
+  - User goal: ${userGoal?.description || "None"}
+  - Already known book titles: ${library.map((book) => book.volumeInfo.title).join(", ")}
   
-  Instructions:
-  - Generate 4 queries using only this user's input.
-  - Focus on timeless literature the user already likes:
-    - Use classic authors they've read
-    - Repeat book titles if re-reading is plausible
-    - Include classic genres
-  - Do NOT invent or assume new interests.
-  - Output: 4 plain queries, one per line.`;
-
-        case "contemporary":
-          return `${sharedHeader}
-  
-  Instructions:
-  - Create 4 modern discovery queries:
-    - Use recent works by favorite authors or books the user enjoyed
-    - Repeat titles or genres if meaningful
-  - Avoid speculative or similarity-based ideas.
-  - Output: 4 search queries, no explanation.`;
-
-        case "genres":
-          return `${sharedHeader}
-  
-  Instructions:
-  - Build 4 genre-driven queries that reflect the user's known preferences.
-  - Combine genres with favorite books or authors.
-  - Stay entirely within the provided data.
-  - Return only 4 distinct queries.`;
-
-        case "authors":
-          return `${sharedHeader}
-  
-  Instructions:
-  - Focus only on the user's favorite authors and their works.
-  - Include exact matches if relevant.
-  - No similar author suggestions.
-  - Return exactly 4 queries — one per line, no extra text.`;
-
-        default:
-          return `${sharedHeader}
   
   Instructions:
   - Based only on the user's preferences, generate 4 relevant queries.
   - Use any combination of books, genres, or authors the user provided.
   - You may repeat known content if it matches the user's goal.
   - Return exactly 4 queries, no explanations.`;
-      }
-    })();
 
-    console.log(prompt, "prompt:onboarding");
-
-    try {
-      const response: any = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a book recommendation expert. Generate specific search queries to use with Google Books API.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.8,
-        frequency_penalty: userGoal?.id === "authors" ? 0.1 : 0.25,
-        presence_penalty: userGoal?.id === "genres" ? 0.8 : 0.25,
-        max_tokens: 600,
+      const completion = await this.openai.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "gpt-3.5-turbo",
       });
 
-      const queries: string[] = response.choices[0]?.message?.content
-        ?.split("\n")
-        .map((line: string) => line.trim())
-        .filter(Boolean)
-        .slice(0, 4); // only 4 queries will be returned
-
-      if (!queries || queries.length === 0) {
-        throw new Error("No queries returned from ChatGPT.");
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new RecommendationError("No response from ChatGPT");
       }
 
-      console.log("GPT Search Queries:", queries, "queries:onboarding");
+      // Split the response into individual queries and clean them up
+      const queries = response
+        .split("\n")
+        .map((query) => query.trim())
+        .filter((query) => query.length > 0)
+        .slice(0, 4);
+
+      if (queries.length !== 4) {
+        throw new RecommendationError("Invalid number of queries generated");
+      }
+
       return queries;
     } catch (error) {
-      console.error("Error generating ChatGPT search queries:", error);
-      return [];
+      console.error("Error getting ChatGPT recommendations:", error);
+      throw new RecommendationError(
+        "Failed to get recommendations",
+        500,
+        error
+      );
     }
   }
 
@@ -252,7 +188,7 @@ export class RecommendationService {
       const sharedHeader: string = `
   You're a book recommendation engine generating personalized and creative Google Books API search queries.
   
-  User’s preferences:
+  User's preferences:
   - Favorite genres: ${genreList}
   - Sampled favorite authors: ${sampledAuthors}
   - Sampled unforgettable books: ${sampledUnforgettableBooks}
@@ -287,7 +223,7 @@ export class RecommendationService {
   
   Instructions:
   - 2 queries using sampled authors or unforgettable books in unique genre blends.
-  - 3 queries mixing genres like “romantic sci-fi” or “psychological horror”.
+  - 3 queries mixing genres like "romantic sci-fi" or "psychological horror".
   `;
 
         case "authors":
@@ -692,7 +628,6 @@ Book: ${unforgettableBook}`;
           finalBooks.push(book);
         }
       });
-
       // Process user's favorite genres first
       for (const genre of favoriteGenres) {
         const base: number = 40;

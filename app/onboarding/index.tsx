@@ -30,6 +30,20 @@ interface UserGoal {
   description: string;
 }
 
+interface UserPreferences {
+  name: string;
+  email: string;
+  favoriteGenres: string[];
+  favoriteAuthors: string[];
+  favoriteBooks: GoogleBooksItem[];
+  unforgettableBook: string;
+  userGoal: UserGoal | null;
+  library: GoogleBooksItem[];
+  createdAt: string;
+  country: string;
+  firstLaunchCompleted: boolean;
+}
+
 const getGoals = (selectedGenres: string[]): UserGoal[] => {
   const unselectedGenres: string[] = GENRES.filter(
     (g: string) => !selectedGenres.includes(g)
@@ -550,28 +564,33 @@ export default function OnboardingFlow() {
         .split(",")
         .map((author) => author.trim())
         .filter(Boolean);
+
       const booksArray: GoogleBooksItem[] = selectedBooks
         .map((book) => book)
         .filter(Boolean);
+
       const unforgettableBookArray: string[] = unforgettableBook
         .split(",")
-        .map((book) => book)
+        .map((book) => book.trim())
         .filter(Boolean);
 
-      // Save user preferences to Firebase
-      await setDoc(doc(FIREBASE_DB, "Users", user.uid), {
+      // Create user preferences object
+      const userPreferences: UserPreferences = {
         name: name,
-        email: user.email,
+        email: user.email || "",
         favoriteGenres: selectedGenres,
         favoriteAuthors: authorsArray,
         favoriteBooks: booksArray,
         unforgettableBook: unforgettableBookArray.join(","),
-        userGoal: goal,
+        userGoal: goal || null,
         library: [],
         createdAt: new Date().toISOString(),
         country: selectedCountry,
         firstLaunchCompleted: true,
-      });
+      };
+
+      // Save user preferences to Firebase
+      await setDoc(doc(FIREBASE_DB, "Users", user.uid), userPreferences);
 
       // Show preparing screen
       setIsAppPrepared(true);
@@ -580,14 +599,14 @@ export default function OnboardingFlow() {
       try {
         const userRef = doc(FIREBASE_DB, "Users", user.uid);
         const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
+        const userData = userSnap.data() as UserPreferences;
 
         const queries = await recommendationService.getChatGPTRecommendations(
-          userData?.favoriteGenres || [],
-          userData?.favoriteBooks || [],
-          userData?.library || [],
-          userData?.goal || undefined,
-          userData?.favoriteAuthors || []
+          userData.favoriteGenres,
+          userData.favoriteBooks,
+          userData.library,
+          userData.userGoal,
+          userData.favoriteAuthors
         );
 
         const newBooks: GoogleBooksItem[] = await Promise.all(

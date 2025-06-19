@@ -8,6 +8,7 @@ import {
   Modal,
   Image,
   Dimensions,
+  Linking,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
@@ -46,9 +47,43 @@ export default function CameraButton({
   const router: any = useRouter();
   const auth: any = getAuth();
 
-  useEffect(() => {
-    if (!permission?.granted) requestPermission();
-  }, [permission]);
+  const handleCameraPress = async () => {
+    try {
+      // If permission is not granted, request permission
+      if (!permission?.granted) {
+        const { granted } = await requestPermission();
+
+        if (!granted) {
+          Alert.alert(
+            "Camera Permission Required",
+            "We need camera permission to take photos of books.",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+              {
+                text: "Go to Settings",
+                onPress: () => Linking.openSettings(),
+                style: "default",
+              },
+            ]
+          );
+          return;
+        }
+      }
+
+      // If permission is granted, open modal
+      setModalVisible(true);
+    } catch (error) {
+      console.error("Camera permission error:", error);
+      Alert.alert(
+        "Error",
+        "An error occurred while checking camera permission. Please try again.",
+        [{ text: "OK", style: "default" }]
+      );
+    }
+  };
 
   const processImage: (
     imageUri: string,
@@ -163,8 +198,8 @@ export default function CameraButton({
         console.log("No matching book found. Showing alternatives...");
         const books: GoogleBooksItem[] = await searchBookList(
           bookInfo.title,
-          "",
-          language !== "Unknown" ? language : ""
+          bookInfo.authors !== "Unknown" ? bookInfo.authors : "Unknown",
+          language !== "Unknown" ? language : "Unknown"
         );
 
         router.push({
@@ -216,22 +251,10 @@ export default function CameraButton({
     }
   };
 
-  if (!permission) return null;
-  if (!permission.granted) {
-    return (
-      <View style={styles.center}>
-        <Text>Camera permission is required</Text>
-        <TouchableOpacity onPress={requestPermission}>
-          <Text>Give permission</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View>
       <TouchableOpacity
-        onPress={() => setModalVisible(true)}
+        onPress={handleCameraPress}
         disabled={isLoading}
         style={styles.button}
       >

@@ -90,21 +90,62 @@ export const searchBookList: (
 ): Promise<any[]> => {
   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
   console.log("Search parameters:", { title, author, language });
-  const MAX_RESULTS: number = 40;
-  let query: string = encodeURIComponent(title);
-  if (author && author !== "Unknown") {
-    query += "+inauthor:" + encodeURIComponent(author);
-  }
-  let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}`;
-  if (language && language !== "Unknown") {
-    url += `&langRestrict=${encodeURIComponent(language)}`;
-  }
-  url += `&key=${BOOKS_API_KEY}`;
 
-  console.log("Search URL:", url);
+  const MAX_RESULTS_PER_QUERY: number = 20;
+  const results: any[] = [];
 
-  const response: any = await axios.get(url);
-  const items: GoogleBooksItem[] = response.data.items || [];
-  console.log("Search results count:", items.length);
-  return items;
+  try {
+    // First search: By title (20 results)
+    if (title && title !== "Unknown") {
+      const titleQuery = encodeURIComponent(title);
+      let titleUrl = `https://www.googleapis.com/books/v1/volumes?q=${titleQuery}&maxResults=${MAX_RESULTS_PER_QUERY}`;
+
+      if (language && language !== "Unknown") {
+        titleUrl += `&langRestrict=${encodeURIComponent(language)}`;
+      }
+      titleUrl += `&key=${BOOKS_API_KEY}`;
+
+      console.log("Title search URL:", titleUrl);
+
+      const titleResponse: any = await axios.get(titleUrl);
+      const titleItems: GoogleBooksItem[] = titleResponse.data.items || [];
+      console.log("Title search results count:", titleItems.length);
+
+      results.push(...titleItems);
+    }
+
+    // Second search: By author (20 results)
+    if (author && author !== "Unknown") {
+      const authorQuery: string = "inauthor:" + encodeURIComponent(author);
+      let authorUrl: string = `https://www.googleapis.com/books/v1/volumes?q=${authorQuery}&maxResults=${MAX_RESULTS_PER_QUERY}`;
+
+      if (language && language !== "Unknown") {
+        authorUrl += `&langRestrict=${encodeURIComponent(language)}`;
+      }
+      authorUrl += `&key=${BOOKS_API_KEY}`;
+
+      console.log("Author search URL:", authorUrl);
+
+      const authorResponse: any = await axios.get(authorUrl);
+      const authorItems: GoogleBooksItem[] = authorResponse.data.items || [];
+      console.log("Author search results count:", authorItems.length);
+
+      results.push(...authorItems);
+    }
+
+    // Remove duplicates based on book ID
+    const uniqueResults: GoogleBooksItem[] = results.filter(
+      (book, index, self) => index === self.findIndex((b) => b.id === book.id)
+    );
+
+    const mixBooks: GoogleBooksItem[] = [...uniqueResults];
+    mixBooks.sort(() => Math.random() - 0.5);
+
+    console.log("Total unique results count:", mixBooks.length);
+
+    return mixBooks;
+  } catch (error) {
+    console.error("Error searching books:", error);
+    return [];
+  }
 };

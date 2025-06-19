@@ -120,7 +120,6 @@ export default function TabTwoScreen() {
                 />
               </TouchableOpacity>
             </View>
-
             <View style={styles.searchBarView}>
               <TouchableOpacity
                 onPress={() => router.replace("/(tabs)/reading")}

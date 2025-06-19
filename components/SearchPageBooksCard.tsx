@@ -15,8 +15,8 @@ import { getAuth } from "firebase/auth";
 import ScrollView = Animated.ScrollView;
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
-const cacheService = CacheService.getInstance();
-const auth = getAuth();
+const cacheService: CacheService = CacheService.getInstance();
+const auth: any = getAuth();
 
 type BookCardProps = {
   title: string;
@@ -36,7 +36,8 @@ const BookCard: React.FC<BookCardProps> = ({
   bookData,
 }) => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const { addBook } = useLibrary();
+  const { addBook }: { addBook: (book: GoogleBooksItem) => Promise<void> } =
+    useLibrary();
 
   const openModal: () => Promise<void> = async () => {
     const user: any = auth.currentUser;

@@ -10,9 +10,9 @@ interface LogoHeaderProps {
 export default function LogoHeader({
   isProfileShown = false,
 }: LogoHeaderProps) {
-  const [showPopup, setShowPopup] = React.useState(false);
+  const [showPopup, setShowPopup] = React.useState<boolean>(false);
 
-  const handleLogout = async () => {
+  const handleLogout: () => Promise<void> = async () => {
     try {
       router.replace("/signin");
     } catch (error) {

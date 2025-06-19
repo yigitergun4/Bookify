@@ -84,7 +84,7 @@ const NotExactBookFound = () => {
         </View>
       ) : (
         <BookSearchList
-          books={listOfBooks}
+          books={listOfBooks.slice(0, 40)}
           loadingMore={false}
           addBook={handleAddBook}
           handleLoadMore={() => {}}

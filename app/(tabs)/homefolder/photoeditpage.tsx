@@ -8,11 +8,12 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { useState, useEffect } from "react";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
 import { GoogleBooksItem } from "@/types/booksapitypes";
+import { View } from "@/components/Themed";
 
 export default function EditBookScreen() {
   const { book = "" }: { book: string } = useLocalSearchParams();
@@ -83,8 +84,8 @@ export default function EditBookScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.header}>Edit Book Details</Text>
+      <View style={styles.content}>
+        <Text style={styles.header}>Book Details</Text>
         {photoUri ? (
           <Image
             source={{ uri: photoUri }}
@@ -122,23 +123,24 @@ export default function EditBookScreen() {
           placeholderTextColor="gray"
           multiline
           editable={false}
-          numberOfLines={50}
+          numberOfLines={15}
         />
         <TouchableOpacity style={styles.button} onPress={handleUpdate}>
           <Text style={styles.buttonText}>Add to Library</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFF",
   },
   content: {
     padding: 20,
     alignItems: "center",
+    backgroundColor: "#FFF",
   },
   header: {
     fontSize: 20,

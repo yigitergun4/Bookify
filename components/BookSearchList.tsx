@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,72 @@ interface BookSearchListProps {
   onRefresh?: () => void;
 }
 
+// Memoized Book Item Component
+const BookItem = memo(
+  ({
+    item,
+    onPress,
+    onLongPress,
+    onAddBook,
+    isAddButtonShown,
+  }: {
+    item: GoogleBooksItem;
+    onPress: (book: GoogleBooksItem) => void;
+    onLongPress?: (book: GoogleBooksItem) => void;
+    onAddBook: (book: GoogleBooksItem) => void;
+    isAddButtonShown: boolean;
+  }) => {
+    const volume = item?.volumeInfo;
+    const imageUrl = volume?.imageLinks?.thumbnail?.replace("http:", "https:");
+
+    return (
+      <TouchableOpacity
+        onPress={() => onPress(item)}
+        onLongPress={() => onLongPress && onLongPress(item)}
+      >
+        <View style={styles.card}>
+          <Image
+            source={
+              imageUrl
+                ? { uri: imageUrl }
+                : require("@/assets/images/not-avaliable-book-photo.png")
+            }
+            style={styles.bookImage}
+            resizeMode="contain"
+          />
+          <View style={styles.bookInfo}>
+            <Text style={styles.bookTitle} numberOfLines={1}>
+              {volume?.title}
+            </Text>
+            <Text style={styles.author} numberOfLines={1}>
+              Author: {volume?.authors?.join(", ") || "Unknown"}
+            </Text>
+            <Text style={styles.description} numberOfLines={1}>
+              Publisher: {volume?.publisher || "No publisher available."}
+            </Text>
+            <View style={styles.bookInfoRow}>
+              <Text style={styles.language} numberOfLines={1}>
+                Language: {volume?.language?.toUpperCase()}
+              </Text>
+              {isAddButtonShown && (
+                <TouchableOpacity
+                  onPress={() => onAddBook(item)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Image
+                    source={require("@/assets/images/addtolibrary.png")}
+                    style={styles.addToLibraryIcon}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+);
+
 const BookSearchList = ({
   books,
   loadingMore,
@@ -47,57 +113,91 @@ const BookSearchList = ({
   const [contentHeight, setContentHeight] = useState<number>(0);
   const [layoutHeight, setLayoutHeight] = useState<number>(0);
 
-  const scrollToTop: () => void = () => {
+  const scrollToTop = useCallback(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
-  };
+  }, []);
 
-  const scrollToBottom: () => void = () => {
+  const scrollToBottom = useCallback(() => {
     if (contentHeight > layoutHeight) {
       listRef.current?.scrollToEnd({ animated: true });
     }
-  };
+  }, [contentHeight, layoutHeight]);
 
-  const handleScroll: (event: any) => void = (event: any) => {
-    if (books.length > 40 && contentHeight > layoutHeight) {
-      const offsetY: number = event.nativeEvent.contentOffset.y;
-      const scrollDirection: string =
-        offsetY > previousOffsetY.current ? "down" : "up";
-      const atTop: boolean = offsetY <= 100;
-      const atBottom: boolean = offsetY >= contentHeight - layoutHeight - 100;
+  const handleScroll = useCallback(
+    (event: any) => {
+      if (books.length > 40 && contentHeight > layoutHeight) {
+        const offsetY: number = event.nativeEvent.contentOffset.y;
+        const scrollDirection: string =
+          offsetY > previousOffsetY.current ? "down" : "up";
+        const atTop: boolean = offsetY <= 100;
+        const atBottom: boolean = offsetY >= contentHeight - layoutHeight - 100;
 
-      if (!atTop && !atBottom) {
-        setShowScrollTop(scrollDirection === "up");
-        setShowScrollBottom(scrollDirection === "down");
-      } else {
-        setShowScrollTop(false);
-        setShowScrollBottom(false);
+        if (!atTop && !atBottom) {
+          setShowScrollTop(scrollDirection === "up");
+          setShowScrollBottom(scrollDirection === "down");
+        } else {
+          setShowScrollTop(false);
+          setShowScrollBottom(false);
+        }
+
+        previousOffsetY.current = offsetY;
       }
+    },
+    [books.length, contentHeight, layoutHeight]
+  );
 
-      previousOffsetY.current = offsetY;
-    }
-  };
+  const openModal = useCallback(
+    async (book: GoogleBooksItem) => {
+      const user: any = auth.currentUser;
+      if (user) {
+        await cacheService.addBookClick(book, user.uid);
+      }
+      setSelectedBook(book);
+      setModalVisible(true);
+    },
+    [auth, cacheService]
+  );
 
-  const openModal: (book: GoogleBooksItem) => Promise<void> = async (
-    book: GoogleBooksItem
-  ) => {
-    const user: any = auth.currentUser;
-    if (user) {
-      await cacheService.addBookClick(book, user.uid);
-    }
-    setSelectedBook(book);
-    setModalVisible(true);
-  };
-
-  const closeModal: () => void = () => {
+  const closeModal = useCallback(() => {
     setModalVisible(false);
     setSelectedBook(null);
-  };
+  }, []);
 
-  let modalImageUrl: string | undefined =
-    selectedBook?.volumeInfo?.imageLinks?.thumbnail;
-  if (modalImageUrl && modalImageUrl?.startsWith("http:")) {
-    modalImageUrl = modalImageUrl?.replace("http:", "https:");
-  }
+  const handleAddBook = useCallback(
+    async (book: GoogleBooksItem) => {
+      try {
+        await addBook(book);
+      } catch (err: any) {
+        if (err?.message === "This book is already in your library.") {
+          Alert.alert("Error", err.message);
+        } else {
+          Alert.alert("Error", "Failed to add book.");
+        }
+      }
+    },
+    [addBook]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: GoogleBooksItem }) => (
+      <BookItem
+        item={item}
+        onPress={openModal}
+        onLongPress={onLongPressBook}
+        onAddBook={handleAddBook}
+        isAddButtonShown={isAddButtonShown}
+      />
+    ),
+    [openModal, onLongPressBook, handleAddBook, isAddButtonShown]
+  );
+
+  const keyExtractor = useCallback(
+    (item: any, index: number) => `${item.id}_${index}`,
+    []
+  );
+
+  const modalImageUrl =
+    selectedBook?.volumeInfo?.imageLinks?.thumbnail?.replace("http:", "https:");
 
   return (
     <>
@@ -105,80 +205,12 @@ const BookSearchList = ({
         ref={listRef}
         data={books}
         contentContainerStyle={styles.listContent}
-        keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
+        keyExtractor={keyExtractor}
         onContentSizeChange={(w: number, h: number) => setContentHeight(h)}
         onLayout={(event: any) =>
           setLayoutHeight(event.nativeEvent.layout.height)
         }
-        renderItem={({ item }: any) => {
-          const volume: any = item?.volumeInfo;
-          let imageUrl: string | undefined = volume?.imageLinks?.thumbnail;
-          if (imageUrl && imageUrl?.startsWith("http:")) {
-            imageUrl = imageUrl?.replace("http:", "https:");
-          }
-          return (
-            <TouchableOpacity
-              onPress={() => openModal(item)}
-              onLongPress={() => onLongPressBook && onLongPressBook(item)}
-            >
-              <View style={styles.card}>
-                <Image
-                  source={
-                    imageUrl
-                      ? {
-                          uri: imageUrl.startsWith("http:")
-                            ? imageUrl.replace("http:", "https:")
-                            : imageUrl,
-                        }
-                      : require("@/assets/images/not-avaliable-book-photo.png")
-                  }
-                  style={styles.bookImage}
-                  resizeMode="contain"
-                />
-                <View style={styles.bookInfo}>
-                  <Text style={styles.bookTitle} numberOfLines={1}>
-                    {volume?.title}
-                  </Text>
-                  <Text style={styles.author} numberOfLines={1}>
-                    Author: {volume?.authors?.join(", ") || "Unknown"}
-                  </Text>
-                  <Text style={styles.description} numberOfLines={1}>
-                    Publisher: {volume?.publisher || "No publisher available."}
-                  </Text>
-                  <View style={styles.bookInfoRow}>
-                    <Text style={styles.language} numberOfLines={1}>
-                      Language: {volume?.language?.toUpperCase()}
-                    </Text>
-                    {isAddButtonShown && (
-                      <TouchableOpacity
-                        onPress={async () => {
-                          try {
-                            await addBook(item);
-                          } catch (err: any) {
-                            if (
-                              err?.message ===
-                              "This book is already in your library."
-                            ) {
-                              Alert.alert("Error", err.message);
-                            } else {
-                              Alert.alert("Error", "Failed to add book.");
-                            }
-                          }
-                        }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <Image
-                          source={require("@/assets/images/addtolibrary.png")}
-                          style={styles.addToLibraryIcon}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={renderItem}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No results found.</Text>
@@ -191,6 +223,10 @@ const BookSearchList = ({
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={10}
       />
       {showScrollTop && (
         <TouchableOpacity
@@ -247,11 +283,7 @@ const BookSearchList = ({
                 <Image
                   source={
                     modalImageUrl
-                      ? {
-                          uri: modalImageUrl.startsWith("http:")
-                            ? modalImageUrl.replace("http:", "https:")
-                            : modalImageUrl,
-                        }
+                      ? { uri: modalImageUrl }
                       : require("@/assets/images/not-avaliable-book-photo.png")
                   }
                   style={styles.modalImage}
@@ -443,4 +475,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BookSearchList;
+export default memo(BookSearchList);

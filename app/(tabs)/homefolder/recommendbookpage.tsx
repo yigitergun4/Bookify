@@ -226,11 +226,6 @@ const RecommendedScreen = () => {
         return;
       }
 
-      // Limit to 50 books per load noooo if i do that i can't see all the books
-      // const limitedNewBooks: GoogleBooksItem[] = uniqueNewBooks.slice(0, 50);
-      // randomize the books
-      // limitedNewBooks.sort(() => Math.random() - 0.5);
-
       // Save new books to Firebase using subcollection structure
       await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);
 

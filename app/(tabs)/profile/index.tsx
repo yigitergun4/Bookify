@@ -36,16 +36,6 @@ export default function MyProfileScreen() {
     fetchUserName();
   }, [user]);
 
-  const getImageSource: (book: GoogleBooksItem) => any = (
-    book: GoogleBooksItem
-  ) => {
-    if (book?.volumeInfo?.imageLinks?.thumbnail) {
-      const imageUrl: string = book.volumeInfo.imageLinks.thumbnail || "";
-      return { uri: imageUrl.replace("http://", "https://") };
-    }
-    return require("@/assets/images/not-avaliable-book-photo.png");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>

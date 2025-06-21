@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Platform,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 import { GoogleBooksItem } from "@/types/booksapitypes";
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
-    paddingTop: 20,
+    paddingTop: Platform.OS === "android" ? 40 : 10,
     paddingHorizontal: 15,
     gap: 20,
     paddingBottom: 10,

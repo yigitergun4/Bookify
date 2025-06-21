@@ -40,60 +40,35 @@ export async function extractBookInfoWithGPT(
       throw new GPTError("OCR text is empty");
     }
 
-    // more secure cache key
     const cacheKey: string = `gpt_${SHA256(ocrText).toString()}`;
-
-    // check cache
     const cachedResult: GPTCacheData | null =
       await cacheService.get<GPTCacheData>(cacheKey);
+
     if (cachedResult) {
-      // if cache is not expired, return it
       if (Date.now() - cachedResult.timestamp < ENV.CACHE_DURATION) {
         return cachedResult.data;
       }
-      // if cache is expired, delete it
       await cacheService.delete(cacheKey);
     }
 
-    // If not in cache, make API call with retry
     const result: BookInfo = await withRetry(async () => {
-      const systemPrompt: string = `You are an expert bibliographic metadata extractor.
-Given OCR-extracted text from a book cover, extract and return only the following fields in strict JSON format:
+      const systemPrompt: string = `You are a bibliographic metadata extractor.
+Extract only the following fields from the OCR-extracted book cover text and return valid JSON:
 
 {
   "title": "...",
-  "authors": ["...","..."],
-  "language": "xxx",
+  "authors": ["..."],
+  "language": "xx",
   "english_title": "..."
 }
 
-Instructions:
-
-1. **"title"**: Extract the original book title only.
-   - Combine multiple lines if the title is broken across lines (e.g., "BEYAZ", "ZAMBAKLAR", "ÜLKESİNDE" → "Beyaz Zambaklar Ülkesinde")
-   - The title is usually the largest or most central text, often in all-caps, and may span multiple lines.
-   - **Do not include** translator names, subtitles, series names, edition info, publisher imprint, or print details.
-
-2. **"authors"**: Identify the primary author(s) only.
-   - Do **not** include translators, editors, illustrators, or contributors.
-   - Author names may appear above or below the title. Common known authors should be preferred.
-
-3. **"language"**: Return the original language in ISO 639-1 format (e.g., "tr", "en", "fr"). If unknown, return "Unknown".
-
-4. **"english_title"**: 
-   - If the original title is in English, repeat it here.
-   - If not, and an official English translation exists, provide it.
-   - Otherwise, return "Unknown".
-
-If you are not 100% certain of a value, use:
-- "Unknown" for title, authors, or english_title
-- "Unknown" for language
-`;
-
-      console.log(
-        "Sending request to GPT with text:",
-        ocrText.substring(0, 100) + "..."
-      );
+Rules:
+- Only extract the main book title. Ignore edition info, subtitle, series, publisher, translator, etc.
+- Only extract the main author(s), not editors or contributors.
+- "language" should be ISO 639-1 (e.g. "tr", "en"). If unknown, use "Unknown".
+- "english_title": If original title is English, repeat. If an official English translation exists, use it. Otherwise: "Unknown".
+- If uncertain about any value, return "Unknown".
+- Response must be valid JSON. No markdown, no explanation, no extra text.`;
 
       const response: any = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -104,17 +79,18 @@ If you are not 100% certain of a value, use:
             Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini", // gpt-4o-mini kullanmamın sebebi anlama kabiliyeti daha iyi
+            model: "gpt-4o",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: ocrText },
             ],
+            temperature: 0,
           }),
         }
       );
 
       if (!response.ok) {
-        const errorData: any = await response.json().catch(() => null);
+        const errorData = await response.json().catch(() => null);
         console.error("GPT API Error:", {
           status: response.status,
           statusText: response.statusText,
@@ -127,38 +103,43 @@ If you are not 100% certain of a value, use:
         );
       }
 
-      const data: any = await response.json();
+      const data = await response.json();
+      const rawContent: string = data.choices?.[0]?.message?.content;
 
-      const content: string = data.choices[0]?.message?.content;
-      if (!content) {
+      if (!rawContent) {
         throw new GPTError("Empty response from GPT");
       }
 
+      const cleanJson = rawContent
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim();
+
       try {
-        const parsed: BookInfo = JSON.parse(content);
+        const parsed: BookInfo = JSON.parse(cleanJson);
         if (!parsed.title || !parsed.authors || !parsed.language) {
           throw new GPTError("Invalid response format from GPT");
         }
+
         return {
           title: parsed.title || "Unknown Title",
           authors: Array.isArray(parsed.authors)
             ? parsed.authors
             : ["Unknown Author"],
           language: parsed.language || "Unknown",
-          english_title: parsed.english_title || undefined,
+          english_title: parsed.english_title || "Unknown",
         };
       } catch (e) {
-        console.log("Failed to parse GPT response:", content);
+        console.log("Failed to parse GPT response:", cleanJson);
         throw new GPTError("Failed to parse GPT response", undefined, e);
       }
     });
 
-    // save to cache
-    const cacheData: GPTCacheData = {
+    await cacheService.set(cacheKey, {
       data: result,
       timestamp: Date.now(),
-    };
-    await cacheService.set(cacheKey, cacheData);
+    });
 
     return result;
   } catch (error) {
@@ -176,18 +157,19 @@ export async function isSimilarTitle(
 ): Promise<boolean> {
   try {
     const response: any = await openai.chat.completions.create({
-      model: "gpt-4o", // gpt-4o kullanmamın sebebi çok dilli analiz edecek olması
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a strict assistant that determines if two book titles refer to the same work, even if the titles are in different languages. You must only reply with "Yes" or "No" — no other text, no punctuation, no explanations.`,
+          content: `You are a precise assistant that determines whether two book titles refer to the same book.
+Ignore language differences, word order, and common OCR errors (like "c" instead of "ç", "i" instead of "İ").
+Only reply with "Yes" or "No". No punctuation, no explanation.`,
         },
         {
           role: "user",
-          content: `Do the following two book titles refer to the same book, even if they are in different languages?\n\n1. ${title1}\n2. ${title2}\n\nOnly reply with Yes or No.`,
+          content: `Do these two book titles refer to the same book?\n\n1. ${title1}\n2. ${title2}`,
         },
       ],
-      temperature: 0,
     });
 
     const reply = response.choices[0]?.message?.content?.trim();
@@ -204,18 +186,19 @@ export async function isSimilarAuthor(author1: string, author2: string) {
   }
 
   const response: any = await openai.chat.completions.create({
-    model: "gpt-4o-mini", // yapılan işlem için yeterli
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `You are a strict assistant that determines if two author names refer to the same person, even with different name orders, abbreviations, or language variations. You must only reply with "Yes" or "No" — no other text, no punctuation, no explanations.`,
+        content: `You are a strict assistant that decides whether two author names refer to the same person.
+Ignore OCR spelling issues, name order changes, abbreviations, or initials.
+Only reply with "Yes" or "No". No punctuation, no explanation.`,
       },
       {
         role: "user",
-        content: `Do these two author names refer to the same person?\n\n1. ${author1}\n2. ${author2}\n\nOnly reply with Yes or No.`,
+        content: `Do these author names refer to the same person?\n\n1. ${author1}\n2. ${author2}`,
       },
     ],
-    temperature: 0,
   });
 
   const answer = response.choices[0]?.message?.content?.trim();

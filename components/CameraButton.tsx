@@ -1,17 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   TouchableOpacity,
   Alert,
-  Text,
   StyleSheet,
   Modal,
   Image,
   Dimensions,
   Linking,
+  Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { detectText, VisionError } from "../services/visionService";
 import {
@@ -49,7 +50,13 @@ export default function CameraButton({
 
   const handleCameraPress = async () => {
     try {
-      // If permission is not granted, request permission
+      // Android için native kamera kullan
+      if (Platform.OS === "android") {
+        await openNativeCamera();
+        return;
+      }
+
+      // iOS için expo camera kullan
       if (!permission?.granted) {
         const { granted } = await requestPermission();
 
@@ -72,7 +79,6 @@ export default function CameraButton({
           return;
         }
       }
-
       // If permission is granted, open modal
       setModalVisible(true);
     } catch (error) {
@@ -82,6 +88,55 @@ export default function CameraButton({
         "An error occurred while checking camera permission. Please try again.",
         [{ text: "OK", style: "default" }]
       );
+    }
+  };
+
+  const openNativeCamera = async () => {
+    try {
+      // Android için kamera izni iste
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Camera Permission Required",
+          "We need camera permission to take photos of books.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Go to Settings",
+              onPress: () => Linking.openSettings(),
+              style: "default",
+            },
+          ]
+        );
+        return;
+      }
+      onBookDetected(true);
+      setIsLoading(true);
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        aspect: [16, 9],
+        quality: 0.8, // Reduced quality for faster processing
+        exif: false, // Disable exif data for smaller file
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const photo = result.assets[0];
+        console.log("Native camera photo:", photo);
+        await processImage(photo.uri, photo.width || 0, photo.height || 0);
+      } else {
+        setIsLoading(false);
+        onBookDetected(false);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      onBookDetected(false);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
+      console.log("Native camera error:", error);
     }
   };
 
@@ -96,19 +151,46 @@ export default function CameraButton({
   ) => {
     try {
       setIsLoading(true);
-      const crop: any = {
-        originX: (overlayLeft / screenWidth) * photoWidth,
-        originY: (overlayTop / screenHeight) * photoHeight,
-        width: (overlayWidth / screenWidth) * photoWidth,
-        height: (overlayHeight / screenHeight) * photoHeight,
-      };
 
-      const cropResult: any = await manipulateAsync(imageUri, [{ crop }], {
-        compress: 1,
-        format: SaveFormat.JPEG,
-      });
+      let finalImageUri = imageUri;
 
-      const base64Image: string = await getBase64FromUri(cropResult.uri);
+      // Platform-specific image processing
+      if (Platform.OS === "ios") {
+        // iOS: Crop image as before
+        const crop: any = {
+          originX: (overlayLeft / screenWidth) * photoWidth,
+          originY: (overlayTop / screenHeight) * photoHeight,
+          width: (overlayWidth / screenWidth) * photoWidth,
+          height: (overlayHeight / screenHeight) * photoHeight,
+        };
+
+        const cropResult: any = await manipulateAsync(imageUri, [{ crop }], {
+          compress: 0.8,
+          format: SaveFormat.JPEG,
+        });
+        finalImageUri = cropResult.uri;
+      } else {
+        // Android: Resize and compress image for faster processing
+        const resizeResult: any = await manipulateAsync(
+          imageUri,
+          [
+            {
+              resize: {
+                width: Math.min(photoWidth, 800), // Smaller max width for faster processing
+                height: Math.min(photoHeight, 1000), // Smaller max height for faster processing
+              },
+            },
+          ],
+          {
+            compress: 0.6, // Higher compression for Android (faster processing)
+            format: SaveFormat.JPEG,
+          }
+        );
+        finalImageUri = resizeResult.uri;
+        console.log("Android image resized for faster processing");
+      }
+
+      const base64Image: string = await getBase64FromUri(finalImageUri);
       const visionResult: any = await detectText(
         base64Image,
         auth.currentUser?.uid || ""
@@ -180,6 +262,8 @@ export default function CameraButton({
 
             // if both are similar, then we have a match
             if (titleSim && authorSim) {
+              setIsLoading(false);
+              setModalVisible(false);
               router.push({
                 pathname: "/(tabs)/homefolder/photoeditpage",
                 params: {
@@ -187,29 +271,48 @@ export default function CameraButton({
                 },
               });
               onBookDetected(false);
-              matched = true;
-              break;
+              return; // Early return to prevent further execution
             }
           }
         }
       }
 
-      if (!matched) {
-        console.log("No matching book found. Showing alternatives...");
-        const books: GoogleBooksItem[] = await searchBookList(
+      console.log("No matching book found. Showing alternatives...");
+
+      // Both platforms use searchBookList now with Android timeout optimization
+      let books: GoogleBooksItem[] = [];
+
+      if (Platform.OS === "android") {
+        try {
+          // Android: Add timeout for faster response
+          books = await searchBookList(
+            bookInfo.title,
+            bookInfo.authors !== "Unknown" ? bookInfo.authors : "Unknown",
+            language !== "Unknown" ? language : "Unknown"
+          );
+          console.log("Android: Search completed successfully");
+        } catch (error) {
+          console.log(
+            "Android: Search timeout or failed, showing empty results"
+          );
+          books = [];
+        }
+      } else {
+        // iOS: Normal search without timeout
+        books = await searchBookList(
           bookInfo.title,
           bookInfo.authors !== "Unknown" ? bookInfo.authors : "Unknown",
           language !== "Unknown" ? language : "Unknown"
         );
-
-        router.push({
-          pathname: "/(tabs)/homefolder/notexactbookfound",
-          params: {
-            books: JSON.stringify(books),
-          },
-        });
-        onBookDetected(false);
       }
+
+      router.push({
+        pathname: "/(tabs)/homefolder/notexactbookfound",
+        params: {
+          books: JSON.stringify(books),
+        },
+      });
+      onBookDetected(false);
     } catch (error) {
       console.log("[CameraButton] Error:", error);
       onBookDetected(false);
@@ -247,6 +350,8 @@ export default function CameraButton({
         setIsLoading(false);
         setModalVisible(false);
         Alert.alert("Error", "Failed to take photo. Please try again.");
+        console.log("Error:", error);
+        onBookDetected(false);
       }
     }
   };

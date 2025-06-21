@@ -175,7 +175,6 @@ export default function HomePageFlatlistRecentClicks({
                 style={styles.iconImage}
               />
             </TouchableOpacity>
-
             {selectedBook && (
               <>
                 <Image
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
   },
   addtolibrary: {
     position: "absolute",
-    top: "47%",
+    top: "53%",
     right: 20,
     zIndex: 10,
   },
@@ -327,6 +326,7 @@ const styles = StyleSheet.create({
   bookInfoTexts: {
     fontSize: 15,
     marginBottom: 4,
+    maxWidth: "90%",
   },
   boldText: {
     fontWeight: "bold",

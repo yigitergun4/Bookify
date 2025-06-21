@@ -4,12 +4,13 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
+  ScrollView,
 } from "react-native";
-import { useLocalSearchParams, useNavigation } from "expo-router";
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useState, useEffect } from "react";
 import { useLibrary } from "@/contexts/LibraryContext";
 import { useRouter } from "expo-router";
 import { GoogleBooksItem } from "@/types/booksapitypes";
@@ -83,53 +84,106 @@ export default function EditBookScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.header}>Book Details</Text>
-        {photoUri ? (
-          <Image
-            source={{ uri: photoUri }}
-            style={styles.bookImage}
-            resizeMode="contain"
-          />
-        ) : (
-          <Image
-            source={require("@/assets/images/not-avaliable-book-photo.png")}
-            style={styles.bookImage}
-            resizeMode="contain"
-          />
-        )}
-        <TextInput
-          placeholder="Book Title"
-          style={styles.input}
-          value={bookTitle}
-          onChangeText={setBookTitle}
-          placeholderTextColor="gray"
-          editable={false}
-        />
-        <TextInput
-          placeholder="Author name"
-          style={styles.input}
-          value={author}
-          onChangeText={setAuthor}
-          placeholderTextColor="gray"
-          editable={false}
-        />
-        <TextInput
-          placeholder="Description"
-          style={[styles.input, styles.textArea]}
-          value={desc}
-          onChangeText={setDesc}
-          placeholderTextColor="gray"
-          multiline
-          editable={false}
-          numberOfLines={15}
-        />
-        <TouchableOpacity style={styles.button} onPress={handleUpdate}>
-          <Text style={styles.buttonText}>Add to Library</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    <>
+      {Platform.OS === "android" ? (
+        <ScrollView>
+          <View style={styles.content}>
+            <Text style={styles.header}>Book Details</Text>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.bookImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <Image
+                source={require("@/assets/images/not-avaliable-book-photo.png")}
+                style={styles.bookImage}
+                resizeMode="contain"
+              />
+            )}
+            <TextInput
+              placeholder="Book Title"
+              style={styles.input}
+              value={bookTitle}
+              onChangeText={setBookTitle}
+              placeholderTextColor="gray"
+              editable={false}
+            />
+            <TextInput
+              placeholder="Author name"
+              style={styles.input}
+              value={author}
+              onChangeText={setAuthor}
+              placeholderTextColor="gray"
+              editable={false}
+            />
+            <TextInput
+              placeholder="Description"
+              style={[styles.input, styles.textArea]}
+              value={desc}
+              onChangeText={setDesc}
+              editable={false}
+              multiline={true}
+              numberOfLines={100}
+              selection={{ start: 0, end: 0 }}
+              scrollEnabled={true}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleUpdate}>
+              <Text style={styles.buttonText}>Add to Library</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      ) : (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.content}>
+            <Text style={styles.header}>Book Details</Text>
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.bookImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <Image
+                source={require("@/assets/images/not-avaliable-book-photo.png")}
+                style={styles.bookImage}
+                resizeMode="contain"
+              />
+            )}
+            <TextInput
+              placeholder="Book Title"
+              style={styles.input}
+              value={bookTitle}
+              onChangeText={setBookTitle}
+              placeholderTextColor="gray"
+              editable={false}
+            />
+            <TextInput
+              placeholder="Author name"
+              style={styles.input}
+              value={author}
+              onChangeText={setAuthor}
+              placeholderTextColor="gray"
+              editable={false}
+            />
+            <TextInput
+              placeholder="Description"
+              style={[styles.input, styles.textArea]}
+              value={desc}
+              onChangeText={setDesc}
+              placeholderTextColor="gray"
+              multiline
+              editable={false}
+              numberOfLines={14}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleUpdate}>
+              <Text style={styles.buttonText}>Add to Library</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      )}
+    </>
   );
 }
 const styles = StyleSheet.create({
@@ -139,6 +193,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: Platform.OS === "android" ? 50 : 20,
     alignItems: "center",
     backgroundColor: "#FFF",
   },
@@ -165,6 +220,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     textAlignVertical: "top",
+    height: Platform.OS === "android" ? null : undefined,
   },
   button: {
     backgroundColor: "#000",

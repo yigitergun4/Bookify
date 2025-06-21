@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import { router } from "expo-router";
 
 interface LogoHeaderProps {
@@ -59,8 +66,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Platform.OS === "ios" ? 16 : 20,
+    paddingTop: Platform.OS === "ios" ? 8 : 40,
   },
   logoContainer: {
     flexDirection: "row",

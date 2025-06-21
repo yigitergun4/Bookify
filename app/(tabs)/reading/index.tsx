@@ -7,6 +7,7 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
+  Platform,
 } from "react-native";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
 import LogoHeader from "@/components/LogoHeader";
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.OS === "ios" ? 16 : 0,
   },
   title: {
     fontSize: 22,
@@ -207,7 +208,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    marginVertical: 20,
     backgroundColor: "#fff",
   },
   titleContainer: {

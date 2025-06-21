@@ -3,14 +3,14 @@ export default {
   slug: "Bookify",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/splash.png",
   scheme: "myapp",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   splash: {
-    image: "./assets/images/splash-icon.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    image: "./assets/images/splash.png",
+    resizeMode: "cover",
+    backgroundColor: "#FFFEF0",
   },
   ios: {
     supportsTablet: true,
@@ -19,6 +19,16 @@ export default {
     },
     bundleIdentifier: "com.yigitergun.Bookify",
     googleServicesFile: "./GoogleService-Info.plist",
+    splash: {
+      image: "./assets/images/splash.png",
+      resizeMode: "cover",
+      backgroundColor: "#FFFEF0",
+      dark: {
+        image: "./assets/images/splash.png",
+        resizeMode: "cover",
+        backgroundColor: "#FFFEF0",
+      },
+    },
   },
   android: {
     adaptiveIcon: {
@@ -27,6 +37,16 @@ export default {
     },
     package: "com.yigitergun.Bookify",
     googleServicesFile: "./google-services.json",
+    splash: {
+      image: "./assets/images/splash.png",
+      resizeMode: "cover",
+      backgroundColor: "#FFFEF0",
+      dark: {
+        image: "./assets/images/splash.png",
+        resizeMode: "cover",
+        backgroundColor: "#FFFEF0",
+      },
+    },
   },
   web: {
     bundler: "metro",

@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
 import { useState } from "react";
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   header: {
-    paddingTop: 20,
+    paddingTop: Platform.OS === "ios" ? 20 : 30,
     paddingHorizontal: 20,
     paddingBottom: 10,
     backgroundColor: "#fff",
@@ -315,10 +316,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerText: {
-    fontSize: 26,
+    fontSize: Platform.OS === "ios" ? 26 : 20,
     fontWeight: "bold",
     color: "#222",
-    marginBottom: 4,
   },
   countBooksText: {
     fontSize: 14,
@@ -328,8 +328,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    position: "absolute",
-    right: 16,
   },
   errorContainer: {
     flex: 1,

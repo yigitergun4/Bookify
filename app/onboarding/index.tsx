@@ -12,6 +12,7 @@ import {
   FlatList,
   TouchableWithoutFeedback,
   Keyboard,
+  Platform,
 } from "react-native";
 import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -43,48 +44,6 @@ interface UserPreferences {
   country: string;
   firstLaunchCompleted: boolean;
 }
-
-const getGoals = (selectedGenres: string[]): UserGoal[] => {
-  const unselectedGenres: string[] = GENRES.filter(
-    (g: string) => !selectedGenres.includes(g)
-  );
-
-  return [
-    {
-      id: "classics",
-      title: "Discover Classic Literature",
-      searchStrategy: (genres: string[]) =>
-        `subject:${genres.join("+subject:")}`,
-      categories: (genres: string[]) => genres,
-      description: "Explore timeless masterpieces and literary classics",
-    },
-    {
-      id: "contemporary",
-      title: "Stay Current with Modern Books",
-      searchStrategy: (genres: string[]) =>
-        `subject:${genres.join("+subject:")}`,
-      categories: (genres: string[]) => genres,
-      description: "Find the latest bestsellers and trending books",
-    },
-    {
-      id: "genres",
-      title: `Explore Selected & Other Genres`,
-      searchStrategy: (genres: string[]) =>
-        `subject:${[...genres, ...unselectedGenres].join("+subject:")}`,
-      categories: (genres: string[]) => [...genres, ...unselectedGenres],
-      description:
-        "Discover books across your favorite and other genres you may not know yet",
-    },
-    {
-      id: "authors",
-      title: "Follow Favorite Authors",
-      searchStrategy: (genres: string[]) =>
-        `subject:${genres.join("+subject:")}`,
-      categories: (genres: string[]) => genres,
-      description: "Get recommendations based on your favorite writers",
-    },
-  ];
-};
 
 export default function OnboardingFlow() {
   const [step, setStep] = useState<number>(0);
@@ -119,6 +78,132 @@ export default function OnboardingFlow() {
         setSelectedBooks([]);
       }
       setStep(step - 1);
+    }
+  };
+
+  const getGoals = (selectedGenres: string[]): UserGoal[] => {
+    const unselectedGenres: string[] = GENRES.filter(
+      (g: string) => !selectedGenres.includes(g)
+    );
+
+    return [
+      {
+        id: "classics",
+        title: "Discover Classic Literature",
+        searchStrategy: (genres: string[]) =>
+          `subject:${genres.join("+subject:")}`,
+        categories: (genres: string[]) => genres,
+        description: "Explore timeless masterpieces and literary classics",
+      },
+      {
+        id: "contemporary",
+        title: "Stay Current with Modern Books",
+        searchStrategy: (genres: string[]) =>
+          `subject:${genres.join("+subject:")}`,
+        categories: (genres: string[]) => genres,
+        description: "Find the latest bestsellers and trending books",
+      },
+      {
+        id: "genres",
+        title: `Explore Selected & Other Genres`,
+        searchStrategy: (genres: string[]) =>
+          `subject:${[...genres, ...unselectedGenres].join("+subject:")}`,
+        categories: (genres: string[]) => [...genres, ...unselectedGenres],
+        description:
+          "Discover books across your favorite and other genres you may not know yet",
+      },
+      {
+        id: "authors",
+        title: "Follow Favorite Authors",
+        searchStrategy: (genres: string[]) =>
+          `subject:${genres.join("+subject:")}`,
+        categories: (genres: string[]) => genres,
+        description: "Get recommendations based on your favorite writers",
+      },
+    ];
+  };
+
+  const handleSubmit: () => Promise<void> = async () => {
+    if (!user) {
+      Alert.alert("Error", "Please sign in to continue");
+      return;
+    }
+
+    try {
+      // Convert favorite authors and books to arrays
+      const authorsArray: string[] = favoriteAuthors
+        .split(",")
+        .map((author) => author.trim())
+        .filter(Boolean);
+
+      const booksArray: GoogleBooksItem[] = selectedBooks
+        .map((book) => book)
+        .filter(Boolean);
+
+      const unforgettableBookArray: string[] = unforgettableBook
+        .split(",")
+        .map((book) => book.trim())
+        .filter(Boolean);
+
+      // Create user preferences object
+      const userPreferences: UserPreferences = {
+        name: name,
+        email: user.email || "",
+        favoriteGenres: selectedGenres,
+        favoriteAuthors: authorsArray,
+        favoriteBooks: booksArray,
+        unforgettableBook: unforgettableBookArray.join(","),
+        userGoal: goal || null,
+        library: [],
+        createdAt: new Date().toISOString(),
+        country: selectedCountry,
+        firstLaunchCompleted: true,
+      };
+
+      // Save user preferences to Firebase
+      await setDoc(doc(FIREBASE_DB, "Users", user.uid), userPreferences);
+
+      // Show preparing screen
+      setIsAppPrepared(true);
+
+      // Load recommendations while showing preparing screen
+      try {
+        const userRef = doc(FIREBASE_DB, "Users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data() as UserPreferences;
+
+        const queries = await recommendationService.getChatGPTRecommendations(
+          userData.favoriteGenres,
+          userData.favoriteBooks,
+          userData.library,
+          userData.userGoal,
+          userData.favoriteAuthors
+        );
+
+        const newBooks: GoogleBooksItem[] = await Promise.all(
+          queries.map((query: string) =>
+            recommendationService.searchBooksWithQuery(query)
+          )
+        ).then((results: GoogleBooksItem[][]) => results.flat());
+
+        const uniqueBooks = new Set(newBooks.map((book) => book.id));
+        const filteredBooks = popularBooks
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 50)
+          .filter((book) => !uniqueBooks.has(book.id));
+        newBooks.push(...filteredBooks);
+
+        // Save recommendations to Firebase
+        await recommendationService.saveRecommendations(user.uid, newBooks);
+      } catch (error) {
+        console.error("Error loading initial recommendations:", error);
+      }
+      // Navigate to home
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      router.replace("/(tabs)/homefolder/home");
+    } catch (error) {
+      console.error("Error saving user data:", error);
+      Alert.alert("Error", "Failed to save your preferences");
     }
   };
 
@@ -552,90 +637,6 @@ export default function OnboardingFlow() {
     );
   };
 
-  const handleSubmit: () => Promise<void> = async () => {
-    if (!user) {
-      Alert.alert("Error", "Please sign in to continue");
-      return;
-    }
-
-    try {
-      // Convert favorite authors and books to arrays
-      const authorsArray: string[] = favoriteAuthors
-        .split(",")
-        .map((author) => author.trim())
-        .filter(Boolean);
-
-      const booksArray: GoogleBooksItem[] = selectedBooks
-        .map((book) => book)
-        .filter(Boolean);
-
-      const unforgettableBookArray: string[] = unforgettableBook
-        .split(",")
-        .map((book) => book.trim())
-        .filter(Boolean);
-
-      // Create user preferences object
-      const userPreferences: UserPreferences = {
-        name: name,
-        email: user.email || "",
-        favoriteGenres: selectedGenres,
-        favoriteAuthors: authorsArray,
-        favoriteBooks: booksArray,
-        unforgettableBook: unforgettableBookArray.join(","),
-        userGoal: goal || null,
-        library: [],
-        createdAt: new Date().toISOString(),
-        country: selectedCountry,
-        firstLaunchCompleted: true,
-      };
-
-      // Save user preferences to Firebase
-      await setDoc(doc(FIREBASE_DB, "Users", user.uid), userPreferences);
-
-      // Show preparing screen
-      setIsAppPrepared(true);
-
-      // Load recommendations while showing preparing screen
-      try {
-        const userRef = doc(FIREBASE_DB, "Users", user.uid);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data() as UserPreferences;
-
-        const queries = await recommendationService.getChatGPTRecommendations(
-          userData.favoriteGenres,
-          userData.favoriteBooks,
-          userData.library,
-          userData.userGoal,
-          userData.favoriteAuthors
-        );
-
-        const newBooks: GoogleBooksItem[] = await Promise.all(
-          queries.map((query: string) =>
-            recommendationService.searchBooksWithQuery(query)
-          )
-        ).then((results: GoogleBooksItem[][]) => results.flat());
-
-        const uniqueBooks = new Set(newBooks.map((book) => book.id));
-        const filteredBooks = popularBooks
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 50)
-          .filter((book) => !uniqueBooks.has(book.id));
-        newBooks.push(...filteredBooks);
-
-        // Save recommendations to Firebase
-        await recommendationService.saveRecommendations(user.uid, newBooks);
-      } catch (error) {
-        console.error("Error loading initial recommendations:", error);
-      }
-      // Navigate to home
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      router.replace("/(tabs)/homefolder/home");
-    } catch (error) {
-      console.error("Error saving user data:", error);
-      Alert.alert("Error", "Failed to save your preferences");
-    }
-  };
-
   if (isAppPrepared) {
     return (
       <View style={styles.containerPreparing}>
@@ -668,6 +669,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
     paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 16 : 40,
   },
   title: {
     fontSize: 26,
@@ -704,6 +706,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     marginTop: 8,
+    marginBottom: Platform.OS === "android" ? 50 : 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

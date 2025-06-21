@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
 } from "react-native";
 import { Text, View } from "@/components/Themed";
 import HomePageSearchInput from "@/components/HomePageSearchInput";
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   discoverView: {
-    marginTop: 25,
+    marginTop: Platform.OS === "ios" ? 25 : 40,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -233,15 +234,16 @@ const styles = StyleSheet.create({
   },
   searchBarView: {
     marginTop: 30,
-    paddingBottom: 15,
+    paddingLeft: 15,
     alignItems: "center",
+    justifyContent: "center",
     flexDirection: "row",
     backgroundColor: "#FFF",
   },
   searchbarInputView: {
     width: "85%",
     backgroundColor: "#fff",
-    paddingLeft: 15,
+    paddingLeft: 10,
   },
   searchInputBookIcon: {
     height: 30,

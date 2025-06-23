@@ -29,15 +29,18 @@ export const searchBook: (
       let query: string = "";
       const MAX_RESULTS: number = 10;
 
-      if (title) {
-        query += `intitle:${encodeURIComponent(title)}`;
+      if (title && title.trim()) {
+        query += encodeURIComponent(title.trim());
       }
 
-      if (author && author !== "Unknown") {
-        query += `+inauthor:${encodeURIComponent(author)}`;
+      if (author && author !== "Unknown" && author.trim()) {
+        if (query) query += "+";
+        query += encodeURIComponent(author.trim());
       }
 
       let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
+
+      console.log("SearchBook URL:", url);
 
       const response: any = await axios.get(url);
       const items: GoogleBooksItem[] = response.data.items || [];
@@ -147,5 +150,50 @@ export const searchBookList: (
   } catch (error) {
     console.error("Error searching books:", error);
     return [];
+  }
+};
+
+export const searchBooksSequential: (
+  title: string,
+  author: string
+) => Promise<GoogleBooksItem[]> = async (
+  title: string,
+  author: string
+): Promise<GoogleBooksItem[]> => {
+  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+  try {
+    const result = await withRetry(async () => {
+      let query: string = "";
+      const MAX_RESULTS: number = 10;
+
+      if (title && title.trim()) {
+        query += encodeURIComponent(title.trim());
+      }
+
+      if (author && author !== "Unknown" && author.trim()) {
+        if (query) query += "+";
+        query += encodeURIComponent(author.trim());
+      }
+
+      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
+
+      console.log("SearchBooksSequential URL:", url);
+
+      const response: any = await axios.get(url);
+      const items: GoogleBooksItem[] = response.data.items || [];
+
+      if (items.length === 0) {
+        throw new BooksError("No books found for the given query");
+      }
+
+      console.log(`Found ${items.length} books for sequential checking`);
+      return items;
+    });
+    return result;
+  } catch (error) {
+    if (error instanceof BooksError) {
+      throw error;
+    }
+    throw new BooksError("Failed to search for books", undefined, error);
   }
 };

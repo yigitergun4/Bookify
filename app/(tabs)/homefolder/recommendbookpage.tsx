@@ -130,6 +130,7 @@ const RecommendedScreen = () => {
       const favoriteAuthors: string =
         userData?.favoriteAuthors?.join(", ") || "";
       const unforgettableBook: string = userData?.unforgettableBook || "";
+      const userCountry: string = userData?.country || "";
       const userGoal: UserGoal = {
         id: userData?.goal?.id || "",
         title: userData?.goal?.title || "",
@@ -146,11 +147,10 @@ const RecommendedScreen = () => {
         userGoal,
       });
       let newBooks: GoogleBooksItem[] = [];
-      // Get library book IDs
+      // Get library book ID's
       const libraryBookIds: Set<string> = new Set(
         libraryBooks.map((book: GoogleBooksItem) => book.id)
       );
-      // If we've loaded more than 40 books, try different search strategies
       if (libraryBooks.length > 0) {
         try {
           // Get ChatGPT recommendations
@@ -159,13 +159,17 @@ const RecommendedScreen = () => {
               libraryBooks,
               userGoal,
               favoriteGenres,
-              unforgettableBook
+              unforgettableBook,
+              userCountry
             );
           // Try all generated queries and combine results
           const queryResults: GoogleBooksItem[][] = await Promise.all(
             queries.map(async (query: string) => {
               try {
-                return await recommendationService.searchBooksWithQuery(query);
+                return await recommendationService.searchBooksWithQuery(
+                  query,
+                  userCountry
+                );
               } catch (error) {
                 console.log(`Failed to fetch books for query: ${query}`, error);
                 return [];
@@ -181,7 +185,8 @@ const RecommendedScreen = () => {
             const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
-              `subject:${randomGenre}`
+              `subject:${randomGenre}`,
+              userCountry
             );
           }
         } catch (error) {
@@ -191,7 +196,8 @@ const RecommendedScreen = () => {
             const randomGenre: string =
               favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
             newBooks = await recommendationService.searchBooksWithQuery(
-              `subject:${randomGenre}`
+              `subject:${randomGenre}`,
+              userCountry
             );
           }
         }
@@ -202,7 +208,8 @@ const RecommendedScreen = () => {
           favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
         try {
           newBooks = await recommendationService.searchBooksWithQuery(
-            `subject:${randomGenre}`
+            `subject:${randomGenre}`,
+            userCountry
           );
         } catch (error) {
           console.error("Error in genre-based search:", error);
@@ -275,6 +282,7 @@ const RecommendedScreen = () => {
             addBook={handleAddBook}
             handleLoadMore={handleLoadMore}
             isAddButtonShown={true}
+            searchQuery={searchQuery}
           />
           {error && (
             <View style={styles.errorContainer}>

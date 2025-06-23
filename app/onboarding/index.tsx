@@ -177,12 +177,13 @@ export default function OnboardingFlow() {
           userData.favoriteBooks,
           userData.library,
           userData.userGoal,
-          userData.favoriteAuthors
+          userData.favoriteAuthors,
+          selectedCountry
         );
 
         const newBooks: GoogleBooksItem[] = await Promise.all(
           queries.map((query: string) =>
-            recommendationService.searchBooksWithQuery(query)
+            recommendationService.searchBooksWithQuery(query, selectedCountry)
           )
         ).then((results: GoogleBooksItem[][]) => results.flat());
 
@@ -515,21 +516,7 @@ export default function OnboardingFlow() {
           autoCorrect={false}
           autoCapitalize="words"
         />
-        <TouchableOpacity
-          style={[
-            styles.button,
-            {
-              opacity:
-                favoriteAuthors.trim() || unforgettableBook.trim() ? 1 : 0.8,
-              backgroundColor:
-                favoriteAuthors.trim() || unforgettableBook.trim()
-                  ? "#000"
-                  : "#ccc",
-            },
-          ]}
-          disabled={!favoriteAuthors.trim() && !unforgettableBook.trim()}
-          onPress={() => setStep(5)}
-        >
+        <TouchableOpacity style={styles.button} onPress={() => setStep(5)}>
           <Text style={styles.buttonText}>Continue</Text>
         </TouchableOpacity>
       </View>

@@ -31,6 +31,64 @@ export class RecommendationService {
   private static instance: RecommendationService;
   private openai: OpenAI;
 
+  // Country to language code mapping for Google Books API (based on COUNTRIES from LibraryContext)
+  private COUNTRY_TO_LANGUAGE: { [key: string]: string } = {
+    "United States": "en", // COUNTRIES[0]
+    "United Kingdom": "en", // COUNTRIES[1]
+    Canada: "en", // COUNTRIES[2]
+    Australia: "en", // COUNTRIES[3]
+    Germany: "de", // COUNTRIES[4]
+    France: "fr", // COUNTRIES[5]
+    Spain: "es", // COUNTRIES[6]
+    Italy: "it", // COUNTRIES[7]
+    Japan: "ja", // COUNTRIES[8]
+    "South Korea": "ko", // COUNTRIES[9]
+    India: "en", // COUNTRIES[10]
+    Brazil: "pt", // COUNTRIES[11]
+    Mexico: "es", // COUNTRIES[12]
+    Turkey: "tr", // COUNTRIES[13]
+    Netherlands: "nl", // COUNTRIES[14]
+    Sweden: "sv", // COUNTRIES[15]
+    Norway: "no", // COUNTRIES[16]
+    Denmark: "da", // COUNTRIES[17]
+    Finland: "fi", // COUNTRIES[18]
+    Russia: "ru", // COUNTRIES[19]
+    China: "zh", // COUNTRIES[20]
+    Singapore: "en", // COUNTRIES[21]
+    "New Zealand": "en", // COUNTRIES[22]
+    "South Africa": "en", // COUNTRIES[23]
+    Argentina: "es", // COUNTRIES[24]
+  };
+
+  // ISO 3166-1 Alpha-2 country codes mapping (based on COUNTRIES from LibraryContext)
+  private COUNTRY_TO_ISO_CODE: { [key: string]: string } = {
+    "United States": "US", // COUNTRIES[0]
+    "United Kingdom": "GB", // COUNTRIES[1]
+    Canada: "CA", // COUNTRIES[2]
+    Australia: "AU", // COUNTRIES[3]
+    Germany: "DE", // COUNTRIES[4]
+    France: "FR", // COUNTRIES[5]
+    Spain: "ES", // COUNTRIES[6]
+    Italy: "IT", // COUNTRIES[7]
+    Japan: "JP", // COUNTRIES[8]
+    "South Korea": "KR", // COUNTRIES[9]
+    India: "IN", // COUNTRIES[10]
+    Brazil: "BR", // COUNTRIES[11]
+    Mexico: "MX", // COUNTRIES[12]
+    Turkey: "TR", // COUNTRIES[13]
+    Netherlands: "NL", // COUNTRIES[14]
+    Sweden: "SE", // COUNTRIES[15]
+    Norway: "NO", // COUNTRIES[16]
+    Denmark: "DK", // COUNTRIES[17]
+    Finland: "FI", // COUNTRIES[18]
+    Russia: "RU", // COUNTRIES[19]
+    China: "CN", // COUNTRIES[20]
+    Singapore: "SG", // COUNTRIES[21]
+    "New Zealand": "NZ", // COUNTRIES[22]
+    "South Africa": "ZA", // COUNTRIES[23]
+    Argentina: "AR", // COUNTRIES[24]
+  };
+
   private constructor() {
     this.openai = new OpenAI({
       apiKey: ENV.OPENAI_API_KEY,
@@ -44,6 +102,14 @@ export class RecommendationService {
     return RecommendationService.instance;
   }
 
+  private getLanguageCodeForCountry(country: string): string {
+    return this.COUNTRY_TO_LANGUAGE[country] || "";
+  }
+
+  private getCountryCodeForCountry(country: string): string {
+    return this.COUNTRY_TO_ISO_CODE[country] || "";
+  }
+
   private shuffleArray<T>(array: T[]): T[] {
     const shuffled: T[] = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -53,15 +119,30 @@ export class RecommendationService {
     return shuffled;
   }
 
-  async searchBooksWithQuery(query: string): Promise<GoogleBooksItem[]> {
+  async searchBooksWithQuery(
+    query: string,
+    selectedCountry: string = ""
+  ): Promise<GoogleBooksItem[]> {
     try {
       console.log("Searching books with query:", query);
       const maxResultsPerPage: number = 20;
       const orderBy: string = "relevance";
+      const languageCode: string =
+        this.getLanguageCodeForCountry(selectedCountry);
+      const countryCode: string =
+        this.getCountryCodeForCountry(selectedCountry);
 
-      const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      let url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
         query
       )}&printType=books&maxResults=${maxResultsPerPage}&orderBy=${orderBy}`;
+
+      // Add country and language restrictions if selectedCountry is provided
+      if (selectedCountry && languageCode) {
+        url += `&langRestrict=${languageCode}`;
+      }
+      if (selectedCountry && countryCode) {
+        url += `&country=${countryCode}`;
+      }
 
       const response: any = await fetch(url);
 
@@ -93,10 +174,11 @@ export class RecommendationService {
     favoriteBooks: GoogleBooksItem[],
     library: GoogleBooksItem[],
     userGoal: UserGoal | null,
-    favoriteAuthors: string[]
+    favoriteAuthors: string[],
+    selectedCountry: string = ""
   ): Promise<string[]> {
     try {
-      const prompt = `You're a recommendation engine generating **exactly 4 personalized Google Books API queries**, based solely on the user's own preferences. Use only the data provided — no assumptions or similarity-based logic.
+      const prompt = `You're a recommendation engine generating **exactly 4 natural language search queries** for finding books based on user preferences.
   
   User's preferences:
   - Favorite genres: ${favoriteGenres.join(", ")}
@@ -104,18 +186,32 @@ export class RecommendationService {
   - Favorite authors: ${favoriteAuthors.join(", ") || "None"}
   - Unforgettable book: ${userGoal?.title || "None"}
   - User goal: ${userGoal?.description || "None"}
+  - Selected country: ${selectedCountry || ""}
   - Already known book titles: ${library.map((book) => book.volumeInfo.title).join(", ")}
   
   
   Instructions:
-  - Based only on the user's preferences, generate 4 relevant queries.
-  - Use any combination of books, genres, or authors the user provided.
-  - You may repeat known content if it matches the user's goal.
-  - Return exactly 4 queries, no explanations.`;
+  - Generate 4 natural, descriptive search queries that describe the type of books to find.
+  - Use phrases like "trending historical novels set in ancient civilizations", "popular contemporary romance books", "bestselling mystery thrillers"
+  - DO NOT use technical API syntax like "subject:Mystery+inauthor:Author"
+  - Include country-specific context when relevant (e.g., "modern Turkish literature" if Turkey is selected)
+  - Base queries on user's favorite genres, authors, and reading goals
+  - Make queries sound like natural human searches
+  - Return exactly 4 queries, no explanations.
+  
+  Examples of good queries:
+  - "trending historical novels set in ancient civilizations in ${selectedCountry}"
+  - "popular contemporary romance books with strong female characters in ${selectedCountry}"
+  - "bestselling psychological thrillers published in recent years in ${selectedCountry}"
+  - "classic science fiction novels by renowned authors in ${selectedCountry}"`;
 
       const completion = await this.openai.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
+        temperature: 0.9, // i have added some randomness to the queries
+        presence_penalty: 0.6, // encourage the use of new concepts that have not been mentioned before
+        frequency_penalty: 0.3, // reduce the frequency of the same words
+        max_tokens: 600,
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -149,7 +245,8 @@ export class RecommendationService {
     libraryBooks: GoogleBooksItem[],
     userGoal: UserGoal,
     favoriteGenres: string[],
-    unforgettableBook: string
+    unforgettableBook: string,
+    selectedCountry: string = ""
   ): Promise<string[]> {
     const authorsFromLibrary: string[] = libraryBooks
       .map((book: GoogleBooksItem) => book.volumeInfo?.authors || [])
@@ -186,18 +283,21 @@ export class RecommendationService {
 
     const prompt: string = (() => {
       const sharedHeader: string = `
-  You're a book recommendation engine generating personalized and creative Google Books API search queries.
+  You're a book recommendation engine generating personalized and creative natural language search queries.
   
   User's preferences:
   - Favorite genres: ${genreList}
   - Sampled favorite authors: ${sampledAuthors}
   - Sampled unforgettable books: ${sampledUnforgettableBooks}
   - User goal: ${goalDescription}
+  - Selected country: ${selectedCountry || ""}
   - Already known book titles to avoid: ${libraryTitles}
   
   RULES:
-  - Vary each query in terms of genre, style, or focus.
-  - No repeated authors in queries.
+  - Generate natural, descriptive search queries (like "trending historical novels", not "subject:History")
+  - Include country-specific context when relevant (e.g., "modern Turkish literature" if Turkey is selected)
+  - Vary each query in terms of genre, style, or focus
+  - No repeated authors in queries
   - Output exactly 5 queries. No explanations or numbering.
   `;
 
@@ -255,9 +355,9 @@ export class RecommendationService {
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.9, // Biraz daha rastlantısallık katmak için artırıldı
-        presence_penalty: 0.6,
-        frequency_penalty: 0.3,
+        temperature: 0.9, // i have added some randomness to the queries
+        presence_penalty: 0.6, // encourage the use of new concepts that have not been mentioned before
+        frequency_penalty: 0.3, // reduce the frequency of the same words
         max_tokens: 600,
       });
 
@@ -416,7 +516,13 @@ export class RecommendationService {
       case "classics":
         prompt = `You are a literary recommendation engine preparing data for Google Books API.
   
-  List 10 culturally significant and timeless classic literary works in ${selectedCountry} that fit these genres: ${genreList}.
+  List 10 culturally significant and timeless classic literary works from ${selectedCountry} that are SPECIFICALLY about or related to these genres: ${genreList}.
+  
+  CRITICAL REQUIREMENTS:
+  - Books MUST be directly related to the genres: ${genreList}
+  - If the genre is "Sports", recommend only books about sports, athletics, or sporting themes
+  - If no classics exist in this specific genre, recommend the closest thematically related works
+  - Do NOT recommend general literature that doesn't match the genre
   
   Consider:
   - The user's unforgettable book: "${unforgettableBook}" (include similar styles/themes).
@@ -425,6 +531,7 @@ export class RecommendationService {
   - Avoid duplicates or books likely to already exist in the user's collection.
   
   IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Use ONLY the author's name, no translators or additional information.
   Example:
   "The Great Gatsby" - F. Scott Fitzgerald
   "1984" - George Orwell`;
@@ -433,7 +540,13 @@ export class RecommendationService {
       case "contemporary":
         prompt = `You are a book data specialist helping with API search queries.
   
-  List 10 popular and critically acclaimed books published in the last 10 years from ${selectedCountry} in the genres: ${genreList}.
+  List 10 popular and critically acclaimed books published in the last 10 years from ${selectedCountry} that are SPECIFICALLY in these genres: ${genreList}.
+  
+  CRITICAL REQUIREMENTS:
+  - Books MUST belong to the specified genres: ${genreList}
+  - If the genre is "Sports", recommend only contemporary sports books, biographies of athletes, or sports-themed fiction
+  - Do NOT recommend general literature that doesn't match the genre
+  - Focus on books that clearly fit the genre categories
   
   Include:
   - Similar style or theme to the book: "${unforgettableBook}".
@@ -441,6 +554,7 @@ export class RecommendationService {
   - A mix of bestsellers, award winners, and reader favorites.
   
   IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Use ONLY the author's name, no translators or additional information.
   Example:
   "The Midnight Library" - Matt Haig
   "Project Hail Mary" - Andy Weir`;
@@ -449,15 +563,21 @@ export class RecommendationService {
       case "genres":
         prompt = `You are helping create tailored search queries for a personalized book recommendation system.
   
-  Recommend 10 highly engaging books from ${selectedCountry}.
+  Recommend 10 highly engaging books from ${selectedCountry} that SPECIFICALLY belong to these genres: ${genreList}.
+  
+  CRITICAL REQUIREMENTS:
+  - Books MUST be directly related to the specified genres: ${genreList}
+  - If the genre is "Sports", recommend only sports-related books, athlete memoirs, or sports fiction
+  - Do NOT recommend general literature unless it clearly fits the genre
+  - Each book should have clear genre alignment
   
   Include:
   - Mostly from the user's favorite genres: ${genreList}.
-  - Some variety from complementary genres.
   - Books stylistically or thematically like "${unforgettableBook}".
   - Authors similar to or inspired by: ${favoriteAuthors || "None"}.
   
   IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Use ONLY the author's name, no translators or additional information.
   Example:
   "The Seven Husbands of Evelyn Hugo" - Taylor Jenkins Reid
   "Klara and the Sun" - Kazuo Ishiguro`;
@@ -466,13 +586,20 @@ export class RecommendationService {
       case "authors":
         prompt = `You are helping match authors and books for Google Books API queries.
   
-  List 10 highly influential authors from ${selectedCountry} in these genres: ${genreList}.
+  List 10 highly influential authors from ${selectedCountry} who SPECIFICALLY write in these genres: ${genreList}.
+  
+  CRITICAL REQUIREMENTS:
+  - Authors MUST be known for writing in the specified genres: ${genreList}
+  - If the genre is "Sports", recommend only authors who write sports books, athlete biographies, or sports fiction
+  - Do NOT recommend general literary authors unless they have significant works in the specified genre
+  - Focus on genre-specific expertise
   
   For each author:
-  - Provide 2–3 bestselling or critically recognized books.
+  - Provide 2–3 bestselling or critically recognized books in the specified genre.
   - Relate the authors to: ${favoriteAuthors || "None"} or "${unforgettableBook}" when possible.
   
   IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Use ONLY the author's name, no translators or additional information.
   Example:
   "Norwegian Wood" - Haruki Murakami
   "Kafka on the Shore" - Haruki Murakami`;
@@ -481,14 +608,21 @@ export class RecommendationService {
       default:
         prompt = `You are an AI assistant helping generate search queries for Google Books API.
   
-  List 10 great recommendations from ${selectedCountry} across these genres: ${genreList}.
+  List 10 great recommendations from ${selectedCountry} that are SPECIFICALLY in these genres: ${genreList}.
+  
+  CRITICAL REQUIREMENTS:
+  - Books MUST belong to the specified genres: ${genreList}
+  - If the genre is "Sports", recommend only sports-related content
+  - Do NOT recommend general literature that doesn't match the genre
+  - Each recommendation should clearly fit the genre category
   
   Ensure:
-  - A mix of genre-based and author-inspired selections.
+  - Genre-specific selections that match ${genreList}.
   - Similarity to "${unforgettableBook}" in tone or story.
   - Authors connected to: ${favoriteAuthors || "None"}.
   
   IMPORTANT: Format each line EXACTLY as: "Book Title" - Author Name
+  Use ONLY the author's name, no translators or additional information.
   Example:
   "The Song of Achilles" - Madeline Miller
   "Piranesi" - Susanna Clarke`;
@@ -498,18 +632,18 @@ export class RecommendationService {
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan iş için yeterli
+        model: "gpt-4o-mini", // i am using gpt-4o-mini because it is enough for the task
         messages: [
           {
             role: "system",
             content:
-              'You are a book recommendation expert. Generate specific book-author pairs based on user preferences. Always use the exact format: "Book Title" - Author Name',
+              'You are a book recommendation expert. Generate specific book-author pairs based on user preferences. Always use the exact format: "Book Title" - Author Name. IMPORTANT: Use ONLY the author\'s name, no translators, no additional information in parentheses, no extra details.',
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.7,
-        frequency_penalty: userGoal?.id === "authors" ? 0.1 : 0.25,
-        presence_penalty: userGoal?.id === "genres" ? 0.8 : 0.25,
+        temperature: 0.7, // i have added some randomness to the queries
+        frequency_penalty: userGoal?.id === "authors" ? 0.1 : 0.25, // reduce the frequency of the same words
+        presence_penalty: userGoal?.id === "genres" ? 0.8 : 0.25, // encourage the use of new concepts that have not been mentioned before
         max_tokens: 500,
       });
 
@@ -517,6 +651,7 @@ export class RecommendationService {
         ?.split("\n")
         .map((line: string) => line.trim())
         .filter(Boolean);
+      console.log(lines, "lines");
 
       const gptBookItems: { title: string; author: string }[] = [];
 
@@ -532,8 +667,17 @@ export class RecommendationService {
             .slice(0, separatorIndex)
             .trim()
             .replace(/^"|"$/g, "");
-          const rawAuthor: string = normalizedLine
+          let rawAuthor: string = normalizedLine
             .slice(separatorIndex + 3)
+            .trim();
+
+          // Clean author name: remove translators, parentheses, and extra info
+          rawAuthor = rawAuthor
+            .replace(/\(translated by[^)]*\)/gi, "") // Remove translator info
+            .replace(/\([^)]*\)/g, "") // Remove any remaining parentheses
+            .replace(/translated by.*$/gi, "") // Remove "translated by" at the end
+            .replace(/,.*translator.*$/gi, "") // Remove translator mentions
+            .replace(/\s+/g, " ") // Normalize whitespace
             .trim();
 
           if (rawTitle && rawAuthor) {
@@ -545,23 +689,32 @@ export class RecommendationService {
       const uniqueBooksMap: Map<string, GoogleBooksItem> = new Map();
       const finalBooks: GoogleBooksItem[] = [];
 
-      // First, parse author names using ChatGPT
-      const authorPrompt = `Parse the following author names into a comma-separated list. If there are multiple authors, separate them with commas. Return only the comma-separated list, no explanations:
+      // First, parse author names using ChatGPT (only if authors were provided)
+      let parsedAuthors: string = "";
+
+      if (favoriteAuthors && favoriteAuthors.trim()) {
+        const authorPrompt: string = `Extract only the author names from the following text. Remove any categories, genres, or additional information in parentheses. Return only the clean author names separated by commas, no explanations:
 
 Authors: ${favoriteAuthors}`;
 
-      const authorCompletion = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan iş için yeterli
-        messages: [{ role: "user", content: authorPrompt }],
-        temperature: 0.3,
-      });
+        const authorCompletion: any = await this.openai.chat.completions.create(
+          {
+            model: "gpt-4o-mini", // i am using gpt-4o-mini because it is enough for the task
+            messages: [{ role: "user", content: authorPrompt }],
+            temperature: 0.3,
+          }
+        );
 
-      const parsedAuthors: string =
-        authorCompletion.choices[0]?.message?.content?.trim() || "";
-      console.log("Parsed authors:", parsedAuthors);
+        parsedAuthors =
+          authorCompletion.choices[0]?.message?.content?.trim() || "";
+        console.log("Parsed authors:", parsedAuthors);
+      } else {
+        console.log("No favorite authors provided, skipping author parsing");
+      }
 
       // Parse unforgettable book using ChatGPT
-      const bookPrompt = `Analyze this book title and generate 3 different search queries to find similar books. Return only the queries, one per line, no explanations:
+      console.log(unforgettableBook, "unforgettableBook");
+      const bookPrompt: string = `Analyze this book title and generate 3 different search queries to find similar books. Return only the queries, one per line, no explanations:
 
 Book: ${unforgettableBook}`;
 
@@ -570,14 +723,16 @@ Book: ${unforgettableBook}`;
 
       if (unforgettableBook) {
         bookCompletion = await this.openai.chat.completions.create({
-          model: "gpt-4o-mini", // gpt-4o-mini kullanıyorum çünkü yapılan iş için yeterli
+          model: "gpt-4o-mini", // i am using gpt-4o-mini because it is enough for the task
           messages: [{ role: "user", content: bookPrompt }],
-          temperature: 0.3,
+          temperature: 0.3, // i have added some randomness to the queries
+          max_tokens: 500,
         });
         parsedBookQueries =
           bookCompletion.choices[0]?.message?.content?.trim().split("\n") || [];
         console.log("Parsed book queries:", parsedBookQueries);
       }
+      console.log("Parsed book queries:", parsedBookQueries);
 
       const gptAuthors: string[] = [
         ...new Set([
@@ -597,11 +752,12 @@ Book: ${unforgettableBook}`;
             try {
               const query: string = `inauthor:"${author}"`;
               const maxResults: number = 10;
+              const orderBy: string = "relevance";
               console.log(`Fetching books for author: ${author}`);
               const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
-                )}&printType=books&maxResults=${maxResults}&orderBy=relevance`
+                )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
               );
               const json: any = await res.json();
               console.log(
@@ -681,11 +837,11 @@ Book: ${unforgettableBook}`;
 
         for (const query of searchQueries) {
           try {
-            console.log(`Fetching books with query: "${query}"`);
+            const orderBy: string = "relevance";
             const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
-              )}&printType=books&maxResults=${Math.ceil(total / searchQueries.length)}&orderBy=relevance`
+              )}&printType=books&maxResults=${10}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
             );
             const json: any = await res.json();
             const items: GoogleBooksItem[] = json.items || [];
@@ -724,7 +880,7 @@ Book: ${unforgettableBook}`;
           ];
 
           for (const query of searchQueries) {
-            const maxResults: number = 2;
+            const maxResults: number = 10;
             const orderBy: string = "relevance";
             try {
               console.log(
@@ -733,7 +889,7 @@ Book: ${unforgettableBook}`;
               const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
-                )}&printType=books&maxResults=${maxResults}&orderBy=${orderBy}`
+                )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
               );
               const json: any = await res.json();
               const items: GoogleBooksItem[] = json.items || [];
@@ -761,19 +917,22 @@ Book: ${unforgettableBook}`;
       if (parsedBookQueries.length > 0) {
         for (const query of parsedBookQueries) {
           try {
-            console.log(
-              `Fetching books related to unforgettable book: "${query}"`
-            );
+            const maxResults: number = 4;
+            const orderBy: string = "relevance";
             const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
-              )}&printType=books&maxResults=4&orderBy=relevance`
+              )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
             );
+
             const json: any = await res.json();
             const items: GoogleBooksItem[] = json.items || [];
 
             console.log(`Found ${items.length} books for unforgettable query`);
-
+            console.log(
+              items.map((item: GoogleBooksItem) => item.volumeInfo.title),
+              "items"
+            );
             items.forEach((book: GoogleBooksItem) => {
               const id: string = book.id;
               const title: string = book.volumeInfo?.title;

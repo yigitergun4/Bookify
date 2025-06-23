@@ -86,11 +86,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [libraryBooks, setLibraryBooks] = useState<any[]>([]);
   const [recommendedBooks, setRecommendedBooks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const auth = getAuth();
+  const auth: any = getAuth();
 
-  const updateLibraryBooks = (books: any[]) => {
+  const updateLibraryBooks: (books: GoogleBooksItem[]) => void = (
+    books: GoogleBooksItem[]
+  ) => {
     setLibraryBooks(books);
   };
 
@@ -99,7 +101,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const loadRecommendedBooks = async () => {
-    const user = auth.currentUser;
+    const user: any = auth.currentUser;
     if (!user) return;
 
     try {
@@ -117,13 +119,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!recommendationsSnap.empty) {
         const firebaseBooks = recommendationsSnap.docs
           .map((doc) => {
-            const data = doc.data();
+            const data: any = doc.data();
             return data.books;
           })
           .flat();
         if (firebaseBooks.length > 0) {
           // Shuffle the books
-          const shuffledBooks = [...firebaseBooks].sort(
+          const shuffledBooks: GoogleBooksItem[] = [...firebaseBooks].sort(
             () => Math.random() - 0.5
           );
           setRecommendedBooks(shuffledBooks);
@@ -136,17 +138,20 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       const userRef = doc(FIREBASE_DB, "Users", user.uid);
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
+      const userCountry: string = userData?.country || "";
 
-      const queries = await recommendationService.getChatGPTRecommendations(
-        userData?.favoriteGenres || [],
-        userData?.favoriteBooks || [],
-        userData?.libraryBooks || [],
-        userData?.goal || undefined,
-        userData?.favoriteAuthors || []
-      );
+      const queries: string[] =
+        await recommendationService.getChatGPTRecommendations(
+          userData?.favoriteGenres || [],
+          userData?.favoriteBooks || [],
+          userData?.libraryBooks || [],
+          userData?.goal || undefined,
+          userData?.favoriteAuthors || [],
+          userCountry
+        );
       const newBooks: GoogleBooksItem[] = await Promise.all(
-        queries.map((query) =>
-          recommendationService.searchBooksWithQuery(query)
+        queries.map((query: string) =>
+          recommendationService.searchBooksWithQuery(query, userCountry)
         )
       ).then((results) => results.flat());
 
@@ -166,8 +171,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const addBook = async (book: any) => {
-    const user = auth.currentUser;
+  const addBook: (book: GoogleBooksItem) => Promise<void> = async (
+    book: GoogleBooksItem
+  ) => {
+    const user: any = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 
     try {
@@ -177,10 +184,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // Add to library
-      const userRef = doc(FIREBASE_DB, "Users", user.uid);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data() || {};
-      const library = userData.library || [];
+      const userRef: any = doc(FIREBASE_DB, "Users", user.uid);
+      const userSnap: any = await getDoc(userRef);
+      const userData: any = userSnap.data() || {};
+      const library: GoogleBooksItem[] = userData.library || [];
 
       await setDoc(userRef, {
         ...userData,

@@ -16,9 +16,9 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { detectText, VisionError } from "../services/visionService";
 import {
-  searchBook,
   BooksError,
   searchBookList,
+  searchBooksSequential,
 } from "../services/booksService";
 import { getBase64FromUri } from "../utils/imageUtils";
 import {
@@ -200,24 +200,59 @@ export default function CameraButton({
       if (!detectedText) {
         throw new VisionError("No text detected in image.");
       }
+      console.log("sending to gpt", detectedText);
       const bookInfo: any = await extractBookInfoWithGPT(detectedText);
       console.log("Extracted book info:", bookInfo);
 
-      const trySearch: (
+      const trySearchSequential: (
         title: string,
         author: string,
         language: string
       ) => Promise<any> = async (title: string, author: string) => {
         try {
-          const result: any = await searchBook(title, author);
-          console.log(
-            "Found:",
-            result.volumeInfo.title,
-            result.volumeInfo.authors
+          // Use the new booksService function to get multiple books
+          const items: GoogleBooksItem[] = await searchBooksSequential(
+            title,
+            author
           );
-          return result;
+
+          console.log(`Found ${items.length} books, checking sequentially...`);
+
+          // Check books sequentially (0, 1, 2, etc.)
+          for (let i = 0; i < Math.min(items.length, 5); i++) {
+            const book = items[i];
+            console.log(
+              `Checking book #${i + 1}: ${book.volumeInfo.title} by ${book.volumeInfo.authors?.[0] || "Unknown"}`
+            );
+
+            try {
+              const titleSim: boolean = await isSimilarTitle(
+                bookInfo.title,
+                book.volumeInfo.title
+              );
+              const authorSim: boolean = await isSimilarAuthor(
+                fullAuthor,
+                book.volumeInfo.authors?.[0] || ""
+              );
+
+              console.log(`Book #${i + 1} - isTitleSimilar:`, titleSim);
+              console.log(`Book #${i + 1} - isAuthorSimilar:`, authorSim);
+
+              // If both are similar, return this book
+              if (titleSim && authorSim) {
+                console.log(`✅ Match found at position #${i + 1}!`);
+                return book;
+              }
+            } catch (error) {
+              console.log(`Error checking book #${i + 1}:`, error);
+              continue;
+            }
+          }
+
+          console.log("No exact match found in sequential check");
+          return null;
         } catch (err) {
-          console.log(`Not found: "${title}" - ${author}`);
+          console.log(`Search error for: "${title}" - ${author}`, err);
           return null;
         }
       };
@@ -241,11 +276,12 @@ export default function CameraButton({
 
       for (const attempt of searchAttempts) {
         if (attempt && (attempt.title || attempt.author)) {
-          const result: any = await trySearch(
+          const result: any = await trySearchSequential(
             attempt.title,
             attempt.author,
             ""
           );
+          console.log(result, "result");
 
           if (result) {
             const titleSim: boolean = await isSimilarTitle(

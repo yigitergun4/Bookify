@@ -24,6 +24,7 @@ interface BookSearchListProps {
   onLongPressBook?: (book: any) => void;
   refreshing?: boolean;
   onRefresh?: () => void;
+  searchQuery?: string;
 }
 
 // Memoized Book Item Component
@@ -101,6 +102,7 @@ const BookSearchList = ({
   onLongPressBook,
   refreshing = false,
   onRefresh,
+  searchQuery = "",
 }: BookSearchListProps) => {
   const cacheService: any = CacheService.getInstance();
   const auth: any = getAuth();
@@ -125,6 +127,13 @@ const BookSearchList = ({
 
   const handleScroll = useCallback(
     (event: any) => {
+      // Don't show scroll buttons if there's a search query
+      if (searchQuery && searchQuery.trim().length > 0) {
+        setShowScrollTop(false);
+        setShowScrollBottom(false);
+        return;
+      }
+
       if (books.length > 40 && contentHeight > layoutHeight) {
         const offsetY: number = event.nativeEvent.contentOffset.y;
         const scrollDirection: string =
@@ -143,7 +152,7 @@ const BookSearchList = ({
         previousOffsetY.current = offsetY;
       }
     },
-    [books.length, contentHeight, layoutHeight]
+    [books.length, contentHeight, layoutHeight, searchQuery]
   );
 
   const openModal = useCallback(

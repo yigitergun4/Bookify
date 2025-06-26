@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { RecommendationService } from "@/services/recommendationService";
 import { CacheService } from "@/services/cacheService";
 import { GoogleBooksItem } from "@/types/booksapitypes";
+import { removeDuplicateBooks, shuffleBooks } from "@/utils/bookUtils";
 
 const cacheService = CacheService.getInstance();
 const recommendationService = RecommendationService.getInstance();
@@ -124,10 +125,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
           })
           .flat();
         if (firebaseBooks.length > 0) {
+          // Remove duplicates by book ID
+          const uniqueBooks = removeDuplicateBooks(firebaseBooks);
           // Shuffle the books
-          const shuffledBooks: GoogleBooksItem[] = [...firebaseBooks].sort(
-            () => Math.random() - 0.5
-          );
+          const shuffledBooks: GoogleBooksItem[] = shuffleBooks(uniqueBooks);
           setRecommendedBooks(shuffledBooks);
           // Also update cache with shuffled books
           await cacheService.saveRecommendedBooks(user.uid, shuffledBooks);
@@ -155,10 +156,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       ).then((results) => results.flat());
 
-      setRecommendedBooks(newBooks);
+      // Remove duplicates by book ID
+      const uniqueNewBooks = removeDuplicateBooks(newBooks);
+
+      setRecommendedBooks(uniqueNewBooks);
       // save to both cache and firebase
-      await cacheService.saveRecommendedBooks(user.uid, newBooks);
-      await recommendationService.saveRecommendations(user.uid, newBooks);
+      await cacheService.saveRecommendedBooks(user.uid, uniqueNewBooks);
+      await recommendationService.saveRecommendations(user.uid, uniqueNewBooks);
     } catch (error) {
       console.log("[LibraryContext] Error loading recommended books:", error);
       if (error instanceof Error) {

@@ -151,9 +151,7 @@ export default function CameraButton({
   ) => {
     try {
       setIsLoading(true);
-
       let finalImageUri = imageUri;
-
       // Platform-specific image processing
       if (Platform.OS === "ios") {
         // iOS: Crop image as before
@@ -219,8 +217,8 @@ export default function CameraButton({
           console.log(`Found ${items.length} books, checking sequentially...`);
 
           // Check books sequentially (0, 1, 2, etc.)
-          for (let i = 0; i < Math.min(items.length, 5); i++) {
-            const book = items[i];
+          for (let i = 0; i < Math.min(items.length, 10); i++) {
+            const book: GoogleBooksItem = items[i];
             console.log(
               `Checking book #${i + 1}: ${book.volumeInfo.title} by ${book.volumeInfo.authors?.[0] || "Unknown"}`
             );

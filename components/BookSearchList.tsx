@@ -16,12 +16,12 @@ import { getAuth } from "firebase/auth";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 
 interface BookSearchListProps {
-  books: any[];
+  books: GoogleBooksItem[];
   loadingMore: boolean;
-  addBook: (book: any) => void;
+  addBook: (book: GoogleBooksItem) => void;
   handleLoadMore: () => void;
   isAddButtonShown: boolean;
-  onLongPressBook?: (book: any) => void;
+  onLongPressBook?: (book: GoogleBooksItem) => void;
   refreshing?: boolean;
   onRefresh?: () => void;
   searchQuery?: string;

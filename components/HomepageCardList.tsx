@@ -200,7 +200,7 @@ export default function HomePageFlatlistRecentClicks({
                 <Text style={styles.modalTitle}>
                   {selectedBook?.volumeInfo?.title}
                 </Text>
-                <Text style={styles.bookInfoTexts}>
+                <Text style={styles.bookInfoTexts} numberOfLines={3}>
                   <Text style={styles.boldText}>Author: </Text>
                   {selectedBook?.volumeInfo?.authors?.join(", ") || "Unknown"}
                 </Text>

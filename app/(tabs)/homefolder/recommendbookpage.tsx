@@ -27,6 +27,7 @@ import { useLibrary } from "@/contexts/LibraryContext";
 import SearchInput from "@/components/HomePageSearchInput";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 import { UserGoal } from "@/types/usersdatatypes";
+import { removeDuplicateBooks, filterUniqueBooks } from "@/utils/bookUtils";
 
 const auth = getAuth();
 const recommendationService = RecommendationService.getInstance();
@@ -138,14 +139,6 @@ const RecommendedScreen = () => {
         categories: userData?.goal?.categories || [],
         description: userData?.userGoal?.description || "",
       };
-      console.log("Processed data:", {
-        favoriteGenres,
-        favoriteBooks,
-        libraryBooksCount: libraryBooks.length,
-        favoriteAuthors,
-        unforgettableBook,
-        userGoal,
-      });
       let newBooks: GoogleBooksItem[] = [];
       // Get library book ID's
       const libraryBookIds: Set<string> = new Set(
@@ -177,6 +170,10 @@ const RecommendedScreen = () => {
             })
           );
           newBooks = queryResults.flat();
+
+          // Remove duplicates by book ID from the new books
+          newBooks = removeDuplicateBooks(newBooks);
+
           // If we got no results, try genre-based search
           if (newBooks.length === 0 && favoriteGenres.length > 0) {
             console.log(
@@ -208,7 +205,7 @@ const RecommendedScreen = () => {
           favoriteGenres[Math.floor(Math.random() * favoriteGenres.length)];
         try {
           newBooks = await recommendationService.searchBooksWithQuery(
-            `subject:${randomGenre}`,
+            `subject:${randomGenre}&country:${userCountry}&maxResults=20&orderBy=relevance`,
             userCountry
           );
         } catch (error) {
@@ -217,11 +214,11 @@ const RecommendedScreen = () => {
       }
 
       // Filter out books that are already in the list, library, or previously recommended
-      const uniqueNewBooks: GoogleBooksItem[] = newBooks.filter(
-        (book: GoogleBooksItem) =>
-          !existingBookIds.has(book.id) &&
-          !libraryBookIds.has(book.id) &&
-          !previouslyRecommendedIds.has(book.id)
+      const uniqueNewBooks: GoogleBooksItem[] = filterUniqueBooks(
+        newBooks,
+        existingBookIds,
+        libraryBookIds,
+        previouslyRecommendedIds
       );
 
       if (uniqueNewBooks.length === 0) {

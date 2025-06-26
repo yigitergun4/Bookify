@@ -193,7 +193,6 @@ export default function OnboardingFlow() {
           .slice(0, 50)
           .filter((book) => !uniqueBooks.has(book.id));
         newBooks.push(...filteredBooks);
-
         // Save recommendations to Firebase
         await recommendationService.saveRecommendations(user.uid, newBooks);
       } catch (error) {

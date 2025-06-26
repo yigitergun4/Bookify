@@ -48,7 +48,6 @@ export default function TabOneScreen() {
 
   useEffect(() => {
     if (!user) return;
-
     // Initial fetch
     cacheService.getRecentClicks(user.uid).then((clicks: any) => {
       setRecentClicks(clicks.map((click: any) => click.bookInfo));
@@ -88,7 +87,6 @@ export default function TabOneScreen() {
             "Recommendations"
           );
           const recommendationsSnap = await getDocs(recommendationsRef);
-
           if (!recommendationsSnap.empty) {
             const firebaseBooks: GoogleBooksItem[] = recommendationsSnap.docs
               .map((doc: any) => {

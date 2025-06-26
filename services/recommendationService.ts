@@ -158,6 +158,10 @@ export class RecommendationService {
       }
 
       console.log(`Found ${data.items.length} books for query:`, query);
+      console.log(
+        "Selected books",
+        data.items.map((item: any) => item.volumeInfo.title)
+      );
       return data.items;
     } catch (error) {
       console.error("[RecommendationService] Error searching books:", {
@@ -786,9 +790,6 @@ Book: ${unforgettableBook}`;
       });
       // Process user's favorite genres first
       for (const genre of favoriteGenres) {
-        const base: number = 40;
-        const extra: number = 10;
-        const total: number = base + (genreCount - 1) * extra;
         const currentYear: number = new Date().getFullYear();
         const fromYear: number = currentYear - 5;
 

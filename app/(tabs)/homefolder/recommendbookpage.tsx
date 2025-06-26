@@ -39,15 +39,15 @@ const RecommendedScreen = () => {
   const user = auth.currentUser;
   const { addBook, recommendedBooks, isLoading, setRecommendedBooks } =
     useLibrary();
-  // Filter books based on search query
-  const filteredBooks: GoogleBooksItem[] = recommendedBooks.filter(
-    (book: GoogleBooksItem) => {
+  // Filter books based on search query and remove duplicates
+  const filteredBooks: GoogleBooksItem[] = removeDuplicateBooks(
+    recommendedBooks.filter((book: GoogleBooksItem) => {
       const title: string = book.volumeInfo?.title?.toLowerCase() || "";
       const authors: string =
         book.volumeInfo?.authors?.join(" ")?.toLowerCase() || "";
       const query: string = searchQuery.toLowerCase();
       return title.includes(query) || authors.includes(query);
-    }
+    })
   );
 
   const handleAddBook: (book: GoogleBooksItem) => Promise<void> = async (
@@ -126,10 +126,9 @@ const RecommendedScreen = () => {
       const userSnap: any = await getDoc(userRef);
       const userData: any = userSnap.data();
       const favoriteGenres: string[] = userData?.favoriteGenres || [];
-      const favoriteBooks: string[] = userData?.favoriteBooks || [];
+      const favoriteBooks: GoogleBooksItem[] = userData?.favoriteBooks || [];
       const libraryBooks: GoogleBooksItem[] = userData?.library || [];
-      const favoriteAuthors: string =
-        userData?.favoriteAuthors?.join(", ") || "";
+      const favoriteAuthors: string[] = userData?.favoriteAuthors || [];
       const unforgettableBook: string = userData?.unforgettableBook || "";
       const userCountry: string = userData?.country || "";
       const userGoal: UserGoal = {
@@ -153,7 +152,9 @@ const RecommendedScreen = () => {
               userGoal,
               favoriteGenres,
               unforgettableBook,
-              userCountry
+              userCountry,
+              favoriteBooks,
+              favoriteAuthors
             );
           // Try all generated queries and combine results
           const queryResults: GoogleBooksItem[][] = await Promise.all(

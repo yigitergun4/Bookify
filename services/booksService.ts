@@ -19,53 +19,45 @@ export class BooksError extends ApiError {
   }
 }
 
-export const searchBook: (
-  title: string,
-  author: string
-) => Promise<any> = async (title: string, author: string): Promise<any> => {
-  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
-  try {
-    const result = await withRetry(async () => {
-      let query: string = "";
-      const MAX_RESULTS: number = 10;
-
-      if (title && title.trim()) {
-        query += encodeURIComponent(title.trim());
-      }
-
-      if (author && author !== "Unknown" && author.trim()) {
-        if (query) query += "+";
-        query += encodeURIComponent(author.trim());
-      }
-
-      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
-
-      console.log("SearchBook URL:", url);
-
-      const response: any = await axios.get(url);
-      const items: GoogleBooksItem[] = response.data.items || [];
-
-      if (items.length === 0) {
-        throw new BooksError("No book found for the given query");
-      }
-
-      // the most relevant book
-      const bookData: GoogleBooksItem = items[0];
-
-      if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
-        throw new BooksError("Invalid book data received from API");
-      }
-
-      return bookData;
-    });
-    return result;
-  } catch (error) {
-    if (error instanceof BooksError) {
-      throw error;
-    }
-    throw new BooksError("Failed to search for book", undefined, error);
-  }
-};
+// It's not necessary to use yet but it's here for future reference
+// export const searchBook: (
+//   title: string,
+//   author: string
+// ) => Promise<any> = async (title: string, author: string): Promise<any> => {
+//   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+//   try {
+//     const result = await withRetry(async () => {
+//       let query: string = "";
+//       const MAX_RESULTS: number = 10;
+//       if (title && title.trim()) {
+//         query += encodeURIComponent(title.trim());
+//       }
+//       if (author && author !== "Unknown" && author.trim()) {
+//         if (query) query += "+";
+//         query += encodeURIComponent(author.trim());
+//       }
+//       let url: string = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
+//       console.log("SearchBook URL:", url);
+//       const response: any = await axios.get(url);
+//       const items: GoogleBooksItem[] = response.data.items || [];
+//       if (items.length === 0) {
+//         throw new BooksError("No book found for the given query");
+//       }
+//       // the most relevant book
+//       const bookData: GoogleBooksItem = items[0];
+//       if (!bookData || !bookData.volumeInfo || !bookData.volumeInfo.title) {
+//         throw new BooksError("Invalid book data received from API");
+//       }
+//       return bookData;
+//     });
+//     return result;
+//   } catch (error) {
+//     if (error instanceof BooksError) {
+//       throw error;
+//     }
+//     throw new BooksError("Failed to search for book", undefined, error);
+//   }
+// };
 
 export const searchBooksPaginated: (
   query: string,
@@ -174,9 +166,7 @@ export const searchBooksSequential: (
         if (query) query += "+";
         query += encodeURIComponent(author.trim());
       }
-
-      let url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
-
+      let url: string = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
       console.log("SearchBooksSequential URL:", url);
 
       const response: any = await axios.get(url);
@@ -185,7 +175,6 @@ export const searchBooksSequential: (
       if (items.length === 0) {
         throw new BooksError("No books found for the given query");
       }
-
       console.log(`Found ${items.length} books for sequential checking`);
       return items;
     });

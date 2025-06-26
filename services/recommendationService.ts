@@ -145,7 +145,7 @@ export class RecommendationService {
       }
 
       const response: any = await fetch(url);
-
+      console.log("url:", url);
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
@@ -250,7 +250,9 @@ export class RecommendationService {
     userGoal: UserGoal,
     favoriteGenres: string[],
     unforgettableBook: string,
-    selectedCountry: string = ""
+    selectedCountry: string = "",
+    favoriteBooks: GoogleBooksItem[] = [],
+    favoriteAuthors: string[] = []
   ): Promise<string[]> {
     const authorsFromLibrary: string[] = libraryBooks
       .map((book: GoogleBooksItem) => book.volumeInfo?.authors || [])
@@ -259,11 +261,10 @@ export class RecommendationService {
 
     const uniqueAuthors: string[] = Array.from(new Set(authorsFromLibrary));
 
-    // Rastgele 3 yazar seç
     const shuffledAuthors: string[] = uniqueAuthors.sort(
       () => 0.5 - Math.random()
     );
-    const selectedAuthors: string[] = shuffledAuthors.slice(0, 2); // veya Math.min(3, uniqueAuthors.length)
+    const selectedAuthors: string[] = shuffledAuthors.slice(0, 2);
     const authorList: string = selectedAuthors.join(", ");
 
     const sampledAuthors: string = authorList;
@@ -291,6 +292,8 @@ export class RecommendationService {
   
   User's preferences:
   - Favorite genres: ${genreList}
+  - Favorite books: ${favoriteBooks.map((book) => book.volumeInfo?.title || "Unknown").join(", ") || "None specified"}
+  - Favorite authors: ${favoriteAuthors.join(", ") || "None specified"}
   - Sampled favorite authors: ${sampledAuthors}
   - Sampled unforgettable books: ${sampledUnforgettableBooks}
   - User goal: ${goalDescription}
@@ -374,7 +377,7 @@ export class RecommendationService {
       if (!queries || queries.length === 0) {
         throw new Error("No queries returned from ChatGPT.");
       }
-
+      console.log("prompt:", prompt);
       console.log("ChatGPT LoadMore Queries:", queries);
       return queries;
     } catch (error) {

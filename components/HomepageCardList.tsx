@@ -116,7 +116,9 @@ export default function HomePageFlatlistRecentClicks({
       ) : (
         <FlatList
           data={books}
-          keyExtractor={(item: any, index: number) => `${item.id}_${index}`}
+          keyExtractor={(item: any, index: number) =>
+            item.id || `book_${index}`
+          }
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }: any) => (

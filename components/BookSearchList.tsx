@@ -120,10 +120,15 @@ const BookSearchList = ({
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    if (contentHeight > layoutHeight) {
-      listRef.current?.scrollToEnd({ animated: true });
+    if (books.length > 0) {
+      // With getItemLayout, scrollToIndex is now precise and efficient
+      listRef.current?.scrollToIndex({
+        index: books.length - 1,
+        viewPosition: 1, // Position item at bottom of viewport
+        animated: true,
+      });
     }
-  }, [contentHeight, layoutHeight]);
+  }, [books.length]);
 
   const handleScroll = useCallback(
     (event: any) => {
@@ -201,9 +206,26 @@ const BookSearchList = ({
   );
 
   const keyExtractor = useCallback(
-    (item: any, index: number) => `${item.id}_${index}`,
+    (item: any, index: number) => item.id || `book_${index}`,
     []
   );
+
+  // Define item layout for better scroll performance and accuracy
+  const getItemLayout = useCallback(
+    (data: any, index: number) => ({
+      length: 132, // height of each book item (100px image + 32px margin/padding)
+      offset: 132 * index + 12, // +12 for top padding
+      index,
+    }),
+    []
+  );
+
+  // Handle scroll to index failures
+  const onScrollToIndexFailed = useCallback((info: any) => {
+    // If scrollToIndex fails, fall back to scrollToEnd
+    console.log("ScrollToIndex failed, falling back to scrollToEnd:", info);
+    listRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   const modalImageUrl =
     selectedBook?.volumeInfo?.imageLinks?.thumbnail?.replace("http:", "https:");
@@ -215,6 +237,8 @@ const BookSearchList = ({
         data={books}
         contentContainerStyle={styles.listContent}
         keyExtractor={keyExtractor}
+        getItemLayout={getItemLayout}
+        onScrollToIndexFailed={onScrollToIndexFailed}
         onContentSizeChange={(w: number, h: number) => setContentHeight(h)}
         onLayout={(event: any) =>
           setLayoutHeight(event.nativeEvent.layout.height)

@@ -37,11 +37,9 @@ yarn-error.*
 # Environment variables
 .env
 .env.*
-env.ts
 
-# Firebase config
-FirebaseConfig.ts
-
+google-services.json
+GoogleService-Info.plist
 # IDE
 .idea/
 .vscode/

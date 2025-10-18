@@ -1,5 +1,4 @@
 import axios from "axios";
-import ENV from "../config/env";
 import { CacheService } from "./cacheService";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import SHA256 from "crypto-js/sha256";
@@ -28,7 +27,7 @@ interface VisionCacheData {
 }
 
 export const detectText = async (base64Image: string, userId: string) => {
-  const VISION_API_KEY = ENV.VISION_API_KEY;
+  const VISION_API_KEY = process.env.EXPO_PUBLIC_VISION_API_KEY;
   try {
     // create cache key
     const cacheKey: VisionCacheKey = {

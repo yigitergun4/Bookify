@@ -7,7 +7,6 @@ import {
   ViewStyle,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import ENV from "@/config/env";
 import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import {
   GoogleSignin,
@@ -23,7 +22,7 @@ interface GoogleButtonProps {
 
 // WebBrowser.maybeCompleteAuthSession();
 // GoogleSignin.configure({
-//   webClientId: ENV.WEB_CLIENT_ID,
+//   webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
 // });
 
 const GoogleButton: React.FC<GoogleButtonProps> = ({ style }) => {

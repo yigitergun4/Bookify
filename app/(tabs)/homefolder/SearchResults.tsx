@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import BookSearchList from "@/components/BookSearchList";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/FirebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { searchBooksForResults } from "@/services/booksService";
 
 export default function SearchResultsScreen() {
   const { query } = useLocalSearchParams<{ query: string }>();
@@ -18,9 +21,34 @@ export default function SearchResultsScreen() {
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [startIndex, setStartIndex] = useState<number>(0);
   const [totalItems, setTotalItems] = useState<number>(0);
+  const [userCountry, setUserCountry] = useState<string>("Turkey"); // Default to Turkey
   const PAGE_SIZE: number = 10;
-
   const { addBook } = useLibrary();
+  const user = FIREBASE_AUTH.currentUser;
+
+  // Get user country from Firebase
+  const getUserCountry = async (): Promise<string> => {
+    if (!user) return "Turkey"; // Default country
+    try {
+      const userDoc = await getDoc(doc(FIREBASE_DB, "Users", user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        return userData.country || "Turkey";
+      }
+    } catch (error) {
+      console.error("Error getting user country:", error);
+    }
+    return "Turkey"; // Default fallback
+  };
+
+  // Load user country on component mount
+  useEffect(() => {
+    const loadUserCountry = async () => {
+      const country = await getUserCountry();
+      setUserCountry(country);
+    };
+    loadUserCountry();
+  }, [user]);
 
   const fetchBooks: (append: boolean) => Promise<void> = async (
     append: boolean
@@ -28,21 +56,24 @@ export default function SearchResultsScreen() {
     if (!query) return;
     if (append) setLoadingMore(true);
     else setLoading(true);
+
     try {
-      const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-          query
-        )}&startIndex=${append ? startIndex : 0}&maxResults=${PAGE_SIZE}`
+      const result = await searchBooksForResults(
+        query,
+        append ? startIndex : 0,
+        PAGE_SIZE,
+        userCountry
       );
-      const data: any = await response.json();
-      const items: any[] = data.items || [];
-      setTotalItems(data.totalItems || 0);
+
+      setTotalItems(result.totalItems);
+
       if (append) {
-        setBooks((prev: any[]) => [...prev, ...items]);
+        setBooks((prev: any[]) => [...prev, ...result.items]);
       } else {
-        setBooks(items);
+        setBooks(result.items);
       }
     } catch (err: any) {
+      console.error("Error fetching books:", err);
       Alert.alert("Error", "Failed to fetch books");
     } finally {
       if (append) setLoadingMore(false);

@@ -2,6 +2,7 @@ import axios from "axios";
 import { withRetry, ApiError } from "../utils/apiUtils";
 import ENV from "../config/env";
 import { GoogleBooksItem } from "@/types/booksapitypes";
+import { getCountryCode, getLanguageCode } from "@/utils/countryUtils";
 
 export interface BookData {
   title: string;
@@ -24,7 +25,7 @@ export class BooksError extends ApiError {
 //   title: string,
 //   author: string
 // ) => Promise<any> = async (title: string, author: string): Promise<any> => {
-//   const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+//   const BOOKS_API_KEY = process.env.EXPO_PUBLIC_BOOKS_API_KEY;
 //   try {
 //     const result = await withRetry(async () => {
 //       let query: string = "";
@@ -61,14 +62,20 @@ export class BooksError extends ApiError {
 
 export const searchBooksPaginated: (
   query: string,
-  startIndex: number
+  startIndex: number,
+  country?: string
 ) => Promise<any> = async (
   query: string,
-  startIndex: number = 0
+  startIndex: number = 0,
+  country: string = "Turkey"
 ): Promise<any> => {
+  const countryCode = getCountryCode(country);
+  const languageCode = getLanguageCode(country);
+
   const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
     query
-  )}&startIndex=${startIndex}`;
+  )}&startIndex=${startIndex}&country=${countryCode}&langRestrict=${languageCode}`;
+
   const response: any = await fetch(url);
   const data: any = await response.json();
   return data;
@@ -77,14 +84,17 @@ export const searchBooksPaginated: (
 export const searchBookList: (
   title: string,
   author: string,
-  language: string
+  language: string,
+  country?: string
 ) => Promise<any[]> = async (
   title: string,
   author: string,
-  language: string
+  language: string,
+  country: string = "Turkey"
 ): Promise<any[]> => {
-  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
-  console.log("Search parameters:", { title, author, language });
+  const BOOKS_API_KEY = process.env.EXPO_PUBLIC_BOOKS_API_KEY;
+  const countryCode: string = getCountryCode(country);
+  const languageCode: string = getLanguageCode(country);
 
   const MAX_RESULTS_PER_QUERY: number = 20;
   const results: any[] = [];
@@ -93,11 +103,8 @@ export const searchBookList: (
     // First search: By title (20 results)
     if (title && title !== "Unknown") {
       const titleQuery = encodeURIComponent(title);
-      let titleUrl = `https://www.googleapis.com/books/v1/volumes?q=${titleQuery}&maxResults=${MAX_RESULTS_PER_QUERY}`;
+      let titleUrl = `https://www.googleapis.com/books/v1/volumes?q=${titleQuery}&maxResults=${MAX_RESULTS_PER_QUERY}&country=${countryCode}&langRestrict=${languageCode}`;
 
-      if (language && language !== "Unknown") {
-        titleUrl += `&langRestrict=${encodeURIComponent(language)}`;
-      }
       titleUrl += `&key=${BOOKS_API_KEY}`;
 
       console.log("Title search URL:", titleUrl);
@@ -112,11 +119,8 @@ export const searchBookList: (
     // Second search: By author (20 results)
     if (author && author !== "Unknown") {
       const authorQuery: string = "inauthor:" + encodeURIComponent(author);
-      let authorUrl: string = `https://www.googleapis.com/books/v1/volumes?q=${authorQuery}&maxResults=${MAX_RESULTS_PER_QUERY}`;
+      let authorUrl: string = `https://www.googleapis.com/books/v1/volumes?q=${authorQuery}&maxResults=${MAX_RESULTS_PER_QUERY}&country=${countryCode}&langRestrict=${languageCode}`;
 
-      if (language && language !== "Unknown") {
-        authorUrl += `&langRestrict=${encodeURIComponent(language)}`;
-      }
       authorUrl += `&key=${BOOKS_API_KEY}`;
 
       console.log("Author search URL:", authorUrl);
@@ -147,12 +151,17 @@ export const searchBookList: (
 
 export const searchBooksSequential: (
   title: string,
-  author: string
+  author: string,
+  country?: string
 ) => Promise<GoogleBooksItem[]> = async (
   title: string,
-  author: string
+  author: string,
+  country: string = "Turkey"
 ): Promise<GoogleBooksItem[]> => {
-  const BOOKS_API_KEY = ENV.BOOKS_API_KEY;
+  const BOOKS_API_KEY = process.env.EXPO_PUBLIC_BOOKS_API_KEY;
+  const countryCode = getCountryCode(country);
+  const languageCode = getLanguageCode(country);
+
   try {
     const result = await withRetry(async () => {
       let query: string = "";
@@ -166,7 +175,7 @@ export const searchBooksSequential: (
         if (query) query += "+";
         query += encodeURIComponent(author.trim());
       }
-      let url: string = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&key=${BOOKS_API_KEY}`;
+      let url: string = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=${MAX_RESULTS}&printType=books&orderBy=relevance&country=${countryCode}&langRestrict=${languageCode}&key=${BOOKS_API_KEY}`;
       console.log("SearchBooksSequential URL:", url);
 
       const response: any = await axios.get(url);
@@ -179,6 +188,56 @@ export const searchBooksSequential: (
       return items;
     });
     return result;
+  } catch (error) {
+    if (error instanceof BooksError) {
+      throw error;
+    }
+    throw new BooksError("Failed to search for books", undefined, error);
+  }
+};
+
+// New function for search results with pagination
+export const searchBooksForResults: (
+  query: string,
+  startIndex: number,
+  maxResults: number,
+  country?: string
+) => Promise<{
+  items: GoogleBooksItem[];
+  totalItems: number;
+}> = async (
+  query: string,
+  startIndex: number = 0,
+  maxResults: number = 10,
+  country: string = "Turkey"
+): Promise<{
+  items: GoogleBooksItem[];
+  totalItems: number;
+}> => {
+  const countryCode = getCountryCode(country);
+  const languageCode = getLanguageCode(country);
+
+  try {
+    const url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      query
+    )}&startIndex=${startIndex}&maxResults=${maxResults}&country=${countryCode}&langRestrict=${languageCode}`;
+
+    console.log("SearchBooksForResults URL:", url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new BooksError(
+        `API Error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: any = await response.json();
+
+    return {
+      items: data.items || [],
+      totalItems: data.totalItems || 0,
+    };
   } catch (error) {
     if (error instanceof BooksError) {
       throw error;

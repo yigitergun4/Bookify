@@ -13,9 +13,9 @@ import {
 } from "firebase/firestore";
 import { CacheService } from "./cacheService";
 import { ApiError } from "../utils/apiUtils";
-import ENV from "@/config/env";
 import { GoogleBooksItem } from "@/types/booksapitypes";
 import { UserGoal } from "@/types/usersdatatypes";
+import { getCountryCode, getLanguageCode } from "@/utils/countryUtils";
 import { OpenAI } from "openai";
 
 const cacheService: CacheService = CacheService.getInstance();
@@ -31,67 +31,9 @@ export class RecommendationService {
   private static instance: RecommendationService;
   private openai: OpenAI;
 
-  // Country to language code mapping for Google Books API (based on COUNTRIES from LibraryContext)
-  private COUNTRY_TO_LANGUAGE: { [key: string]: string } = {
-    "United States": "en", // COUNTRIES[0]
-    "United Kingdom": "en", // COUNTRIES[1]
-    Canada: "en", // COUNTRIES[2]
-    Australia: "en", // COUNTRIES[3]
-    Germany: "de", // COUNTRIES[4]
-    France: "fr", // COUNTRIES[5]
-    Spain: "es", // COUNTRIES[6]
-    Italy: "it", // COUNTRIES[7]
-    Japan: "ja", // COUNTRIES[8]
-    "South Korea": "ko", // COUNTRIES[9]
-    India: "en", // COUNTRIES[10]
-    Brazil: "pt", // COUNTRIES[11]
-    Mexico: "es", // COUNTRIES[12]
-    Turkey: "tr", // COUNTRIES[13]
-    Netherlands: "nl", // COUNTRIES[14]
-    Sweden: "sv", // COUNTRIES[15]
-    Norway: "no", // COUNTRIES[16]
-    Denmark: "da", // COUNTRIES[17]
-    Finland: "fi", // COUNTRIES[18]
-    Russia: "ru", // COUNTRIES[19]
-    China: "zh", // COUNTRIES[20]
-    Singapore: "en", // COUNTRIES[21]
-    "New Zealand": "en", // COUNTRIES[22]
-    "South Africa": "en", // COUNTRIES[23]
-    Argentina: "es", // COUNTRIES[24]
-  };
-
-  // ISO 3166-1 Alpha-2 country codes mapping (based on COUNTRIES from LibraryContext)
-  private COUNTRY_TO_ISO_CODE: { [key: string]: string } = {
-    "United States": "US", // COUNTRIES[0]
-    "United Kingdom": "GB", // COUNTRIES[1]
-    Canada: "CA", // COUNTRIES[2]
-    Australia: "AU", // COUNTRIES[3]
-    Germany: "DE", // COUNTRIES[4]
-    France: "FR", // COUNTRIES[5]
-    Spain: "ES", // COUNTRIES[6]
-    Italy: "IT", // COUNTRIES[7]
-    Japan: "JP", // COUNTRIES[8]
-    "South Korea": "KR", // COUNTRIES[9]
-    India: "IN", // COUNTRIES[10]
-    Brazil: "BR", // COUNTRIES[11]
-    Mexico: "MX", // COUNTRIES[12]
-    Turkey: "TR", // COUNTRIES[13]
-    Netherlands: "NL", // COUNTRIES[14]
-    Sweden: "SE", // COUNTRIES[15]
-    Norway: "NO", // COUNTRIES[16]
-    Denmark: "DK", // COUNTRIES[17]
-    Finland: "FI", // COUNTRIES[18]
-    Russia: "RU", // COUNTRIES[19]
-    China: "CN", // COUNTRIES[20]
-    Singapore: "SG", // COUNTRIES[21]
-    "New Zealand": "NZ", // COUNTRIES[22]
-    "South Africa": "ZA", // COUNTRIES[23]
-    Argentina: "AR", // COUNTRIES[24]
-  };
-
   private constructor() {
     this.openai = new OpenAI({
-      apiKey: ENV.OPENAI_API_KEY,
+      apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
     });
   }
 
@@ -100,14 +42,6 @@ export class RecommendationService {
       RecommendationService.instance = new RecommendationService();
     }
     return RecommendationService.instance;
-  }
-
-  private getLanguageCodeForCountry(country: string): string {
-    return this.COUNTRY_TO_LANGUAGE[country] || "";
-  }
-
-  private getCountryCodeForCountry(country: string): string {
-    return this.COUNTRY_TO_ISO_CODE[country] || "";
   }
 
   private shuffleArray<T>(array: T[]): T[] {
@@ -127,10 +61,8 @@ export class RecommendationService {
       console.log("Searching books with query:", query);
       const maxResultsPerPage: number = 20;
       const orderBy: string = "relevance";
-      const languageCode: string =
-        this.getLanguageCodeForCountry(selectedCountry);
-      const countryCode: string =
-        this.getCountryCodeForCountry(selectedCountry);
+      const languageCode: string = getLanguageCode(selectedCountry);
+      const countryCode: string = getCountryCode(selectedCountry);
 
       let url: string = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
         query
@@ -764,7 +696,7 @@ Book: ${unforgettableBook}`;
               const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
-                )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
+                )}&printType=books&maxResults=${maxResults}&langRestrict=${getLanguageCode(selectedCountry)}&country=${getCountryCode(selectedCountry)}&orderBy=${orderBy}`
               );
               const json: any = await res.json();
               console.log(
@@ -845,7 +777,7 @@ Book: ${unforgettableBook}`;
             const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
-              )}&printType=books&maxResults=${10}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
+              )}&printType=books&maxResults=${10}&langRestrict=${getLanguageCode(selectedCountry)}&country=${getCountryCode(selectedCountry)}&orderBy=${orderBy}`
             );
             const json: any = await res.json();
             const items: GoogleBooksItem[] = json.items || [];
@@ -893,7 +825,7 @@ Book: ${unforgettableBook}`;
               const res: any = await fetch(
                 `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                   query
-                )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
+                )}&printType=books&maxResults=${maxResults}&langRestrict=${getLanguageCode(selectedCountry)}&country=${getCountryCode(selectedCountry)}&orderBy=${orderBy}`
               );
               const json: any = await res.json();
               const items: GoogleBooksItem[] = json.items || [];
@@ -926,7 +858,7 @@ Book: ${unforgettableBook}`;
             const res: any = await fetch(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
                 query
-              )}&printType=books&maxResults=${maxResults}&langRestrict=${this.getLanguageCodeForCountry(selectedCountry)}&country=${this.getCountryCodeForCountry(selectedCountry)}&orderBy=${orderBy}`
+              )}&printType=books&maxResults=${maxResults}&langRestrict=${getLanguageCode(selectedCountry)}&country=${getCountryCode(selectedCountry)}&orderBy=${orderBy}`
             );
 
             const json: any = await res.json();

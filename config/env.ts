@@ -1,5 +1,3 @@
-import Constants from "expo-constants";
-
 interface Env {
   VISION_API_KEY: string;
   BOOKS_API_KEY: string;
@@ -11,21 +9,13 @@ interface Env {
 }
 
 const ENV: Env = {
-  VISION_API_KEY:
-    Constants.expoConfig?.extra?.VISION_API_KEY ||
-    "AIzaSyD3wpw7y6jJqL905btvKlscgYku5fZxj_I",
-  BOOKS_API_KEY:
-    Constants.expoConfig?.extra?.BOOKS_API_KEY ||
-    "AIzaSyALRYFWbp8BkrD7ONPPH5TmJ4_oZEUR1yM",
-  OPENAI_API_KEY:
-    Constants.expoConfig?.extra?.OPENAI_API_KEY ||
-    "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",
+  VISION_API_KEY: process.env.EXPO_PUBLIC_VISION_API_KEY || "",
+  BOOKS_API_KEY: process.env.EXPO_PUBLIC_BOOKS_API_KEY || "",
+  OPENAI_API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY || "",
   API_RETRY_COUNT: 3,
   API_RETRY_DELAY: 1000,
   CACHE_DURATION: 1000 * 60 * 60,
-  WEB_CLIENT_ID:
-    Constants.expoConfig?.extra?.GOOGLE_CLIENT_ID ||
-    "78369109206-cbvqqgcq0l7001v0q44vj73g8i9uo6pu.apps.googleusercontent.com",
+  WEB_CLIENT_ID: process.env.EXPO_PUBLIC_WEB_CLIENT_ID || "",
 };
 
 export default ENV;

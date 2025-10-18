@@ -5,7 +5,7 @@ import SHA256 from "crypto-js/sha256";
 import OpenAI from "openai";
 
 const openai: OpenAI = new OpenAI({
-  apiKey: ENV.OPENAI_API_KEY,
+  apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
 });
 
 const cacheService: CacheService = CacheService.getInstance();
@@ -76,7 +76,7 @@ Rules:
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${ENV.OPENAI_API_KEY}`,
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
             model: "gpt-4o",
